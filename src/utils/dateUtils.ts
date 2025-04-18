@@ -1,77 +1,145 @@
 // src/utils/dateUtils.ts
 import {
-    format as formatFns, isToday as isTodayFns, isBefore, startOfDay, endOfDay,
-    addDays, parseISO, isValid, differenceInCalendarDays, endOfWeek, startOfWeek,
-    eachDayOfInterval, isSameMonth, isSameDay, getDay, addMonths, subMonths,
-    startOfMonth, endOfMonth, subWeeks, // Added subWeeks for SummaryView
+    format as formatFns, // Alias to avoid conflict
+    isToday as isTodayFns,
+    isBefore,
+    startOfDay,
+    endOfDay,
+    addDays,
+    parseISO,
+    isValid,
+    differenceInCalendarDays,
+    endOfWeek, // Needed for CalendarView calculation
+    startOfWeek, // Needed for CalendarView calculation
+    eachDayOfInterval, // Needed for CalendarView calculation
+    isSameMonth, // Needed for CalendarView calculation
+    isSameDay, // Needed for CalendarView calculation
+    getDay, // Needed for CalendarView calculation
+    addMonths, // Needed for CalendarView calculation
+    subMonths, // Needed for CalendarView calculation
+    startOfMonth, // Needed for CalendarView calculation
+    endOfMonth, // Needed for CalendarView calculation
+    addWeeks, // Needed for CalendarView calculation
+    subWeeks, // Needed for CalendarView calculation
+    subDays, // Needed for calculations
 } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
+// Consistent locale
 const currentLocale = enUS;
 
+/** Safely parses various date inputs into a Date object */
 export const safeParseDate = (dateInput: Date | number | string | null | undefined): Date | null => {
     if (dateInput === null || typeof dateInput === 'undefined') return null;
+
     let date: Date;
-    if (dateInput instanceof Date) date = dateInput;
-    else if (typeof dateInput === 'number') date = new Date(dateInput);
-    else if (typeof dateInput === 'string') {
+    if (dateInput instanceof Date) {
+        date = dateInput;
+    } else if (typeof dateInput === 'number') {
+        // Assuming the number is a timestamp in milliseconds
+        date = new Date(dateInput);
+    } else if (typeof dateInput === 'string') {
+        // Try parsing ISO 8601 first, then fall back to general parsing
         date = parseISO(dateInput);
-        if (!isValid(date)) date = new Date(dateInput);
-    } else return null;
+        if (!isValid(date)) {
+            date = new Date(dateInput); // General fallback
+        }
+    } else {
+        return null; // Unsupported type
+    }
+
     return isValid(date) ? date : null;
 };
 
+/** Formats a date using a specified format string */
 export const formatDate = (dateInput: Date | number | null | undefined, formatString: string = 'MMM d, yyyy'): string => {
     const date = safeParseDate(dateInput);
-    if (!date) return '';
-    try { return formatFns(date, formatString, { locale: currentLocale }); }
-    catch (e) { console.error("Error formatting date:", dateInput, e); return "Invalid Date"; }
+    if (!date || !isValid(date)) return ''; // Added validity check
+    try {
+        return formatFns(date, formatString, { locale: currentLocale });
+    } catch (e) {
+        console.error("Error formatting date:", dateInput, e);
+        return "Invalid Date";
+    }
 };
 
+/** Formats a date and time */
 export const formatDateTime = (dateInput: Date | number | null | undefined): string => {
-    return formatDate(dateInput, 'MMM d, yyyy, h:mm a');
+    return formatDate(dateInput, 'MMM d, yyyy, h:mm a'); // e.g., Sep 13, 2024, 2:30 PM
 }
 
+/** Formats a date relative to today (Today, Tomorrow, Yesterday, or specific date) */
 export const formatRelativeDate = (dateInput: Date | number | null | undefined): string => {
     const date = safeParseDate(dateInput);
-    if (!date) return '';
+    if (!date || !isValid(date)) return ''; // Added validity check
+
     const today = startOfDay(new Date());
     const inputDay = startOfDay(date);
     const diffDays = differenceInCalendarDays(inputDay, today);
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Tomorrow';
     if (diffDays === -1) return 'Yesterday';
+
+    // Include year if the date is not in the current year
     const currentYear = today.getFullYear();
     const inputYear = inputDay.getFullYear();
-    if (inputYear !== currentYear) return formatDate(date, 'MMM d, yyyy');
-    return formatDate(date, 'MMM d');
+    if (inputYear !== currentYear) {
+        return formatDate(date, 'MMM d, yyyy'); // e.g., Sep 13, 2023
+    }
+
+    // Default to standard format for other dates within the current year
+    return formatDate(date, 'MMM d'); // e.g., Sep 13
 };
 
+/** Checks if a date is today */
 export const isToday = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
-    return date ? isTodayFns(date) : false;
+    return date && isValid(date) ? isTodayFns(date) : false; // Added validity check
 };
 
+/** Checks if a date is within the next 7 days (inclusive of today) */
 export const isWithinNext7Days = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
-    if (!date) return false;
+    if (!date || !isValid(date)) return false; // Added validity check
     const today = startOfDay(new Date());
-    const nextWeekEnd = endOfDay(addDays(today, 6));
-    // Check: Date is >= Today AND <= End of 7th day
-    return !isBefore(startOfDay(date), today) && !isBefore(nextWeekEnd, startOfDay(date));
+    const sevenDaysFromToday = addDays(today, 7); // Day 7 starts at 00:00
+
+    // Check if the date is on or after today AND before the start of the 8th day
+    return !isBefore(startOfDay(date), today) && isBefore(startOfDay(date), sevenDaysFromToday);
 };
 
+
+/** Checks if a date is before today (overdue) */
 export const isOverdue = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
-    if (!date) return false;
+    if (!date || !isValid(date)) return false; // Added validity check
     const today = startOfDay(new Date());
+    // Compare the start of the input date with the start of today
     return isBefore(startOfDay(date), today);
 };
 
-// Re-export needed functions
+// Re-export date-fns functions needed specifically by CalendarView or others for cleaner imports
 export {
-    formatFns as format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-    eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, getDay,
-    startOfDay, endOfDay, isBefore, isValid, subWeeks
+    formatFns as format, // Rename to avoid conflict with our formatDate
+    startOfMonth,
+    endOfMonth,
+    startOfWeek,
+    endOfWeek,
+    eachDayOfInterval,
+    addMonths,
+    subMonths,
+    isSameMonth,
+    isSameDay,
+    getDay,
+    startOfDay,
+    endOfDay, // Re-export if needed elsewhere
+    isBefore,
+    isValid,
+    addDays,
+    subDays,
+    addWeeks,
+    subWeeks,
+    differenceInCalendarDays, // Re-export if needed
 };
-export { enUS };
+export { enUS }; // Export locale for consistency

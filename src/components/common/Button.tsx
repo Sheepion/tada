@@ -2,23 +2,24 @@
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
-import Icon from './Icon';
+import Icon from './Icon'; // Correct import path
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { IconName } from "@/components/common/IconMap";
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'danger';
-type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
+// Added 'glass' variant
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'danger' | 'glass';
+type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'; // Consistent sizes
 
 interface ButtonProps extends Omit<HTMLMotionProps<"button">, "size"> {
     variant?: ButtonVariant;
     size?: ButtonSize;
-    icon?: IconName;
+    icon?: IconName; // Use the specific IconName type
     iconPosition?: 'left' | 'right';
     fullWidth?: boolean;
     loading?: boolean;
     children?: React.ReactNode;
-    className?: string;
-    'aria-label'?: string;
+    className?: string; // Allow className override
+    'aria-label'?: string; // Ensure aria-label is accepted
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -34,57 +35,63 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             loading = false,
             disabled,
             type = 'button',
-            'aria-label': ariaLabel,
+            'aria-label': ariaLabel, // Destructure aria-label
             ...props
         },
         ref
     ) => {
         const isDisabled = disabled || loading;
 
-        // Base styling - consistent radius, focus ring, subtle transition
+        // Base styling - consistent radius, focus ring, transition
         const baseClasses = clsx(
-            'inline-flex items-center justify-center font-medium whitespace-nowrap select-none outline-none relative',
-            'focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas',
-            'transition-all duration-100 ease-apple', // Faster, standard transition
+            'inline-flex items-center justify-center font-medium whitespace-nowrap select-none outline-none relative', // Added relative for potential ::before/::after pseudo-elements
+            'focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas', // Standard focus ring
+            'transition-all duration-150 ease-apple', // Use standard Apple ease
             isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             fullWidth && 'w-full',
-            'rounded-md'
+            'rounded-md' // Apply standard radius here
         );
 
         // Variant specific styles - Refined for subtlety
         const variantClasses: Record<ButtonVariant, string> = {
             primary: clsx(
-                'bg-primary text-white shadow-subtle border border-primary/90',
-                !isDisabled && 'hover:bg-primary-dark active:bg-primary-dark' // Simplified active
+                'bg-primary text-primary-foreground shadow-subtle border border-primary/90', // Use foreground color
+                !isDisabled && 'hover:bg-primary-dark active:bg-primary' // Keep hover/active simple
             ),
             secondary: clsx(
                 'bg-gray-100 text-gray-700 border border-border-color shadow-subtle',
                 !isDisabled && 'hover:bg-gray-200 active:bg-gray-200'
             ),
             outline: clsx(
-                'border border-border-color text-gray-700 bg-canvas',
-                !isDisabled && 'hover:bg-gray-100/50 active:bg-gray-100/70'
+                'border border-border-color text-gray-700 bg-canvas', // Use canvas for pure outline
+                !isDisabled && 'hover:bg-gray-100/50 active:bg-gray-100/70' // Subtle hover/active
             ),
             ghost: clsx(
-                'text-gray-600 border border-transparent',
+                'text-gray-600 border border-transparent', // Use transparent border for layout consistency
                 !isDisabled && 'hover:bg-black/5 active:bg-black/[0.07] hover:text-gray-800'
             ),
             link: clsx(
-                'text-primary underline-offset-4 h-auto px-0 py-0 rounded-none border-none bg-transparent shadow-none',
+                'text-primary underline-offset-4 h-auto px-0 py-0 rounded-none border-none bg-transparent shadow-none', // Reset styles for link
                 !isDisabled && 'hover:underline hover:text-primary-dark'
             ),
             danger: clsx(
                 'bg-red-500 text-white shadow-subtle border border-red-500/90',
                 !isDisabled && 'hover:bg-red-600 active:bg-red-700'
             ),
+            // Glass variant
+            glass: clsx(
+                'border border-black/5 text-gray-700 shadow-subtle',
+                'bg-glass-200 backdrop-blur-sm', // Use glass background
+                !isDisabled && 'hover:bg-glass-100 active:bg-glass-alt-100' // Transition between glass levels
+            ),
         };
 
-        // Size specific styles
+        // Size specific styles - slightly tweaked heights
         const sizeClasses: Record<ButtonSize, string> = {
-            sm: 'text-xs px-2.5 h-7',
-            md: 'text-sm px-3 h-8',
-            lg: 'text-base px-3.5 h-9',
-            icon: 'h-8 w-8 p-0', // Ensure padding is zero for icon centering
+            sm: 'text-xs px-2.5 h-[30px]',   // Slightly taller small size
+            md: 'text-sm px-3 h-[32px]',     // Default medium size
+            lg: 'text-base px-3.5 h-[36px]', // Slightly taller large size
+            icon: 'h-8 w-8 p-0',             // Square icon button, use medium height
         };
 
         // Icon size based on button size
@@ -92,36 +99,26 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             sm: 14,
             md: 16,
             lg: 18,
-            icon: 18,
+            icon: 18, // Standard icon size for icon-only buttons
         };
 
-        // Icon margin logic
+        // Icon margin logic - ensure correct spacing only when children exist
         const getIconMargin = (pos: 'left' | 'right') => {
-            // No margin if icon-only or no text children *or* loading
-            if (size === 'icon' || !children || loading) return '';
+            if (size === 'icon' || !children) return ''; // No margin if icon-only or no text content
             if (size === 'sm') return pos === 'left' ? 'mr-1' : 'ml-1';
             return pos === 'left' ? 'mr-1.5' : 'ml-1.5'; // md and lg
         };
 
-        // Very subtle animation props for non-disabled buttons
+        // Subtle animation props for non-disabled buttons (only tap)
         const motionProps = !isDisabled
             ? {
-                whileTap: { scale: 0.98, transition: { duration: 0.05 } }, // Less aggressive tap
-                // No whileHover scale animation by default
+                whileTap: { scale: 0.97, transition: { duration: 0.08 } },
+                // Removed whileHover scale effect
             }
             : {};
 
-        // Determine Aria Label
+        // Determine Aria Label: Explicitly provided > string child > fallback undefined
         const finalAriaLabel = ariaLabel || (typeof children === 'string' ? children : undefined);
-
-        // Check if children is just the Icon component (to handle the case the user identified)
-        // Although the fix is to use the `icon` prop, this detection might be useful elsewhere.
-        // let isChildOnlyIcon = false;
-        // React.Children.forEach(children, child => {
-        //     if (React.isValidElement(child) && child.type === Icon) {
-        //         isChildOnlyIcon = true;
-        //     }
-        // });
 
         return (
             <motion.button
@@ -129,48 +126,42 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 type={type}
                 className={twMerge(
                     baseClasses,
-                    variant !== 'link' && sizeClasses[size],
+                    variant !== 'link' && sizeClasses[size], // Apply size unless link
                     variantClasses[variant],
-                    className
+                    className // Allow overrides last
                 )}
                 disabled={isDisabled}
-                aria-label={finalAriaLabel}
+                aria-label={finalAriaLabel} // Apply the determined aria-label
                 {...motionProps}
-                {...props}
+                {...props} // Spread remaining native button props
             >
-                {/* Central Loading Spinner */}
-                {loading && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Icon name="loader" size={iconSizeClasses[size]} className="animate-spin" />
-                    </div>
+                {loading ? (
+                    // Ensure loading spinner uses an appropriate icon and size
+                    <Icon name="loader" size={iconSizeClasses[size]} className="animate-spin" />
+                ) : (
+                    <>
+                        {/* Render icon if 'icon' prop is provided and position is left */}
+                        {icon && iconPosition === 'left' && (
+                            <Icon
+                                name={icon}
+                                size={iconSizeClasses[size]}
+                                className={twMerge(getIconMargin('left'))}
+                                aria-hidden="true" // Hide decorative icon from screen readers
+                            />
+                        )}
+                        {/* Render children, but hide visually if it's an icon-only button */}
+                        {children && <span className={size === 'icon' ? 'sr-only' : ''}>{children}</span>}
+                        {/* Render icon if 'icon' prop is provided and position is right */}
+                        {icon && iconPosition === 'right' && (
+                            <Icon
+                                name={icon}
+                                size={iconSizeClasses[size]}
+                                className={twMerge(getIconMargin('right'))}
+                                aria-hidden="true" // Hide decorative icon from screen readers
+                            />
+                        )}
+                    </>
                 )}
-
-                {/* Content Wrapper - Hide content visually if loading */}
-                <span className={clsx('inline-flex items-center justify-center', loading && 'invisible')}>
-                     {/* Render icon from prop if position is left */}
-                    {icon && iconPosition === 'left' && (
-                        <Icon
-                            name={icon}
-                            size={iconSizeClasses[size]}
-                            className={twMerge(getIconMargin('left'))}
-                            aria-hidden="true"
-                        />
-                    )}
-
-                    {/* Render children, visually hidden if size is 'icon' */}
-                    {children && <span className={size === 'icon' ? 'sr-only' : ''}>{children}</span>}
-
-                    {/* Render icon from prop if position is right */}
-                    {icon && iconPosition === 'right' && (
-                        <Icon
-                            name={icon}
-                            size={iconSizeClasses[size]}
-                            className={twMerge(getIconMargin('right'))}
-                            aria-hidden="true"
-                        />
-                    )}
-                </span>
-
             </motion.button>
         );
     }
