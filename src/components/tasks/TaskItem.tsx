@@ -142,7 +142,6 @@ const TaskItem: React.FC<TaskItemProps> = ({task, groupCategory, isOverlay = fal
     // Base classes for the task item container
     const baseClasses = twMerge(
         'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]', // Layout and border
-        'transition-colors duration-30 ease-apple', // Background color transition only
         isOverlay
             ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong'
             : isSelected && !isDragging
