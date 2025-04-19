@@ -87,7 +87,6 @@ const CustomDatePickerPopover: React.FC<CustomDatePickerPopoverProps> = ({
                     <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => handlePresetSelect(addWeeks(today, 1))}>
                         <div className="relative">
                             <Icon name="calendar" size={24} className="text-gray-500" />
-                            <div className="absolute -top-0.5 -right-0.5 text-[10px] bg-gray-200 text-gray-600 rounded-sm px-1 font-medium">+7</div>
                         </div>
                     </button>
                 </Tooltip>
