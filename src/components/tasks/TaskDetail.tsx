@@ -421,7 +421,7 @@ const TaskDetail: React.FC = () => {
                     <button
                         onClick={handleToggleComplete}
                         className={twMerge(
-                            "mt-[5px] flex-shrink-0 h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors duration-150 ease-apple appearance-none", // Base + transition
+                            "mt-[5px] flex-shrink-0 h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors duration-30 ease-apple appearance-none", // Base + transition
                             "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-100", // Focus state
                             isCompleted ? 'bg-gray-400 border-gray-400 hover:bg-gray-500' : 'bg-white/40 border-gray-400 hover:border-primary/80 backdrop-blur-sm', // Incomplete/Completed states
                             // Checkmark SVG or pseudo-element styling
@@ -553,7 +553,7 @@ const TaskDetail: React.FC = () => {
                             placeholder="Add tags (comma-separated)"
                             className={twMerge(
                                 "flex-1 text-xs h-7 px-1.5 border-none focus:ring-0 bg-transparent rounded-sm w-full", // Base styling
-                                "hover:bg-white/15 focus:bg-white/20 backdrop-blur-sm transition-colors duration-150 ease-apple", // Interaction styles
+                                "hover:bg-white/15 focus:bg-white/20 backdrop-blur-sm transition-colors duration-30 ease-apple", // Interaction styles
                                 "placeholder:text-muted placeholder:font-normal", // Placeholder
                                 "disabled:bg-transparent disabled:hover:bg-transparent disabled:text-muted disabled:line-through disabled:placeholder:text-transparent" // Disabled state
                             )}

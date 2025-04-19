@@ -28,7 +28,7 @@ const IconBar: React.FC = () => {
     // Callback to generate NavLink class names based on active state
     const getNavLinkClass = useCallback(({ isActive }: { isActive: boolean }): string =>
         twMerge(
-            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-150 ease-apple group relative', // Base styling
+            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-30 ease-apple group relative', // Base styling
             isActive
                 ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30' // Active state
                 : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm' // Inactive state

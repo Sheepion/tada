@@ -186,7 +186,7 @@ const SettingsModal: React.FC = () => {
                                 key={item.id}
                                 onClick={() => setSelectedTab(item.id)}
                                 className={twMerge(
-                                    'flex items-center w-full px-2 py-1 h-7 text-sm rounded-md transition-colors duration-150 ease-apple', // Base styling
+                                    'flex items-center w-full px-2 py-1 h-7 text-sm rounded-md transition-colors duration-30 ease-apple', // Base styling
                                     selectedTab === item.id
                                         ? 'bg-primary/25 text-primary font-medium backdrop-blur-sm' // Active state
                                         : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-sm', // Inactive state

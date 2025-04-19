@@ -80,7 +80,7 @@ const SidebarItem: React.FC<{
             to={to}
             onClick={handleClick}
             className={twMerge(
-                'flex items-center justify-between px-2 py-1 h-7 rounded-md mb-0.5 text-sm group transition-colors duration-150 ease-apple cursor-pointer',
+                'flex items-center justify-between px-2 py-1 h-7 rounded-md mb-0.5 text-sm group transition-colors duration-30 ease-apple cursor-pointer',
                 isActive ? 'bg-primary/20 text-primary font-medium backdrop-blur-sm' : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-sm',
                 'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100'
             )}
@@ -240,7 +240,7 @@ const Sidebar: React.FC = () => {
                         <Icon name="search" size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none opacity-70 z-10"/>
                         <input
                             ref={searchInputRef} id="sidebar-search" type="search" placeholder="Search" value={searchTerm} onChange={handleSearchChange}
-                            className={twMerge( "w-full h-7 pl-8 pr-7 text-sm bg-glass-inset-100 backdrop-blur-md border border-black/10 rounded-md focus:border-primary/30 focus:ring-1 focus:ring-primary/20 placeholder:text-muted text-gray-800 shadow-inner focus:bg-glass-inset-200 transition-colors duration-150 ease-apple" )}
+                            className={twMerge( "w-full h-7 pl-8 pr-7 text-sm bg-glass-inset-100 backdrop-blur-md border border-black/10 rounded-md focus:border-primary/30 focus:ring-1 focus:ring-primary/20 placeholder:text-muted text-gray-800 shadow-inner focus:bg-glass-inset-200 transition-colors duration-30 ease-apple" )}
                             aria-label="Search tasks"
                         />
                         <AnimatePresence>

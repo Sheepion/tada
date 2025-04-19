@@ -44,7 +44,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         const baseClasses = clsx(
             'inline-flex items-center justify-center font-medium whitespace-nowrap select-none outline-none relative',
             'focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas',
-            'transition-colors duration-150 ease-apple', // Keep color transition
+            'transition-colors duration-30 ease-apple', // Keep color transition
             isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             fullWidth && 'w-full',
             'rounded-md' // Use theme border radius

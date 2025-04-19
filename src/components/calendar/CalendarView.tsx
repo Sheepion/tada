@@ -42,7 +42,7 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({ task, 
     const overdue = useMemo(() => parsedDueDate != null && isValid(parsedDueDate) && isBefore(startOfDay(parsedDueDate), startOfDay(new Date())) && !task.completed, [parsedDueDate, task.completed]);
 
     const baseClasses = twMerge(
-        "w-full text-left px-1.5 py-0.5 rounded-[5px] truncate text-[11px] transition-colors duration-150 ease-apple cursor-grab relative mb-0.5", // Keep color transition
+        "w-full text-left px-1.5 py-0.5 rounded-[5px] truncate text-[11px] transition-colors duration-30 ease-apple cursor-grab relative mb-0.5", // Keep color transition
         task.completed
             ? 'bg-glass-alt/50 text-muted-foreground line-through italic opacity-60 pointer-events-none backdrop-blur-xs'
             : 'bg-primary/15 text-primary-dark backdrop-blur-sm hover:bg-primary/25 hover:backdrop-blur-sm',
@@ -81,7 +81,7 @@ const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.me
     return (
         <div
             className={twMerge(
-                'h-full w-full transition-colors duration-150 ease-apple', // Keep color transition
+                'h-full w-full transition-colors duration-30 ease-apple', // Keep color transition
                 className,
                 isOver && 'bg-primary/20 backdrop-blur-sm ring-1 ring-inset ring-primary/40'
             )}
@@ -232,7 +232,7 @@ const CalendarView: React.FC = () => {
                 key={day.toISOString()}
                 day={day}
                 className={twMerge(
-                    'flex flex-col relative transition-colors duration-150 ease-apple overflow-hidden',
+                    'flex flex-col relative transition-colors duration-30 ease-apple overflow-hidden',
                     isCurrentMonthDay ? 'bg-glass/90' : 'bg-glass-alt/60',
                     'border-t border-l border-black/10 backdrop-blur-md',
                     dayOfWeek === 0 && 'border-l-0', // No left border for Sunday
@@ -243,7 +243,7 @@ const CalendarView: React.FC = () => {
                 {/* Day Number Header */}
                 <div className="flex justify-between items-center px-1.5 pt-1 pb-0.5 flex-shrink-0">
                     <span className={clsx(
-                        'text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full transition-colors duration-150 ease-apple',
+                        'text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full transition-colors duration-30 ease-apple',
                         isToday ? 'bg-primary text-white font-semibold shadow-sm' : 'text-gray-600',
                         !isCurrentMonthDay && !isToday && 'text-gray-400 opacity-60'
                     )}>

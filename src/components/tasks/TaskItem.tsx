@@ -83,7 +83,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
     const style = useMemo(() => ({
         ...overlayStyle, // Apply positioning from DragOverlay
         transform: CSS.Transform.toString(transform), // Apply DND transform
-        transition: isDragging ? (dndTransition || 'transform 150ms ease-apple') : undefined,
+        transition: isDragging ? (dndTransition || 'transform 50ms ease-apple') : undefined,
         // Style overrides while item is being dragged (the original item becoming faint)
         ...(isDragging && !isOverlay && {
             opacity: 0.3,
@@ -137,7 +137,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
     // Base classes for the task item container
     const baseClasses = twMerge(
         'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]', // Layout and border
-        'transition-colors duration-150 ease-apple', // Background color transition only
+        'transition-colors ease-apple', // Background color transition only
         isOverlay
             ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong'
             : isSelected && !isDragging
@@ -175,7 +175,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
                         onClick={(e) => e.stopPropagation()}
                         className={twMerge(
                             "text-muted cursor-grab p-1 -ml-1 opacity-0 group-hover:opacity-50 group-focus-within:opacity-50 focus-visible:opacity-80",
-                            "transition-opacity duration-150 ease-apple outline-none rounded focus-visible:ring-1 focus-visible:ring-primary/50",
+                            "transition-opacity duration-30 ease-apple outline-none rounded focus-visible:ring-1 focus-visible:ring-primary/50",
                             isDragging && "opacity-50 cursor-grabbing"
                         )}
                         aria-label="Drag task to reorder"
@@ -195,7 +195,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
                     onChange={handleCheckboxChange}
                     onClick={(e) => e.stopPropagation()}
                     className={twMerge(
-                        "h-4 w-4 rounded border-2 transition-colors duration-150 ease-apple cursor-pointer appearance-none",
+                        "h-4 w-4 rounded border-2 transition-colors duration-30 ease-apple cursor-pointer appearance-none",
                         "focus:ring-primary/50 focus:ring-1 focus:ring-offset-1 focus:ring-offset-current/50 focus:outline-none",
                         'relative after:content-[""] after:absolute after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-[60%]',
                         'after:h-2 after:w-1 after:rotate-45 after:border-b-2 after:border-r-2 after:border-solid after:border-transparent after:transition-opacity after:duration-100',
@@ -265,7 +265,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
 
             {/* More Actions Button */}
             {(isSortable || isTrashItem) && !isOverlay && (
-                <div className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ease-apple">
+                <div className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple">
                     <Button
                         variant="ghost"
                         size="icon"
