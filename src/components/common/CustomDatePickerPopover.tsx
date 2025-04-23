@@ -1,8 +1,8 @@
 // src/components/common/CustomDatePickerPopover.tsx
-import React, {useState, useMemo, useCallback} from 'react';
-import ReactDOM from 'react-dom'; // Import ReactDOM for createPortal
-import {twMerge} from 'tailwind-merge';
-import {Tooltip} from 'react-tooltip';
+import React, { useState, useMemo, useCallback, useRef } from 'react'; // Added useRef
+import ReactDOM from 'react-dom';
+import { twMerge } from 'tailwind-merge';
+import { Tooltip } from 'react-tooltip';
 import {
     addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek,
     format, isSameDay, isSameMonth, isToday, startOfDay, startOfMonth,
@@ -10,26 +10,45 @@ import {
 } from '@/utils/dateUtils';
 import Button from './Button';
 import Icon from './Icon';
-import {motion, AnimatePresence} from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import useClickAway from '@/hooks/useClickAway'; // <<< Import useClickAway
 
 interface CustomDatePickerPopoverProps {
     initialDate: Date | undefined;
     onSelect: (date: Date | undefined) => void;
     close: () => void;
-    triggerElement?: HTMLElement | null;
-    usePortal?: boolean; // <<< Add portal prop
+    triggerElement?: HTMLElement | null; // Still useful for positioning if not using portal
+    usePortal?: boolean;
 }
 
-// Keep the internal content component the same
+// Internal content component remains largely the same, but adds useClickAway
 const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = React.memo(({
                                                                                                initialDate,
                                                                                                onSelect,
                                                                                                close,
-                                                                                               // triggerElement // Not directly used in content
+                                                                                               triggerElement // Keep triggerElement prop for potential useClickAway logic with trigger
                                                                                            }) => {
     const today = useMemo(() => startOfDay(new Date()), []);
     const [viewDate, setViewDate] = useState(initialDate && isValid(initialDate) ? startOfDay(initialDate) : today);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate && isValid(initialDate) ? startOfDay(initialDate) : undefined);
+    const popoverRef = useRef<HTMLDivElement>(null); // <<< Ref for the popover content
+
+    // <<< Apply useClickAway hook >>>
+    // We pass both the popover content ref and the trigger element ref (if available)
+    // This prevents closing if the user clicks the trigger button again while the popover is open.
+    // const refsToWatch: React.RefObject<HTMLElement>[] = [popoverRef];
+    if (triggerElement instanceof HTMLElement) {
+        // Create a RefObject on the fly if triggerElement is passed and is an HTMLElement
+        // Note: This isn't ideal as the ref isn't stable, but works for preventing trigger clicks closing.
+        // A more robust way would be to require the trigger ref to be passed if needed.
+        // However, for this specific problem in TaskList, triggerElement isn't strictly necessary
+        // for the click-away logic *of the popover itself*. We primarily need the popoverRef.
+        // Let's keep it simple and just watch the popoverRef for now.
+        // If issues arise with trigger clicks, this part can be revisited.
+    }
+    useClickAway(popoverRef, close); // Watch only the popover content itself
+
+    // --- Rest of the component logic remains the same ---
 
     const { calendarDays } = useMemo(() => {
         const mStart = startOfMonth(viewDate);
@@ -40,7 +59,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
         return { monthStart: mStart, monthEnd: mEnd, calendarStart: cStart, calendarEnd: cEnd, calendarDays: days };
     }, [viewDate]);
 
-    const tooltipIdPrefix = 'date-picker-tooltip-';
+    const tooltipIdPrefix = useMemo(() => `date-picker-tooltip-${Math.random().toString(36).substring(7)}`, []); // Unique prefix per instance
 
     const prevMonth = useCallback(() => setViewDate(v => subMonths(v, 1)), []);
     const nextMonth = useCallback(() => setViewDate(v => addMonths(v, 1)), []);
@@ -86,10 +105,13 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
 
     return (
+        // <<< Attach ref and ignore-click-away class >>>
         <div
+            ref={popoverRef}
             className="date-picker-content ignore-click-away bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 p-4 w-[320px]"
+            // Stop propagation needed to prevent triggering parent click-away handlers if nested
             onClick={e => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()} // Prevent closing dropdowns on mouse down
+            onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
         >
             {/* Quick Date Selection Icons */}
@@ -102,7 +124,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                 >
                     <Icon name="sun" size={20} className="text-gray-500"/>
                 </button>
-                <Tooltip id={`${tooltipIdPrefix}today`} place="top" className="!z-[60]"/> {/* Ensure tooltip z-index */}
+                <Tooltip id={`${tooltipIdPrefix}today`} place="top" className="!z-[60]"/>
 
                 <button
                     onClick={selectTomorrow}
@@ -112,7 +134,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                 >
                     <Icon name="sunset" size={20} className="text-gray-500"/>
                 </button>
-                <Tooltip id={`${tooltipIdPrefix}tomorrow`} place="top" className="!z-[60]"/> {/* Ensure tooltip z-index */}
+                <Tooltip id={`${tooltipIdPrefix}tomorrow`} place="top" className="!z-[60]"/>
 
                 <button
                     onClick={selectNextWeek}
@@ -127,7 +149,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                         </div>
                     </div>
                 </button>
-                <Tooltip id={`${tooltipIdPrefix}next-week`} place="top" className="!z-[60]"/> {/* Ensure tooltip z-index */}
+                <Tooltip id={`${tooltipIdPrefix}next-week`} place="top" className="!z-[60]"/>
 
                 <button
                     onClick={selectNextMonth}
@@ -137,7 +159,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                 >
                     <Icon name="moon" size={20} className="text-gray-500"/>
                 </button>
-                <Tooltip id={`${tooltipIdPrefix}next-month`} place="top" className="!z-[60]"/> {/* Ensure tooltip z-index */}
+                <Tooltip id={`${tooltipIdPrefix}next-month`} place="top" className="!z-[60]"/>
             </div>
 
             {/* Month Navigation */}
@@ -221,17 +243,18 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
 CustomDatePickerPopoverContent.displayName = 'CustomDatePickerPopoverContent';
 
 
-// Main Popover component - wrapper for portal logic
+// Main Popover component - wrapper for portal logic (remains the same)
 const CustomDatePickerPopover: React.FC<CustomDatePickerPopoverProps> = ({ usePortal = false, ...props }) => {
     const content = (
         <AnimatePresence>
             <motion.div
-                className="date-picker-popover z-[60]" // Ensure high z-index (higher than dropdown)
+                className="date-picker-popover z-[60]" // Keep high z-index
                 initial={{ opacity: 0, scale: 0.95, y: -5 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -5, transition: { duration: 0.1 } }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
             >
+                {/* Pass all props down, including triggerElement */}
                 <CustomDatePickerPopoverContent {...props} />
             </motion.div>
         </AnimatePresence>
