@@ -1,6 +1,5 @@
 // src/components/tasks/TaskItem.tsx
-import React, {useCallback, useMemo, memo, useState, useRef, useEffect} from 'react';
-// *** Add ReactDOM import for createPortal ***
+import React, { useCallback, useMemo, memo, useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Task, TaskGroupCategory } from '@/types';
 import { formatDate, formatRelativeDate, isOverdue, safeParseDate, isValid, startOfDay } from '@/utils/dateUtils';
@@ -14,28 +13,35 @@ import { CSS } from '@dnd-kit/utilities';
 import Button from "@/components/common/Button";
 import Highlighter from "react-highlight-words";
 import { IconName } from "@/components/common/IconMap";
-import Dropdown, { DropdownRenderProps } from "@/components/common/Dropdown";
+// *** Remove Dropdown import if only used for Actions, keep if needed elsewhere ***
+// import Dropdown, { DropdownRenderProps } from "@/components/common/Dropdown";
 import MenuItem from "@/components/common/MenuItem";
 import CustomDatePickerPopover from "@/components/common/CustomDatePickerPopover";
 import { usePopper } from "react-popper";
+import { motion, AnimatePresence } from 'framer-motion'; // Keep motion/presence
 
 interface TaskItemProps {
     task: Task;
     groupCategory?: TaskGroupCategory;
     isOverlay?: boolean;
     style?: React.CSSProperties;
+    scrollContainerRef: React.RefObject<HTMLDivElement>; // Keep ref for scroll listeners
 }
 
-// Helper function (remains the same)
+// Helper/Priority Map (remain the same)
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return ''; const lowerContent = content.toLowerCase(); const searchWords = term.toLowerCase().split(' ').filter(Boolean); let firstMatchIndex = -1; let matchedWord = ''; for (const word of searchWords) { const index = lowerContent.indexOf(word); if (index !== -1) { firstMatchIndex = index; matchedWord = word; break; } } if (firstMatchIndex === -1) { return content.substring(0, length) + (content.length > length ? '...' : ''); } const start = Math.max(0, firstMatchIndex - Math.floor(length / 3)); const end = Math.min(content.length, firstMatchIndex + matchedWord.length + Math.ceil(length * 2 / 3)); let snippet = content.substring(start, end); if (start > 0) snippet = '...' + snippet; if (end < content.length) snippet = snippet + '...'; return snippet;
 }
-
-// Priority map (remains the same)
 const priorityMap: Record<number, { label: string; iconColor: string }> = { 1: { label: 'High', iconColor: 'text-red-500' }, 2: { label: 'Medium', iconColor: 'text-orange-500' }, 3: { label: 'Low', iconColor: 'text-blue-500' }, 4: { label: 'Lowest', iconColor: 'text-gray-500' }, };
 
-// Performance: Memoize TaskItem
-const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay = false, style: overlayStyle }) => {
+
+const TaskItem: React.FC<TaskItemProps> = memo(({
+                                                    task,
+                                                    groupCategory,
+                                                    isOverlay = false,
+                                                    style: overlayStyle,
+                                                    scrollContainerRef
+                                                }) => {
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
@@ -43,132 +49,268 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
 
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
 
-    // State for Date Picker Popover (triggered by reschedule button OR dropdown item)
+    // --- State for Date Picker Popover (Uses Popper) ---
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [datePickerReferenceElement, setDatePickerReferenceElement] = useState<HTMLButtonElement | null>(null);
     const [datePickerPopperElement, setDatePickerPopperElement] = useState<HTMLDivElement | null>(null);
-
-    // State for More Actions Dropdown
-    const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
-    const moreActionsButtonRef = useRef<HTMLDivElement>(null); // Ref for the dropdown trigger div
-
-    // Popper setup for Date Picker
     const { styles: datePickerStyles, attributes: datePickerAttributes, update: updateDatePickerPopper } = usePopper(
-        datePickerReferenceElement,
-        datePickerPopperElement, {
-            // Use fixed positioning strategy since the popover might be in a portal
-            strategy: 'fixed',
-            placement: 'bottom-start',
-            modifiers: [
-                { name: 'offset', options: { offset: [0, 8] } },
-                { name: 'preventOverflow', options: { padding: 8 } },
-                { name: 'flip', options: { fallbackPlacements: ['top-start', 'bottom-end', 'top-end'] } }
-            ],
-        });
-
-    // Update popper position when it opens
+        datePickerReferenceElement, datePickerPopperElement, {
+            strategy: 'fixed', placement: 'bottom-start',
+            modifiers: [ { name: 'offset', options: { offset: [0, 8] } }, { name: 'preventOverflow', options: { padding: 8 } }, { name: 'flip', options: { fallbackPlacements: ['top-start', 'bottom-end', 'top-end'] } } ],
+        }
+    );
     useEffect(() => {
         if (isDatePickerOpen && updateDatePickerPopper) {
-            updateDatePickerPopper();
+            const rafId = requestAnimationFrame(() => { updateDatePickerPopper?.(); });
+            return () => cancelAnimationFrame(rafId);
         }
     }, [isDatePickerOpen, updateDatePickerPopper]);
+    // --- End Date Picker ---
 
+    // --- State for More Actions Dropdown (Manual Positioning) ---
+    const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
+    const actionsTriggerRef = useRef<HTMLButtonElement>(null); // Ref for the trigger BUTTON itself
+    const actionsContentRef = useRef<HTMLDivElement>(null); // Ref for the dropdown content div
+    const [actionsStyle, setActionsStyle] = useState<React.CSSProperties>({ // State for position
+        position: 'fixed', // Necessary for portal positioning
+        opacity: 0, // Start hidden
+        pointerEvents: 'none', // Start non-interactive
+        zIndex: 55, // Ensure it's above TaskItem hover
+    });
+    // --- End More Actions ---
 
-    // Memoize derived states
+    // Memoized derived states (remain the same)
     const isTrashItem = useMemo(() => task.list === 'Trash', [task.list]);
     const isCompleted = useMemo(() => task.completed && !isTrashItem, [task.completed, isTrashItem]);
     const isSortable = useMemo(() => !isCompleted && !isTrashItem && !isOverlay, [isCompleted, isTrashItem, isOverlay]);
 
-    // DND hook
+    // DND hook (remains the same)
     const { attributes, listeners, setNodeRef, transform, transition: dndTransition, isDragging } = useSortable({
         id: task.id, disabled: !isSortable, data: { task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory },
     });
 
-    // Memoized style
+    // Memoized style (remains the same)
     const style = useMemo(() => ({
         ...overlayStyle, transform: CSS.Transform.toString(transform),
         transition: isDragging ? (dndTransition || 'transform 50ms ease-apple') : (overlayStyle ? undefined : 'background-color 0.2s ease-apple, border-color 0.2s ease-apple'),
         ...(isDragging && !isOverlay && { opacity: 0.3, cursor: 'grabbing', backgroundColor: 'hsla(210, 40%, 98%, 0.5)', backdropFilter: 'blur(2px)', boxShadow: 'none', border: '1px dashed hsla(0, 0%, 0%, 0.1)'}),
         ...(isOverlay && { cursor: 'grabbing', boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)', zIndex: 1000 }),
-        zIndex: isDragging || isOverlay ? 100 : (isSelected ? 2 : 1), // Slightly elevate selected items
-    }), [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]); // Added isSelected
+        zIndex: isDragging || isOverlay ? 100 : (isSelected ? 2 : 1),
+    }), [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]);
 
-    // Task Click
+    // --- Manual Position Calculation Logic ---
+    const calculateActionsPosition = useCallback(() => {
+        if (!actionsTriggerRef.current || !actionsContentRef.current) return;
+
+        const triggerRect = actionsTriggerRef.current.getBoundingClientRect();
+        const contentRect = actionsContentRef.current.getBoundingClientRect(); // Get content size *after* render
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 8; // Desired margin from viewport edges and trigger
+
+        let top: number;
+        let left: number;
+
+        // Default: Place below and aligned to the right edge of the trigger
+        left = triggerRect.right - contentRect.width;
+        top = triggerRect.bottom + margin / 2;
+
+        // Check vertical overflow
+        if (top + contentRect.height + margin > viewportHeight) {
+            // Place above the trigger
+            top = triggerRect.top - contentRect.height - margin / 2;
+        }
+
+        // Check horizontal overflow (rare for right-aligned, but good practice)
+        if (left < margin) {
+            left = margin; // Align to left viewport edge
+        }
+        if (left + contentRect.width + margin > viewportWidth) {
+            left = viewportWidth - contentRect.width - margin; // Align to right viewport edge
+        }
+
+        // Prevent negative top/left positioning
+        top = Math.max(margin, top);
+        left = Math.max(margin, left);
+
+
+        setActionsStyle(prev => ({
+            ...prev,
+            top: `${top}px`,
+            left: `${left}px`,
+            opacity: 1, // Make visible after position calculation
+            pointerEvents: 'auto', // Make interactive
+        }));
+    }, []); // No dependencies needed here, reads refs directly
+
+    // Effect to calculate position when dropdown opens
+    useEffect(() => {
+        if (isMoreActionsOpen) {
+            // Calculate initial position slightly after opening allows content to render
+            requestAnimationFrame(() => {
+                calculateActionsPosition();
+            });
+        } else {
+            // Reset style when closed
+            setActionsStyle(prev => ({
+                ...prev,
+                opacity: 0,
+                pointerEvents: 'none',
+            }));
+        }
+    }, [isMoreActionsOpen, calculateActionsPosition]);
+
+    // Effect to update position on scroll/resize
+    useEffect(() => {
+        if (!isMoreActionsOpen) return; // Only listen when open
+
+        const scrollElement = scrollContainerRef?.current;
+        const handleUpdate = () => {
+            // Recalculate position based on the *current* trigger position
+            calculateActionsPosition();
+        };
+
+        // Throttle updates for performance
+        let throttleTimeout: NodeJS.Timeout | null = null;
+        const throttledHandler = () => {
+            if (!throttleTimeout) {
+                throttleTimeout = setTimeout(() => {
+                    handleUpdate();
+                    throttleTimeout = null;
+                }, 50); // Shorter throttle for potentially faster feedback
+            }
+        };
+
+        if (scrollElement) {
+            scrollElement.addEventListener('scroll', throttledHandler, { passive: true });
+        }
+        window.addEventListener('resize', throttledHandler);
+
+        return () => {
+            if (scrollElement) {
+                scrollElement.removeEventListener('scroll', throttledHandler);
+            }
+            window.removeEventListener('resize', throttledHandler);
+            if (throttleTimeout) {
+                clearTimeout(throttleTimeout);
+            }
+        };
+    }, [isMoreActionsOpen, calculateActionsPosition, scrollContainerRef]);
+    // --- End Manual Position Logic ---
+
+
+    // Task Click (remains the same, checks ignore class)
     const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
-        // Updated to check against the dropdown trigger ref and date picker ref
+        // Check against the trigger BUTTON ref now, not the wrapper div
         if (target.closest('button, input, a') ||
-            moreActionsButtonRef.current?.contains(target) ||
+            actionsTriggerRef.current?.contains(target) || // Check trigger button
             datePickerReferenceElement?.contains(target) ||
-            target.closest('.ignore-click-away') // Keep general ignore class check
+            target.closest('.ignore-click-away') || // Check content div via class
+            actionsContentRef.current?.contains(target) // Explicitly check content ref
         ) {
             return;
         }
         setSelectedTaskId(id => (id === task.id ? null : task.id));
-    }, [setSelectedTaskId, task.id, datePickerReferenceElement]); // Add datePickerReferenceElement
+    }, [setSelectedTaskId, task.id, datePickerReferenceElement]);
 
-    // Direct Update Function
+    // Direct Update Function (remains the same)
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt'>>) => {
         setTasks(prevTasks => prevTasks.map(t => { if (t.id === task.id) { return { ...t, ...updates, updatedAt: Date.now() }; } return t; }));
     }, [setTasks, task.id]);
 
-    // Checkbox Handler
+    // Checkbox Handler (remains the same)
     const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         e.stopPropagation(); const isChecked = e.target.checked; updateTask({ completed: isChecked });
         if (isChecked && isSelected) { setSelectedTaskId(null); }
     }, [updateTask, isSelected, setSelectedTaskId]);
 
 
-    // --- Date Picker Handlers ---
+    // --- Date Picker Handlers (remain the same) ---
     const openDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        setDatePickerReferenceElement(event.currentTarget); // Set the trigger
+        setDatePickerReferenceElement(event.currentTarget);
         setIsDatePickerOpen(true);
-        setIsMoreActionsOpen(false); // Ensure actions menu is closed if opening date picker directly
+        setIsMoreActionsOpen(false); // Close actions if opening date picker
     }, []);
-
-    const closeDatePicker = useCallback(() => {
-        setIsDatePickerOpen(false);
-        setDatePickerReferenceElement(null); // Clear reference on close
-    }, []);
-
+    const closeDatePicker = useCallback(() => { setIsDatePickerOpen(false); setDatePickerReferenceElement(null); }, []);
     const handleDateSelect = useCallback((date: Date | undefined) => {
         const newDueDate = date && isValid(date) ? startOfDay(date).getTime() : null;
         updateTask({ dueDate: newDueDate });
         closeDatePicker();
     }, [updateTask, closeDatePicker]);
+    // --- End Date Picker Handlers ---
 
+    // --- More Actions Handlers ---
+    const toggleActionsDropdown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        setIsMoreActionsOpen(prev => !prev);
+        if(isDatePickerOpen) setIsDatePickerOpen(false); // Close date picker if opening actions
+    }, [isDatePickerOpen]);
 
-    // Close date picker IF it was triggered from within the actions dropdown when the dropdown closes
-    const handleActionsDropdownClose = useCallback(() => {
-        if (datePickerReferenceElement && moreActionsButtonRef.current?.contains(datePickerReferenceElement)) {
-            closeDatePicker();
-        }
-    }, [datePickerReferenceElement, closeDatePicker]);
+    const closeActionsDropdown = useCallback(() => {
+        setIsMoreActionsOpen(false);
+    }, []);
 
     // Handler specifically for clicking the "Set Due Date..." button inside the dropdown
     const handleSetDueDateClickFromDropdown = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
+        e.stopPropagation(); // Prevent closing actions dropdown
         setDatePickerReferenceElement(e.currentTarget); // Anchor to the button inside the dropdown
         setIsDatePickerOpen(true);
-        // Don't close the main dropdown here explicitly, the user might click elsewhere in it
     };
 
-    const handlePriorityChange = useCallback((newPriority: number | null, closeDropdown?: () => void) => { updateTask({ priority: newPriority }); closeDropdown?.(); }, [updateTask]);
-    const handleListChange = useCallback((newList: string, closeDropdown?: () => void) => { updateTask({ list: newList }); closeDropdown?.(); }, [updateTask]);
-    const handleDuplicateTask = useCallback((closeDropdown?: () => void) => {
+    // Click handlers for actions (now call closeActionsDropdown)
+    const handlePriorityChange = useCallback((newPriority: number | null) => { updateTask({ priority: newPriority }); closeActionsDropdown(); }, [updateTask, closeActionsDropdown]);
+    const handleListChange = useCallback((newList: string) => { updateTask({ list: newList }); closeActionsDropdown(); }, [updateTask, closeActionsDropdown]);
+    const handleDuplicateTask = useCallback(() => {
         const now = Date.now(); const newTask: Omit<Task, 'groupCategory'> = { ...JSON.parse(JSON.stringify(task)), id: `task-${now}-${Math.random().toString(16).slice(2)}`, title: `${task.title} (Copy)`, completed: false, completedAt: null, createdAt: now, updatedAt: now, order: task.order + 0.01, };
         setTasks(prev => { const index = prev.findIndex(t => t.id === task.id); const newTasks = [...prev]; if (index !== -1) { newTasks.splice(index + 1, 0, newTask as Task); } else { newTasks.push(newTask as Task); } return newTasks; });
-        setSelectedTaskId(newTask.id); closeDropdown?.();
-    }, [task, setTasks, setSelectedTaskId]);
-    const handleDeleteTask = useCallback((closeDropdown?: () => void) => {
+        setSelectedTaskId(newTask.id); closeActionsDropdown();
+    }, [task, setTasks, setSelectedTaskId, closeActionsDropdown]);
+    const handleDeleteTask = useCallback(() => {
         const confirmationText = `Move task "${task.title || 'Untitled Task'}" to Trash?`;
         if (window.confirm(confirmationText)) { updateTask({ list: 'Trash', completed: false }); if (isSelected) { setSelectedTaskId(null); } }
-        closeDropdown?.();
-    }, [task.id, task.title, updateTask, isSelected, setSelectedTaskId]);
+        closeActionsDropdown();
+    }, [task.id, task.title, updateTask, isSelected, setSelectedTaskId, closeActionsDropdown]);
+    // --- End More Actions Handlers ---
 
 
-    // Memoized values
+    // --- Click Away for Actions Dropdown ---
+    useEffect(() => {
+        if (!isMoreActionsOpen) return;
+
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+            const target = event.target as Node;
+            // Close if click is outside the trigger button AND outside the content div
+            if (!actionsTriggerRef.current?.contains(target) && !actionsContentRef.current?.contains(target)) {
+                // AND not inside the date picker popover if it's open from within this actions menu
+                if(!datePickerPopperElement?.contains(target)) {
+                    closeActionsDropdown();
+                    // Also close date picker if it was opened from here
+                    if (datePickerReferenceElement && actionsContentRef.current?.contains(datePickerReferenceElement)) {
+                        closeDatePicker();
+                    }
+                }
+            }
+        };
+
+        // Use timeout to prevent immediate close on opening click
+        const timerId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+        }, 0);
+
+
+        return () => {
+            clearTimeout(timerId);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [isMoreActionsOpen, closeActionsDropdown, datePickerReferenceElement, datePickerPopperElement, closeDatePicker]);
+    // --- End Click Away ---
+
+
+    // Memoized values (remain the same)
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const isValidDueDate = useMemo(() => dueDate && isValid(dueDate), [dueDate]);
     const overdue = useMemo(() => isValidDueDate && !isCompleted && !isTrashItem && isOverdue(dueDate!), [isValidDueDate, isCompleted, isTrashItem, dueDate]);
@@ -181,6 +323,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
     const dragHandleClasses = useMemo(() => twMerge( "text-muted cursor-grab p-1 -ml-1 opacity-0 group-hover:opacity-50 group-focus-within:opacity-50 focus-visible:opacity-80", "transition-opacity duration-30 ease-apple outline-none rounded focus-visible:ring-1 focus-visible:ring-primary/50", isDragging && "opacity-50 cursor-grabbing" ), [isDragging]);
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
+
+
+    // Class for the dropdown content
+    const actionsMenuClasses = twMerge(
+        'ignore-click-away min-w-[180px] overflow-hidden py-1 w-48', // Base classes
+        'bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10' // Appearance
+    );
 
     return (
         <div
@@ -213,11 +362,10 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                             <span className={clsx('whitespace-nowrap', overdue && 'text-red-600 font-medium', (isCompleted || isTrashItem) && 'line-through opacity-70')} title={formatDate(dueDate!)}>
                                 <Icon name="calendar" size={11} className="mr-0.5 opacity-70"/> {formatRelativeDate(dueDate!)}
                             </span>
-                            {/* Overdue Reschedule Button - Triggers Date Picker */}
                             {overdue && !isOverlay && !isCompleted && !isTrashItem && (
                                 <button
-                                    className="ml-1 p-0.5 rounded hover:bg-red-500/15 focus-visible:ring-1 focus-visible:ring-red-400 outline-none ignore-click-away" /* Add ignore */
-                                    onClick={openDatePicker} // Use the specific handler for direct open
+                                    className="ml-1 p-0.5 rounded hover:bg-red-500/15 focus-visible:ring-1 focus-visible:ring-red-400 outline-none ignore-click-away"
+                                    onClick={openDatePicker} // Still uses Popper date picker
                                     aria-label="Reschedule task" title="Reschedule"
                                 >
                                     <Icon name="calendar-plus" size={12} className="text-red-500 opacity-70 group-hover/task-item-reschedule:opacity-100" />
@@ -234,70 +382,80 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                 </div>
             </div>
 
-            {/* More Actions Button & Dropdown */}
+            {/* More Actions Button & Dropdown (Manual Positioning) */}
             {!isOverlay && !isCompleted && !isTrashItem && (
                 <div
-                    ref={moreActionsButtonRef} // Keep ref on the container
+                    // No wrapper ref needed here anymore
                     className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple"
-                    // Prevent clicks on the button container itself from propagating to the TaskItem click handler
+                    // Prevent clicks on the button container itself from propagating
                     onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                     onTouchStart={(e) => e.stopPropagation()}
                 >
-                    <Dropdown
-                        // <<< Use Portal for the actions dropdown >>>
-                        usePortal={true}
-                        isOpen={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}
-                        onClose={handleActionsDropdownClose}
-                        wrapperClassName="inline-block" placement="bottom-end"
-                        contentClassName="py-1 w-48 ignore-click-away" // Keep ignore-click-away on content
-                        zIndex={55} // Needs to be above TaskItem hover but potentially below date picker
-                        trigger={
-                            <Button variant="ghost" size="icon" icon="more-horizontal" className="h-6 w-6 text-muted-foreground hover:bg-black/15"
-                                // Click is handled by the Dropdown component wrapper now
-                                    aria-label={`More actions for ${task.title || 'task'}`}
-                                    aria-haspopup="true" aria-expanded={isMoreActionsOpen} tabIndex={0} />
-                        }>
-                        {({ close: closeDropdown }: DropdownRenderProps) => (
-                            <div className="space-y-0.5">
-                                {/* Set Due Date Button - Triggers Date Picker */}
-                                <button
-                                    onClick={handleSetDueDateClickFromDropdown} // Specific handler
-                                    className="w-full ignore-click-away" /* Add ignore */
+                    {/* Trigger Button */}
+                    <Button
+                        ref={actionsTriggerRef} // Ref is on the button now
+                        variant="ghost" size="icon" icon="more-horizontal"
+                        className="h-6 w-6 text-muted-foreground hover:bg-black/15"
+                        onClick={toggleActionsDropdown} // Toggle state on click
+                        aria-label={`More actions for ${task.title || 'task'}`}
+                        aria-haspopup="true" // Indicate it controls a menu
+                        aria-expanded={isMoreActionsOpen} // Link state to aria attribute
+                        tabIndex={0}
+                    />
+
+                    {/* Dropdown Content Portal */}
+                    {ReactDOM.createPortal(
+                        <AnimatePresence>
+                            {isMoreActionsOpen && (
+                                <motion.div
+                                    ref={actionsContentRef} // Ref for content size calculation and click-away
+                                    style={actionsStyle} // Apply calculated fixed position style
+                                    className={actionsMenuClasses} // Apply menu styling
+                                    // Animation
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.1 } }}
+                                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                                    // Prevent clicks inside from closing immediately
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
                                 >
-                                    <MenuItem icon="calendar-plus"> Set Due Date... </MenuItem>
-                                </button>
-                                <hr className="my-1 border-black/10" />
-                                {/* Priorities */}
-                                <div className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Priority</div>
-                                {[1, 2, 3, 4, null].map(p => ( <MenuItem key={p ?? 'none'} icon="flag" iconColor={p ? priorityMap[p]?.iconColor : undefined} selected={task.priority === p} onClick={() => handlePriorityChange(p, closeDropdown)}> {p ? `P${p} ${priorityMap[p]?.label}` : 'None'} </MenuItem> ))}
-                                <hr className="my-1 border-black/10" />
-                                {/* Lists */}
-                                <div className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Move to List</div>
-                                <div className="max-h-32 overflow-y-auto styled-scrollbar px-0.5">
-                                    {availableLists.map(list => ( <MenuItem key={list} icon={list === 'Inbox' ? 'inbox' : 'list'} selected={task.list === list} onClick={() => handleListChange(list, closeDropdown)}> {list} </MenuItem> ))}
-                                </div>
-                                <hr className="my-1 border-black/10" />
-                                {/* Actions */}
-                                <MenuItem icon="copy-plus" onClick={() => handleDuplicateTask(closeDropdown)}> Duplicate Task </MenuItem>
-                                <MenuItem icon="trash" className="!text-red-600 hover:!bg-red-500/15" onClick={() => handleDeleteTask(closeDropdown)}> Move to Trash </MenuItem>
-                            </div>
-                        )}
-                    </Dropdown>
+                                    {/* Menu Items */}
+                                    <div className="space-y-0.5">
+                                        <button onClick={handleSetDueDateClickFromDropdown} className="w-full ignore-click-away">
+                                            <MenuItem icon="calendar-plus"> Set Due Date... </MenuItem>
+                                        </button>
+                                        <hr className="my-1 border-black/10" />
+                                        <div className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Priority</div>
+                                        {[1, 2, 3, 4, null].map(p => ( <MenuItem key={p ?? 'none'} icon="flag" iconColor={p ? priorityMap[p]?.iconColor : undefined} selected={task.priority === p} onClick={() => handlePriorityChange(p)}> {p ? `P${p} ${priorityMap[p]?.label}` : 'None'} </MenuItem> ))}
+                                        <hr className="my-1 border-black/10" />
+                                        <div className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Move to List</div>
+                                        <div className="max-h-32 overflow-y-auto styled-scrollbar px-0.5">
+                                            {availableLists.map(list => ( <MenuItem key={list} icon={list === 'Inbox' ? 'inbox' : 'list'} selected={task.list === list} onClick={() => handleListChange(list)}> {list} </MenuItem> ))}
+                                        </div>
+                                        <hr className="my-1 border-black/10" />
+                                        <MenuItem icon="copy-plus" onClick={handleDuplicateTask}> Duplicate Task </MenuItem>
+                                        <MenuItem icon="trash" className="!text-red-600 hover:!bg-red-500/15" onClick={handleDeleteTask}> Move to Trash </MenuItem>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>,
+                        document.body // Render directly into body
+                    )}
                 </div>
             )}
 
-            {/* Date Picker Popover - Rendered using state, positioned by Popper */}
-            {/* <<< Use Portal for the date picker >>> */}
-            {/* Wrap the rendering logic, not the state check */}
+            {/* Date Picker Popover (Still uses Popper and Portal) */}
             {isDatePickerOpen && datePickerReferenceElement && ReactDOM.createPortal(
                 (
                     <div ref={setDatePickerPopperElement} style={{ ...datePickerStyles.popper, zIndex: 60 }} // Popper applies position, ensure high zIndex
-                         {...datePickerAttributes.popper} className="ignore-click-away"> {/* Keep ignore */}
+                         {...datePickerAttributes.popper} className="ignore-click-away">
                         <CustomDatePickerPopover
-                            // Don't pass usePortal here, the wrapper handles it
                             initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
-                            close={closeDatePicker} triggerElement={datePickerReferenceElement} />
+                            close={closeDatePicker} triggerElement={datePickerReferenceElement}
+                        />
                     </div>
                 ), document.body // Target portal destination
             )}
