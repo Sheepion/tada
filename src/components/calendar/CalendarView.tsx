@@ -7,8 +7,8 @@ import Dropdown, { DropdownRenderProps } from '../common/Dropdown'; // Import Dr
 import { Task } from '@/types';
 import {
     format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
-    addMonths, subMonths, // Import year functions
-    isSameMonth, isSameDay, // Import date part functions
+    addMonths, subMonths,
+    isSameMonth, isSameDay,
     startOfDay, isBefore, enUS, safeParseDate, isToday as isTodayFn, isValid
 } from '@/utils/dateUtils';
 import { twMerge } from 'tailwind-merge';
@@ -122,22 +122,10 @@ const MonthYearSelector: React.FC<MonthYearSelectorProps> = ({ currentDate, onCh
 
     const [displayYear, setDisplayYear] = useState(currentYear);
 
-    // Generate years around the display year
-    // const years = useMemo(() => {
-    //     return Array.from({ length: 7 }, (_, i) => displayYear - 3 + i); // Show 7 years at a time
-    // }, [displayYear]);
-
     const months = useMemo(() => [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ], []);
-
-    // const handleYearChange = useCallback((year: number) => {
-    //     const newDate = setYear(currentDate, year);
-    //     onChange(newDate);
-    //     // Optional: Close immediately or wait for month selection? Let's wait.
-    //     // close();
-    // }, [currentDate, onChange]);
 
     const handleMonthChange = useCallback((monthIndex: number) => {
         let newDate = setMonth(currentDate, monthIndex);
