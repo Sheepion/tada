@@ -4,167 +4,204 @@
 @tailwind utilities;
 
 @layer base {
-    :root {
-        /* Define your color palette using HSL values */
-        --background: 0 0% 100%; /* White */
-        --foreground: 224 71.4% 4.1%; /* Dark Blue/Black */
-
-        --card: 0 0% 100%;
-        --card-foreground: 224 71.4% 4.1%;
-
-        --popover: 0 0% 100%;
-        --popover-foreground: 224 71.4% 4.1%;
-
-        --primary: 262.1 83.3% 57.8%; /* Example Purple */
-        --primary-foreground: 0 0% 100%; /* White text on primary */
-
-        --secondary: 220 13% 91%; /* Light Gray */
-        --secondary-foreground: 224 71.4% 4.1%;
-
-        --muted: 220 9% 46.1%; /* Gray */
-        --muted-foreground: 220 13% 69.1%; /* Lighter Gray */
-
-        --accent: 220 13% 91%; /* Same as secondary */
-        --accent-foreground: 224 71.4% 4.1%;
-
-        --destructive: 0 84.2% 60.2%; /* Red */
-        --destructive-foreground: 0 0% 100%;
-
-        --border: 220 13% 91%;
-        --input: 220 13% 91%;
-        --ring: 262.1 83.3% 57.8%; /* Primary color for rings */
-
-        --radius: 0.75rem; /* Example border radius */
-    }
-
-    .dark {
-        /* Define dark mode colors */
-        --background: 224 71.4% 4.1%; /* Dark Blue/Black */
-        --foreground: 210 20% 98%; /* Very Light Gray */
-
-        --card: 224 71.4% 4.1%;
-        --card-foreground: 210 20% 98%;
-
-        --popover: 224 71.4% 4.1%;
-        --popover-foreground: 210 20% 98%;
-
-        --primary: 263.4 95.2% 66.9%; /* Brighter Purple */
-        --primary-foreground: 210 20% 98%;
-
-        --secondary: 215 27.9% 16.9%; /* Dark Gray/Blue */
-        --secondary-foreground: 210 20% 98%;
-
-        --muted: 215 27.9% 16.9%;
-        --muted-foreground: 217.9 10.6% 64.9%; /* Grayish */
-
-        --accent: 215 27.9% 16.9%;
-        --accent-foreground: 210 20% 98%;
-
-        --destructive: 0 62.8% 30.6%; /* Darker Red */
-        --destructive-foreground: 210 20% 98%;
-
-        --border: 215 27.9% 16.9%;
-        --input: 215 27.9% 16.9%;
-        --ring: 263.4 95.2% 66.9%;
-    }
-}
-
-@layer base {
-    * {
-        @apply border-border;
+    html {
+        scroll-behavior: smooth;
+        /* Base font size for consistent rem units */
+        font-size: 16px;
     }
 
     body {
-        @apply bg-background text-foreground;
-        font-feature-settings: "rlig" 1, "calt" 1;
-        /* Apply a subtle font smoothing */
+        @apply bg-canvas-alt font-sans text-gray-900 antialiased;
+        /* Apple system font stack */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        background-color: hsl(220, 40%, 98%); /* Match canvas-alt */
+    }
+
+    *:focus-visible {
+        /* Consistent focus ring */
+        @apply outline-none ring-1 ring-primary/70 ring-offset-1 ring-offset-canvas;
+    }
+
+    button:focus {
+        /* Remove default browser outline on buttons when focus-visible is handled */
+        outline: none;
+    }
+
+    /* CSS Variables for theming */
+    :root {
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --primary-h: 208; /* Hue for primary color (Blue) */
+        --primary-s: 100%; /* Saturation */
+        --primary-l: 50%; /* Lightness */
+        --canvas: hsl(0, 0%, 100%); /* White */
+        --canvas-alt: hsl(220, 40%, 98%); /* Very light grey-blue */
     }
 }
 
 @layer components {
-    /* Thin Scrollbar for Webkit */
-    .styled-scrollbar-thin::-webkit-scrollbar {
-        width: 6px; /* Thinner scrollbar */
-        height: 6px;
+    /* Custom Scrollbar Styling (Subtle, macOS-like) */
+    .styled-scrollbar {
+        scrollbar-width: thin; /* "thin" keyword for Firefox */
+        scrollbar-color: hsla(0, 0%, 0%, 0.3) transparent; /* Thumb color and track color */
     }
 
-    .styled-scrollbar-thin::-webkit-scrollbar-track {
-        background: transparent; /* Track */
-        border-radius: 3px;
-    }
-
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        background-color: hsl(var(--muted) / 0.3); /* Thumb */
-        border-radius: 3px;
-        border: 1px solid transparent;
-        background-clip: padding-box;
-    }
-
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background-color: hsl(var(--muted) / 0.5);
-    }
-
-    /* Thin Scrollbar for Firefox */
-    .styled-scrollbar-thin {
-        scrollbar-width: thin;
-        scrollbar-color: hsl(var(--muted) / 0.3) transparent;
-    }
-
-    /* Standard Scrollbar for Webkit */
+    /* Webkit browsers (Chrome, Safari, Edge) */
     .styled-scrollbar::-webkit-scrollbar {
-        width: 8px; /* Standard width */
-        height: 8px;
+        width: 8px; /* Width of vertical scrollbar */
+        height: 8px; /* Height of horizontal scrollbar */
     }
 
     .styled-scrollbar::-webkit-scrollbar-track {
-        background: hsl(var(--secondary) / 0.3); /* Slightly visible track */
-        border-radius: 4px;
+        background-color: transparent; /* Make track invisible */
     }
 
     .styled-scrollbar::-webkit-scrollbar-thumb {
-        background-color: hsl(var(--muted) / 0.5); /* Slightly darker thumb */
-        border-radius: 4px;
-        border: 1px solid transparent;
-        background-clip: padding-box;
+        @apply bg-black/20 rounded-full border-[2.5px] border-solid border-transparent;
+        /* Slightly transparent black thumb with padding */
+        background-clip: padding-box; /* Ensures border creates padding effect */
+        transition: background-color 0.15s ease-out; /* Smooth hover effect */
+    }
+
+    /* Hover effects for scrollbar thumb */
+    .styled-scrollbar:hover::-webkit-scrollbar-thumb {
+        @apply bg-black/30;
     }
 
     .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-        background-color: hsl(var(--muted) / 0.7);
+        @apply bg-black/35;
     }
 
-    /* Standard Scrollbar for Firefox */
-    .styled-scrollbar {
-        scrollbar-width: auto; /* Standard width */
-        scrollbar-color: hsl(var(--muted) / 0.5) hsl(var(--secondary) / 0.3);
+    .styled-scrollbar::-webkit-scrollbar-thumb:active {
+        @apply bg-black/40;
     }
 
-    /* Custom focus outline */
-    *:focus-visible {
-        outline: 2px solid hsl(var(--primary) / 0.5);
-        outline-offset: 2px;
-        border-radius: 2px; /* Optional: match border radius */
+    .styled-scrollbar-thin::-webkit-scrollbar {
+        width: 4px; /* Adjust width */
+        height: 4px; /* Adjust height for horizontal */
+    }
+    .styled-scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent; /* Or a very light color */
+    }
+    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2); /* Adjust color and opacity */
+        border-radius: 4px;
+        border: 1px solid transparent; /* Prevent border clipping */
+        background-clip: padding-box;
+    }
+    .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    /* Add Firefox equivalent if needed using scrollbar-width: thin; */
+    .styled-scrollbar-thin {
+        scrollbar-width: thin; /* For Firefox */
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* thumb track */
     }
 
-    /* Remove default browser outline when focus-visible is supported */
-    *:focus:not(:focus-visible) {
-        outline: none;
+    /* Isolation context for hover effects if needed */
+    .hover-isolate {
+        isolation: isolate;
     }
 
-    /* Tooltip styling (if needed beyond shadcn defaults) */
-    .tooltip-content {
-        @apply bg-foreground text-background px-2 py-1 text-xs rounded-sm shadow-md z-50;
+    /* CodeMirror Editor Base Styles Integration */
+    .cm-editor-container {
+        /* Container specific styles if needed */
     }
 
-    /* Style CodeMirror specifically to ensure background transparency */
-    .cm-editor .cm-scroller, .cm-editor .cm-content {
-        background-color: transparent !important; /* Ensure CodeMirror respects container background */
+    .cm-editor {
+        /* Editor view itself */
+        @apply text-sm h-full bg-transparent;
+
+        &.cm-focused {
+            outline: none; /* Remove default CM outline */
+        }
     }
 
-    /* Ensure drag overlay has high z-index */
-    .dnd-drag-overlay {
-        z-index: 9999 !important;
+    .cm-scroller {
+        /* Scrollable area */
+        @apply h-full styled-scrollbar bg-transparent overflow-auto;
+        font-family: var(--font-mono);
+        line-height: 1.65; /* Consistent line height */
+    }
+
+    .cm-gutters {
+        /* Line numbers area */
+        @apply bg-glass-alt-100/80 backdrop-blur-lg border-r border-black/10 text-muted-foreground text-xs opacity-90 pr-2 pl-2;
+        /* Adjusted padding */
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .cm-activeLineGutter {
+        /* Active line number background */
+        @apply bg-primary/15;
+        /* Subtle highlight */
+    }
+
+    .cm-content {
+        /* Editable content area */
+        @apply p-3.5 bg-transparent;
+        /* Match padding elsewhere */
+        caret-color: hsl(var(--primary-h), var(--primary-s), var(--primary-l)); /* Primary color caret */
+    }
+
+    .cm-line {
+        /* Individual lines */
+        @apply leading-relaxed px-1;
+    }
+
+    .cm-placeholder {
+        /* Placeholder text style */
+        @apply text-muted-foreground italic opacity-70 pointer-events-none absolute;
+        top: 14px; /* Align with content padding */
+        left: 14px; /* Align with content padding */
+        padding-left: 4px; /* Match .cm-line padding */
+    }
+
+    .cm-selectionBackground, ::selection {
+        /* Text selection background */
+        @apply bg-primary/30;
+        /* Use primary color with alpha */
+    }
+
+    .cm-activeLine {
+        /* Active line background */
+        background-color: hsla(var(--primary-h), var(--primary-s), 95%, 0.75); /* Light primary highlight */
+    }
+
+    .cm-foldMarker {
+        /* Fold marker style */
+        color: hsl(210, 10%, 65%);
+        margin-left: 2px;
+        padding: 0 2px;
+        cursor: pointer;
+
+        &:hover {
+            color: hsl(210, 10%, 45%);
+        }
+    }
+
+    .cm-foldGutter .cm-gutterElement {
+        padding-left: 4px !important; /* Ensure padding */
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .cm-searchMatch {
+        /* Search match highlight */
+        @apply bg-yellow-300/50 outline-none rounded-[2px];
+    }
+
+    .cm-searchMatch-selected {
+        /* Selected search match highlight */
+        @apply bg-yellow-400/70;
+    }
+
+    /* Wrapper for TaskItem used by framer-motion */
+    .task-motion-wrapper {
+        /* Ensures layout animation works correctly */
+        position: relative;
     }
 
     /* --- FIX: Hide browser's default clear button for search inputs --- */
@@ -187,5 +224,12 @@
         display: none;
         width: 0;
         height: 0;
+    }
+}
+
+@layer utilities {
+    /* Utility for content visibility optimization if needed */
+    .content-auto {
+        content-visibility: auto;
     }
 }

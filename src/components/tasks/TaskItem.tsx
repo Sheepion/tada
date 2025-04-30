@@ -1,36 +1,24 @@
 // src/components/tasks/TaskItem.tsx
-import React, {memo, useCallback, useMemo, useState} from 'react';
+import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import ReactDOM from 'react-dom';
 import {Task, TaskGroupCategory} from '@/types';
-import {formatRelativeDate, isOverdue, isValid, safeParseDate, startOfDay} from '@/lib/utils/dateUtils';
+import {formatDate, formatRelativeDate, isOverdue, isValid, safeParseDate, startOfDay} from '@/utils/dateUtils';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {searchTermAtom, selectedTaskIdAtom, tasksAtom, userListNamesAtom} from '@/store/atoms';
 import Icon from '../common/Icon';
-import {cn} from '@/lib/utils';
+import {twMerge} from 'tailwind-merge';
+import {clsx} from 'clsx';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import {Button} from "@/components/ui/button";
-import {Checkbox} from "@/components/ui/checkbox"; // Use Checkbox for progress indicator trigger area
-import {Badge} from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuPortal,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
-    DropdownMenuSeparator,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
-import CustomDatePickerPopover from "@/components/common/CustomDatePickerPopover"; // Use refactored picker
-import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal"; // Use refactored dialog
+import Button from "@/components/common/Button";
 import Highlighter from "react-highlight-words";
 import {IconName} from "@/components/common/IconMap";
+import MenuItem from "@/components/common/MenuItem";
+import CustomDatePickerPopover from "@/components/common/CustomDatePickerPopover";
+import {usePopper} from "react-popper";
+import {AnimatePresence, motion} from 'framer-motion';
+import {useTaskItemMenu} from '@/context/TaskItemMenuContext';
+import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
 
 interface TaskItemProps {
     task: Task;
@@ -40,91 +28,125 @@ interface TaskItemProps {
     scrollContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-// --- SVG Progress Indicator Component ---
-// Keeping the highly custom SVG indicator for visual consistency, but wrapping interaction with Checkbox
+// --- ENHANCED SVG Progress Indicator Component ---
 interface ProgressIndicatorProps {
-    percentage: number | null;
+    percentage: number | null; // null or 0 = 0%, 20, 50, 80, 100
     isTrash: boolean;
-    taskId: string; // Use taskId for unique ID
-    checked: boolean; // Controlled by parent
-    onCheckedChange: (checked: boolean | 'indeterminate') => void; // Use shadcn Checkbox handler type
     size?: number;
     className?: string;
-    ariaLabelledby?: string;
+    onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+    ariaLabelledby?: string; // For accessibility linking to task title
 }
 
 export const ProgressIndicator: React.FC<ProgressIndicatorProps> = React.memo(({
                                                                                    percentage,
                                                                                    isTrash,
-                                                                                   taskId,
-                                                                                   checked,
-                                                                                   onCheckedChange,
-                                                                                   size = 18,
+                                                                                   size = 16,
                                                                                    className,
+                                                                                   onClick,
+                                                                                   onKeyDown,
                                                                                    ariaLabelledby
                                                                                }) => {
     const normalizedPercentage = percentage ?? 0;
-    const radius = size / 2 - 1.25;
+    const radius = size / 2 - 1.25; // Slightly smaller radius for bolder stroke
     const circumference = 2 * Math.PI * radius;
-    const strokeWidth = 2.5;
+    const strokeWidth = 2.5; // Bolder stroke
+
+    // Calculate stroke-dashoffset for progress arc
     const offset = circumference - (normalizedPercentage / 100) * circumference;
+
+    // Checkmark path scaled
     const checkPath = `M ${size * 0.3} ${size * 0.55} L ${size * 0.45} ${size * 0.7} L ${size * 0.75} ${size * 0.4}`;
 
-    const svgClasses = useMemo(() => cn(
-        "absolute inset-0 w-full h-full transition-opacity duration-200 ease-apple pointer-events-none", // SVG itself shouldn't capture clicks
-        normalizedPercentage > 0 ? "opacity-100" : "opacity-0"
-    ), [normalizedPercentage]);
+    const indicatorClasses = useMemo(() => twMerge(
+        "relative flex-shrink-0 rounded-full transition-all duration-200 ease-apple focus:outline-none",
+        "focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-current/50",
+        !isTrash && "cursor-pointer",
+        isTrash && "opacity-50 cursor-not-allowed",
+        className
+    ), [isTrash, className]);
 
+    const buttonBgColor = useMemo(() => {
+        if (isTrash) return "bg-gray-200/50 border-gray-300"; // Ensure border color matches
+        if (normalizedPercentage === 100) return "bg-primary/80 hover:bg-primary/90 border-primary/80"; // Use primary color for completed background
+        return "bg-white/40 hover:border-primary/60 border-gray-400/80"; // Default background
+    }, [isTrash, normalizedPercentage]);
+
+    // Enhanced progress stroke color
     const progressStrokeColor = useMemo(() => {
-        if (isTrash) return "stroke-muted-foreground/50";
-        if (normalizedPercentage === 100) return "stroke-primary-foreground";
+        if (isTrash) return "stroke-gray-400";
+        if (normalizedPercentage === 100) return "stroke-white"; // Checkmark color
+        // Adjusted saturation for better visibility
         if (normalizedPercentage >= 80) return "stroke-primary/90";
         if (normalizedPercentage >= 50) return "stroke-primary/80";
         if (normalizedPercentage > 0) return "stroke-primary/70";
-        return "stroke-transparent";
+        return "stroke-transparent"; // No stroke if 0%
     }, [isTrash, normalizedPercentage]);
 
+
+    const progressLabel = normalizedPercentage === 100 ? "Completed" : `${normalizedPercentage}% done`;
+
     return (
-        <div className={cn("relative flex-shrink-0", className)} style={{width: size, height: size}}>
-            {/* Use shadcn Checkbox for interaction and accessibility */}
-            <Checkbox
-                id={`progress-checkbox-${taskId}`}
-                checked={checked}
-                onCheckedChange={onCheckedChange}
-                disabled={isTrash}
-                aria-labelledby={ariaLabelledby}
-                className={cn(
-                    "absolute inset-0 w-full h-full rounded-full border-2 transition-all duration-200 ease-apple", // Base Checkbox styles
-                    // Apply background and border based on state, similar to original SVG button
-                    isTrash ? "bg-muted/20 border-muted/30 cursor-not-allowed" :
-                        checked ? "bg-primary border-primary hover:bg-primary/90" :
-                            "bg-background/40 border-muted/50 hover:border-primary/60 data-[state=unchecked]:bg-background/40",
-                    "!ring-offset-0 !ring-0 focus-visible:!ring-1 focus-visible:!ring-ring focus-visible:!ring-offset-1 focus-visible:!ring-offset-background" // Custom focus for circle
-                )}
-            />
-            {/* SVG is purely visual now */}
-            <svg viewBox={`0 0 ${size} ${size}`} className={svgClasses} aria-hidden="true">
-                {/* Progress Arc */}
+        <button
+            type="button"
+            onClick={onClick}
+            onKeyDown={onKeyDown}
+            disabled={isTrash}
+            // Link to task title for better screen reader announcement
+            aria-labelledby={ariaLabelledby}
+            aria-label={`Task progress: ${progressLabel}`} // Add percentage to label
+            aria-pressed={normalizedPercentage === 100}
+            className={twMerge(indicatorClasses, buttonBgColor, "border")} // Ensure border is applied
+            style={{width: size, height: size}}
+        >
+            <svg
+                viewBox={`0 0 ${size} ${size}`}
+                className="absolute inset-0 w-full h-full transition-opacity duration-200 ease-apple"
+                // Only show SVG content if progress > 0
+                style={{opacity: normalizedPercentage > 0 ? 1 : 0}}
+                aria-hidden="true" // SVG is decorative, label is on button
+            >
+                {/* Progress Arc (shown for > 0% and < 100%) */}
                 {normalizedPercentage > 0 && normalizedPercentage < 100 && (
-                    <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth}
-                            className={progressStrokeColor} strokeDasharray={circumference} strokeDashoffset={offset}
-                            transform={`rotate(-90 ${size / 2} ${size / 2})`} strokeLinecap="round"
-                            style={{transition: 'stroke-dashoffset 0.3s ease-out'}}/>
+                    <circle
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={radius}
+                        fill="none"
+                        strokeWidth={strokeWidth}
+                        className={progressStrokeColor}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                        transform={`rotate(-90 ${size / 2} ${size / 2})`} // Start from top
+                        strokeLinecap="round"
+                        style={{transition: 'stroke-dashoffset 0.3s ease-out'}}
+                    />
                 )}
                 {/* Checkmark (only shown for 100%) */}
                 {normalizedPercentage === 100 && (
-                    <path d={checkPath} fill="none" strokeWidth={strokeWidth * 0.9} className={progressStrokeColor}
-                          strokeLinecap="round" strokeLinejoin="round"
-                          style={{transition: 'opacity 0.2s ease-in 0.1s'}}/>
+                    // Add a background circle for the checkmark for better contrast
+                    <>
+                        <circle cx={size / 2} cy={size / 2} r={size / 2} className="fill-current text-primary/80"/>
+                        <path
+                            d={checkPath}
+                            fill="none"
+                            strokeWidth={strokeWidth * 0.9} // Slightly thinner checkmark
+                            className={progressStrokeColor} // Should be white now
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{transition: 'opacity 0.2s ease-in 0.1s'}}
+                        />
+                    </>
                 )}
             </svg>
-        </div>
+        </button>
     );
 });
 ProgressIndicator.displayName = 'ProgressIndicator';
 
-// Snippet Function (remains the same)
-function generateContentSnippet(content: string, term: string, length: number = 35): string { /* ... */
+// Helper function to generate content snippet (keep as is)
+function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
     const searchWords = term.toLowerCase().split(' ').filter(Boolean);
@@ -149,7 +171,7 @@ function generateContentSnippet(content: string, term: string, length: number = 
     return snippet;
 }
 
-// Priority Map (remains the same)
+// Priority Map (keep as is)
 const priorityMap: Record<number, { label: string; iconColor: string }> = {
     1: {
         label: 'High',
@@ -160,164 +182,322 @@ const priorityMap: Record<number, { label: string; iconColor: string }> = {
     4: {label: 'Lowest', iconColor: 'text-gray-500'},
 };
 
-// TaskItem Component Refactored
+
+// TaskItem Component (with corrections and updates)
 const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     task,
                                                     groupCategory,
                                                     isOverlay = false,
                                                     style: overlayStyle,
+                                                    scrollContainerRef
                                                 }) => {
+    // Hooks and state setup
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
     const userLists = useAtomValue(userListNamesAtom);
-    // const { openItemId, setOpenItemId } = useTaskItemMenu(); // Potentially remove if not needed
+    const {openItemId, setOpenItemId} = useTaskItemMenu();
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [datePickerReferenceElement, setDatePickerReferenceElement] = useState<HTMLButtonElement | null>(null);
+    const [datePickerPopperElement, setDatePickerPopperElement] = useState<HTMLDivElement | null>(null);
+    const actionsTriggerRef = useRef<HTMLButtonElement>(null);
+    const actionsContentRef = useRef<HTMLDivElement>(null);
+    const [actionsStyle, setActionsStyle] = useState<React.CSSProperties>({
+        position: 'fixed',
+        opacity: 0,
+        pointerEvents: 'none',
+        zIndex: 55,
+    });
 
+    // Popper/Actions/Sorting hooks and logic
+    const {styles: datePickerStyles, attributes: datePickerAttributes, update: updateDatePickerPopper} = usePopper(
+        datePickerReferenceElement, datePickerPopperElement,
+        {
+            strategy: 'fixed',
+            placement: 'bottom-start',
+            modifiers: [{name: 'offset', options: {offset: [0, 8]}}, {
+                name: 'preventOverflow',
+                options: {padding: 8, boundary: scrollContainerRef?.current ?? undefined}
+            }, {
+                name: 'flip',
+                options: {
+                    padding: 8,
+                    boundary: scrollContainerRef?.current ?? undefined,
+                    fallbackPlacements: ['top-start', 'bottom-end', 'top-end']
+                }
+            }],
+        }
+    );
+    useEffect(() => {
+        if (isDatePickerOpen && scrollContainerRef?.current && updateDatePickerPopper) {
+            const rafId = requestAnimationFrame(() => updateDatePickerPopper());
+            return () => cancelAnimationFrame(rafId);
+        }
+    }, [isDatePickerOpen, updateDatePickerPopper, scrollContainerRef]);
     const isTrashItem = useMemo(() => task.list === 'Trash', [task.list]);
     const isCompleted = useMemo(() => (task.completionPercentage ?? 0) === 100 && !isTrashItem, [task.completionPercentage, isTrashItem]);
     const isSortable = useMemo(() => !isCompleted && !isTrashItem && !isOverlay, [isCompleted, isTrashItem, isOverlay]);
-
-    // DND Hook (remains the same)
-    const {attributes, listeners, setNodeRef, transform, transition: dndTransition, isDragging} = useSortable({
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition: dndTransition,
+        isDragging
+    } = useSortable({
         id: task.id,
         disabled: !isSortable,
         data: {task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory},
     });
-
-    // DND Styles (adjusted for potentially simpler structure)
     const style = useMemo(() => {
         const baseTransform = CSS.Transform.toString(transform);
-        const calculatedTransition = dndTransition; // Use dnd-kit's transition
-        const baseStyle: React.CSSProperties = {
-            transform: baseTransform,
-            transition: calculatedTransition || 'background-color 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out',
-            zIndex: isDragging ? 100 : (isSelected ? 2 : 1),
-            position: 'relative', // Needed for z-index and absolute positioning of actions button maybe
-            cursor: isDragging ? 'grabbing' : (isSortable ? 'grab' : 'pointer'),
-            touchAction: isSortable ? 'none' : 'auto', // Prevent scrolling on draggable items on touch devices
-            backgroundColor: 'transparent', // Default background handled by cn
-            opacity: 1,
-        };
-
-        if (isDragging) {
-            if (isOverlay) {
-                // Style for the DragOverlay item
-                return {
-                    ...baseStyle,
-                    ...overlayStyle, // Apply any overlay styles passed in
-                    boxShadow: '0 8px 20px -5px rgba(0, 0, 0, 0.15), 0 4px 8px -6px rgba(0, 0, 0, 0.1)',
-                    cursor: 'grabbing',
-                    backgroundColor: 'hsl(var(--card))', // Ensure it has a background
-                };
-            } else {
-                // Style for the original item being dragged (placeholder)
-                return {
-                    ...baseStyle,
-                    opacity: 0.4,
-                    boxShadow: 'none',
-                    border: '1px dashed hsl(var(--border))', // Dashed border for placeholder
-                };
-            }
+        const calculatedTransition = dndTransition;
+        if (isDragging && !isOverlay) {
+            return {
+                transform: baseTransform,
+                transition: calculatedTransition,
+                opacity: 0.4,
+                cursor: 'grabbing',
+                backgroundColor: 'hsla(210, 40%, 98%, 0.3)',
+                boxShadow: 'none',
+                border: '1px dashed hsla(0, 0%, 0%, 0.15)',
+                zIndex: 1,
+            };
         }
-
-        return {...baseStyle, ...overlayStyle};
-
-    }, [transform, dndTransition, isDragging, isSelected, isSortable, isOverlay, overlayStyle]);
-
-
-    // Task Click Handler (remains the same)
+        if (isOverlay) {
+            return {
+                ...overlayStyle,
+                transform: baseTransform,
+                transition: calculatedTransition,
+                cursor: 'grabbing',
+                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+                zIndex: 1000,
+            };
+        }
+        return {
+            ...overlayStyle,
+            transform: baseTransform,
+            transition: calculatedTransition || 'background-color 0.2s ease-apple, border-color 0.2s ease-apple',
+            zIndex: isSelected ? 2 : 1,
+        };
+    }, [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]);
+    useEffect(() => {
+        if (openItemId !== task.id) {
+            if (isMoreActionsOpen) setIsMoreActionsOpen(false);
+            if (isDatePickerOpen) setIsDatePickerOpen(false);
+        }
+    }, [openItemId, task.id, isMoreActionsOpen, isDatePickerOpen]);
+    const calculateActionsPosition = useCallback(() => {
+        if (!actionsTriggerRef.current || !actionsContentRef.current) return;
+        const triggerRect = actionsTriggerRef.current.getBoundingClientRect();
+        const contentRect = actionsContentRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 8;
+        let top = triggerRect.bottom + margin / 2;
+        let left = triggerRect.right - contentRect.width;
+        if (top + contentRect.height + margin > viewportHeight) top = triggerRect.top - contentRect.height - margin / 2;
+        if (left < margin) left = margin;
+        if (left + contentRect.width + margin > viewportWidth) left = viewportWidth - contentRect.width - margin;
+        top = Math.max(margin, top);
+        left = Math.max(margin, left);
+        setActionsStyle(prev => ({...prev, top: `${top}px`, left: `${left}px`, opacity: 1, pointerEvents: 'auto'}));
+    }, []);
+    useEffect(() => {
+        if (isMoreActionsOpen) {
+            requestAnimationFrame(() => calculateActionsPosition());
+        } else {
+            setActionsStyle(prev => ({...prev, opacity: 0, pointerEvents: 'none'}));
+        }
+    }, [isMoreActionsOpen, calculateActionsPosition]);
+    useEffect(() => {
+        if (!isMoreActionsOpen || !scrollContainerRef) return;
+        const scrollElement = scrollContainerRef.current;
+        const handleUpdate = () => calculateActionsPosition();
+        let throttleTimeout: NodeJS.Timeout | null = null;
+        const throttledHandler = () => {
+            if (!throttleTimeout) {
+                throttleTimeout = setTimeout(() => {
+                    handleUpdate();
+                    throttleTimeout = null;
+                }, 50);
+            }
+        };
+        if (scrollElement) scrollElement.addEventListener('scroll', throttledHandler, {passive: true});
+        window.addEventListener('resize', throttledHandler);
+        return () => {
+            if (scrollElement) scrollElement.removeEventListener('scroll', throttledHandler);
+            window.removeEventListener('resize', throttledHandler);
+            if (throttleTimeout) clearTimeout(throttleTimeout);
+        };
+    }, [isMoreActionsOpen, calculateActionsPosition, scrollContainerRef]);
     const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
-        // Ignore clicks on interactive elements within the item
-        if (target.closest('button, input, a, [role="button"], [role="checkbox"], [role="menuitem"], [role="menuitemradio"]')) {
+        if (target.closest('button, input, a') || actionsTriggerRef.current?.contains(target) || datePickerReferenceElement?.contains(target) || target.closest('.ignore-click-away') || actionsContentRef.current?.contains(target) || target.closest('.react-tooltip') || target.closest('[role="dialog"]')) {
             return;
         }
-        if (isDragging) return; // Don't select during drag
+        if (isDragging) {
+            return;
+        }
         setSelectedTaskId(id => (id === task.id ? null : task.id));
-        // setOpenItemId(null); // Close any other menus
-    }, [setSelectedTaskId, task.id, isDragging]);
+        setOpenItemId(null);
+    }, [setSelectedTaskId, task.id, datePickerReferenceElement, setOpenItemId, isDragging]);
 
-
-    // Update Task Logic (remains the same)
+    // Update Task Logic
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed'>>) => {
         setTasks(prevTasks => prevTasks.map(t => {
-            if (t.id === task.id) return {...t, ...updates, updatedAt: Date.now()};
+            if (t.id === task.id) {
+                return {...t, ...updates, updatedAt: Date.now()};
+            }
             return t;
         }));
     }, [setTasks, task.id]);
 
-    // Progress Cycling Logic (using checkbox handler now)
-    const cycleCompletion = useCallback((checked: boolean | 'indeterminate') => {
-        // Checkbox gives boolean, 'indeterminate' isn't passed here
-        const isNowChecked = !!checked; // Coerce to boolean
-        let nextPercentage: number | null;
-
-        if (isNowChecked) {
-            nextPercentage = 100; // Mark as complete
-        } else {
-            // Unchecking: If it was 100%, revert to 0 (or null), otherwise keep current % (shouldn't happen with simple checkbox)
-            nextPercentage = null; // Mark as incomplete (0%)
-        }
-
+    // Progress Cycling Logic (for main button)
+    const cycleCompletionPercentage = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
+        event?.stopPropagation();
+        const currentPercentage = task.completionPercentage ?? 0;
+        let nextPercentage: number | null = null;
+        if (currentPercentage === 100) nextPercentage = null;
+        else nextPercentage = 100;
         updateTask({completionPercentage: nextPercentage});
         if (nextPercentage === 100 && isSelected) setSelectedTaskId(null);
-    }, [task.completionPercentage, updateTask, isSelected, setSelectedTaskId]);
+        setOpenItemId(null);
+    }, [task.completionPercentage, updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
 
-
-    // Actions Handlers (adapted for DropdownMenu)
+    // Direct Progress Setting Logic (for menu)
+    const closeActionsDropdown = useCallback(() => {
+        setIsMoreActionsOpen(false);
+        if (openItemId === task.id) {
+            setOpenItemId(null);
+        }
+    }, [setOpenItemId, openItemId, task.id]);
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
         if (newPercentage === 100 && isSelected) setSelectedTaskId(null);
-        // Dropdown closes automatically
-    }, [updateTask, isSelected, setSelectedTaskId]);
+        closeActionsDropdown();
+    }, [updateTask, isSelected, setSelectedTaskId, closeActionsDropdown]);
 
+    const handleProgressIndicatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            cycleCompletionPercentage();
+        }
+    }, [cycleCompletionPercentage]);
+
+    // Date picker/other actions logic
+    const openDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        setDatePickerReferenceElement(event.currentTarget);
+        setIsDatePickerOpen(true);
+        setIsMoreActionsOpen(false);
+        setOpenItemId(task.id);
+    }, [setOpenItemId, task.id]);
+    const closeDatePicker = useCallback(() => {
+        setIsDatePickerOpen(false);
+        setDatePickerReferenceElement(null);
+        if (openItemId === task.id) {
+            setOpenItemId(null);
+        }
+    }, [setOpenItemId, openItemId, task.id]);
     const handleDateSelect = useCallback((date: Date | undefined) => {
         const newDueDate = date && isValid(date) ? startOfDay(date).getTime() : null;
         updateTask({dueDate: newDueDate});
-        // Popover within Dropdown closes automatically
-    }, [updateTask]);
-
-    const handlePriorityChange = useCallback((newPriority: string) => { // Value from RadioItem is string
-        updateTask({priority: newPriority === 'null' ? null : parseInt(newPriority, 10)});
-    }, [updateTask]);
-
+        closeDatePicker();
+    }, [updateTask, closeDatePicker]);
+    const toggleActionsDropdown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        const opening = !isMoreActionsOpen;
+        setIsMoreActionsOpen(opening);
+        setIsDatePickerOpen(false);
+        setOpenItemId(opening ? task.id : null);
+    }, [isMoreActionsOpen, setOpenItemId, task.id]);
+    const handleSetDueDateClickFromDropdown = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        setDatePickerReferenceElement(event.currentTarget as HTMLButtonElement);
+        setIsDatePickerOpen(true);
+        setOpenItemId(task.id);
+    }, [setOpenItemId, task.id]);
+    const handlePriorityChange = useCallback((newPriority: number | null) => {
+        updateTask({priority: newPriority});
+        closeActionsDropdown();
+    }, [updateTask, closeActionsDropdown]);
     const handleListChange = useCallback((newList: string) => {
         updateTask({list: newList});
-    }, [updateTask]);
-
+        closeActionsDropdown();
+    }, [updateTask, closeActionsDropdown]);
     const handleDuplicateTask = useCallback(() => {
         const now = Date.now();
+        // Create a new task object, copying relevant fields including completionPercentage
         const newTaskData: Partial<Task> = {
-            ...task,
-            id: `task-${now}-${Math.random().toString(16).slice(2)}`,
-            title: `${task.title} (Copy)`,
-            order: task.order + 0.01,
-            createdAt: now,
-            updatedAt: now,
+            ...task, // Spread original task data
+            id: `task-${now}-${Math.random().toString(16).slice(2)}`, // New unique ID
+            title: `${task.title} (Copy)`, // Modified title
+            order: task.order + 0.01, // Slightly adjust order
+            createdAt: now, // New creation time
+            updatedAt: now, // New update time
+            // Reset completion *trigger* fields, let atom derive state from copied percentage
             completed: false,
             completedAt: null,
+            // Explicitly copy the percentage
             completionPercentage: task.completionPercentage
         };
+        // Remove groupCategory as it will be derived by the atom
         delete newTaskData.groupCategory;
+
         setTasks(prev => {
             const index = prev.findIndex(t => t.id === task.id);
             const newTasks = [...prev];
-            if (index !== -1) newTasks.splice(index + 1, 0, newTaskData as Task);
-            else newTasks.push(newTaskData as Task);
+            // The tasksAtom setter will handle deriving completed, completedAt, and groupCategory
+            if (index !== -1) {
+                newTasks.splice(index + 1, 0, newTaskData as Task);
+            } else {
+                newTasks.push(newTaskData as Task);
+            }
             return newTasks;
         });
-        setSelectedTaskId(newTaskData.id!);
-    }, [task, setTasks, setSelectedTaskId]);
-
-    const openDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(true), []);
-    const closeDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(false), []);
+        setSelectedTaskId(newTaskData.id!); // Select the newly created task
+        closeActionsDropdown();
+    }, [task, setTasks, setSelectedTaskId, closeActionsDropdown]);
+    const openDeleteConfirm = useCallback(() => {
+        setIsDeleteDialogOpen(true);
+        closeActionsDropdown();
+    }, [closeActionsDropdown]);
+    const closeDeleteConfirm = useCallback(() => {
+        setIsDeleteDialogOpen(false);
+    }, []);
     const confirmDeleteTask = useCallback(() => {
         updateTask({list: 'Trash', completionPercentage: null});
-        if (isSelected) setSelectedTaskId(null);
-        closeDeleteConfirm(); // Closes the modal itself
+        if (isSelected) {
+            setSelectedTaskId(null);
+        }
+        closeDeleteConfirm();
     }, [updateTask, isSelected, setSelectedTaskId, closeDeleteConfirm]);
+    useEffect(() => {
+        if (!isMoreActionsOpen) return;
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+            const target = event.target as Node;
+            const isClickInsideTrigger = actionsTriggerRef.current?.contains(target);
+            const isClickInsideContent = actionsContentRef.current?.contains(target);
+            const isClickInsideDatePicker = datePickerPopperElement?.contains(target);
+            const shouldIgnore = (target instanceof Element) && target.closest('.ignore-click-away');
+            if (!isClickInsideTrigger && !isClickInsideContent && !isClickInsideDatePicker && !shouldIgnore) {
+                closeActionsDropdown();
+            }
+        };
+        const timerId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+        }, 0);
+        return () => {
+            clearTimeout(timerId);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [isMoreActionsOpen, closeActionsDropdown, datePickerPopperElement]);
 
     // Memoized display values
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
@@ -325,68 +505,76 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const overdue = useMemo(() => isValidDueDate && !isCompleted && !isTrashItem && isOverdue(dueDate!), [isValidDueDate, isCompleted, isTrashItem, dueDate]);
     const searchWords = useMemo(() => searchTerm ? searchTerm.trim().toLowerCase().split(' ').filter(Boolean) : [], [searchTerm]);
     const highlighterProps = useMemo(() => ({
-        highlightClassName: "bg-primary/20 text-inherit font-semibold rounded-[1px] px-0",
-        searchWords: searchWords, autoEscape: true, textToHighlight: '' // Placeholder, set below
+        highlightClassName: "bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs",
+        searchWords: searchWords,
+        autoEscape: true,
     }), [searchWords]);
-    const showContentHighlight = useMemo(() => { /* ... (same logic) ... */
+    const showContentHighlight = useMemo(() => {
         if (searchWords.length === 0 || !task.content?.trim()) return false;
         const lc = task.content.toLowerCase();
         const lt = task.title.toLowerCase();
         return searchWords.some(w => lc.includes(w)) && !searchWords.every(w => lt.includes(w));
     }, [searchWords, task.content, task.title]);
-
-    // Task Item Container Styling
-    const baseClasses = cn(
-        'task-item flex items-start px-2.5 py-2 border-b border-border/50 group relative min-h-[52px]', // Layout and border
-        'transition-colors duration-150 ease-apple', // Hover transition
+    const baseClasses = useMemo(() => twMerge(
+        'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]',
         isOverlay
-            ? 'bg-card backdrop-blur-sm border rounded-md shadow-lg' // Overlay style
-            : isSelected && !isDragging
-                ? 'bg-accent dark:bg-accent/70' // Selected style
-                : isTrashItem
-                    ? 'bg-secondary/30 opacity-60 hover:bg-secondary/50' // Trashed style
-                    : isCompleted
-                        ? 'bg-secondary/30 opacity-70 hover:bg-secondary/50' // Completed style
-                        : 'hover:bg-accent/50', // Default hover
-        // isDragging style is handled in the `style` object
-    );
-
+            ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong' // Overlay style
+            : isSelected && !isDragging // Selected non-dragging style
+                ? 'bg-primary/20 backdrop-blur-sm'
+                : isTrashItem // Trashed style
+                    ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10'
+                    : isCompleted // Completed style
+                        ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10'
+                        : 'bg-transparent hover:bg-black/[.05] hover:backdrop-blur-sm', // Default style
+        isDragging ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-pointer')
+    ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
+    const titleClasses = useMemo(() => twMerge(
+        "text-sm text-gray-800 leading-snug block",
+        (isCompleted || isTrashItem) && "line-through text-muted-foreground"
+    ), [isCompleted, isTrashItem]);
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
-    const progressLabel = useMemo(() => { /* ... (same logic) ... */
+    const actionsMenuClasses = useMemo(() => twMerge('ignore-click-away min-w-[180px] overflow-hidden py-1 w-48', 'bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10'), []);
+
+    // Progress Percentage Label
+    const progressLabel = useMemo(() => {
         const p = task.completionPercentage;
-        if (p && p > 0 && p < 100 && !isTrashItem) return `[${p}%]`;
+        if (p && p > 0 && p < 100 && !isTrashItem) {
+            return `[${p}%]`;
+        }
         return null;
     }, [task.completionPercentage, isTrashItem]);
+
+    // Corrected Progress Menu Items (Icons Swapped for 20/50)
+    const progressMenuItems = useMemo(() => [
+        {label: 'Not Started', value: null, icon: 'circle' as IconName},
+        {label: 'Started (20%)', value: 20, icon: 'circle-dot-dashed' as IconName}, // Swapped Icon
+        {label: 'Halfway (50%)', value: 50, icon: 'circle-dot' as IconName}, // Swapped Icon
+        {label: 'Almost Done (80%)', value: 80, icon: 'circle-slash' as IconName},
+        {label: 'Completed (100%)', value: 100, icon: 'circle-check' as IconName},
+    ], []);
 
     return (
         <>
             <div
                 ref={setNodeRef} style={style} className={baseClasses}
-                {...(isSortable ? attributes : {})}
-                // Apply listeners only if sortable, otherwise use onClick for selection
-                {...(isSortable ? listeners : {onClick: handleTaskClick})}
-                // Use div role for non-interactive drag handle, button role for clickable item
-                role={isSortable ? "listitem" : "button"}
-                tabIndex={0} // Make it focusable
+                {...(isSortable ? attributes : {})} {...(isSortable ? listeners : {})}
+                onClick={handleTaskClick} role={isSortable ? "listitem" : "button"} tabIndex={0}
                 onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-                    if (!isSortable && (e.key === 'Enter' || e.key === ' ')) { // Handle click for non-sortable items
+                    if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         handleTaskClick(e as unknown as React.MouseEvent<HTMLDivElement>);
                     }
-                    // DND Kit's KeyboardSensor handles keyboard dragging when sortable
                 }}
-                aria-selected={isSelected}
-                aria-labelledby={`task-title-${task.id}`}
+                aria-selected={isSelected} aria-labelledby={`task-title-${task.id}`}
             >
                 {/* Progress Indicator */}
                 <div className="flex-shrink-0 mr-2.5 pt-[3px] pl-[2px]">
                     <ProgressIndicator
                         percentage={task.completionPercentage}
                         isTrash={isTrashItem}
-                        taskId={task.id}
-                        checked={isCompleted}
-                        onCheckedChange={cycleCompletion}
+                        onClick={cycleCompletionPercentage}
+                        onKeyDown={handleProgressIndicatorKeyDown}
                         ariaLabelledby={`task-title-${task.id}`}
                     />
                 </div>
@@ -396,247 +584,183 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                     {/* Title and Progress Label */}
                     <div className="flex items-baseline">
                         <Highlighter {...highlighterProps} textToHighlight={task.title || 'Untitled Task'}
-                                     id={`task-title-${task.id}`}
-                                     className={cn(
-                                         "text-sm text-foreground leading-snug block",
-                                         (isCompleted || isTrashItem) && "line-through text-muted-foreground"
-                                     )}
-                        />
+                                     id={`task-title-${task.id}`} className={titleClasses}/>
+                        {/* Display percentage label subtly with color */}
                         {progressLabel && (
-                            <span className="ml-1.5 text-[10px] text-primary/90 font-medium select-none">
+                            <span className="ml-1.5 text-[10px] text-primary/90 opacity-90 font-medium select-none">
                                  {progressLabel}
                              </span>
                         )}
                     </div>
                     {/* Metadata */}
                     <div
-                        className="flex items-center flex-wrap text-[11px] text-muted-foreground gap-x-2 gap-y-0.5 mt-1 min-h-[17px]">
-                        {/* Priority */}
+                        className="flex items-center flex-wrap text-[11px] text-muted-foreground space-x-2 mt-1 leading-tight gap-y-0.5 min-h-[17px]">
+                        {/* Priority Indicator */}
                         {!!task.priority && task.priority <= 4 && !isCompleted && !isTrashItem && (
-                            <span className={cn("flex items-center", priorityMap[task.priority]?.iconColor)}
+                            <span className={clsx("flex items-center", priorityMap[task.priority]?.iconColor)}
                                   title={`Priority ${priorityMap[task.priority]?.label}`}>
                                 <Icon name="flag" size={11} strokeWidth={2.5}/>
                             </span>
                         )}
-                        {/* Due Date */}
+                        {/* Due Date & Reschedule Button */}
                         {isValidDueDate && (
-                            <Popover>
-                                <PopoverTrigger asChild disabled={isTrashItem || isCompleted || isOverlay}>
+                            <span className="flex items-center task-item-reschedule">
+                                <span
+                                    className={clsx('whitespace-nowrap', overdue && 'text-red-600 font-medium', (isCompleted || isTrashItem) && 'line-through opacity-70')}
+                                    title={formatDate(dueDate!)}>
+                                    <Icon name="calendar" size={11}
+                                          className="mr-0.5 opacity-70"/> {formatRelativeDate(dueDate!)}
+                                </span>
+                                {overdue && !isOverlay && !isCompleted && !isTrashItem && (
                                     <button
-                                        className={cn(
-                                            'flex items-center whitespace-nowrap group/date disabled:opacity-70 disabled:cursor-not-allowed disabled:line-through',
-                                            overdue && 'text-destructive font-medium',
-                                            (isCompleted || isTrashItem) && 'line-through opacity-70',
-                                            isTrashItem || isCompleted || isOverlay ? '' : 'hover:text-primary'
-                                        )}
-                                        disabled={isTrashItem || isCompleted || isOverlay}
-                                        aria-label={`Due date: ${formatRelativeDate(dueDate!)}`}
+                                        className="ml-1 p-0.5 rounded hover:bg-red-500/15 focus-visible:ring-1 focus-visible:ring-red-400 outline-none ignore-click-away"
+                                        onClick={openDatePicker}
+                                        aria-label="Reschedule task" title="Reschedule"
                                     >
-                                        <Icon name="calendar" size={11}
-                                              className="mr-0.5 opacity-70 group-hover/date:opacity-90"/>
-                                        {formatRelativeDate(dueDate!)}
-                                        {/* Reschedule Icon */}
-                                        {(overdue || !isOverlay) && !isCompleted && !isTrashItem && (
-                                            <Icon name="calendar-plus" size={12}
-                                                  className="ml-1 opacity-0 group-hover/date:opacity-70 transition-opacity text-primary/80"/>
-                                        )}
+                                        <Icon name="calendar-plus" size={12}
+                                              className="text-red-500 opacity-70 group-hover/task-item-reschedule:opacity-100"/>
                                     </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <CustomDatePickerPopover
-                                        initialDate={dueDate ?? undefined}
-                                        onSelect={handleDateSelect}
-                                        trigger={<></>} // Trigger is handled by PopoverTrigger above
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                                )}
+                            </span>
                         )}
-                        {/* List */}
+                        {/* List Name */}
                         {task.list && task.list !== 'Inbox' && (
-                            <Badge variant="secondary"
-                                   className={cn("px-1 py-0 text-[10px] font-normal h-[16px]", (isCompleted || isTrashItem) && 'opacity-70')}
-                                   title={task.list}>
-                                <Icon name={listIcon} size={10} className="mr-0.5 opacity-70 flex-shrink-0"/>
-                                <span className="truncate max-w-[80px]">{task.list}</span>
-                            </Badge>
+                            <span
+                                className={clsx("flex items-center whitespace-nowrap bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[80px] truncate backdrop-blur-sm", (isCompleted || isTrashItem) && 'line-through opacity-70')}
+                                title={task.list}>
+                                <Icon name={listIcon} size={10} className="mr-0.5 opacity-70 flex-shrink-0"/> <span
+                                className="truncate">{task.list}</span>
+                            </span>
                         )}
                         {/* Tags */}
                         {task.tags && task.tags.length > 0 && (
                             <span
-                                className={cn("flex items-center gap-1 flex-wrap", (isCompleted || isTrashItem) && 'opacity-70')}>
+                                className={clsx("flex items-center space-x-1 flex-wrap gap-y-0.5", (isCompleted || isTrashItem) && 'opacity-70')}>
                                 {task.tags.slice(0, 2).map(tag => (
-                                    <Badge key={tag} variant="outline"
-                                           className="px-1 py-0 text-[10px] font-normal h-[16px] border-border/50"
-                                           title={tag}>
+                                    <span key={tag}
+                                          className={clsx("bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[70px] truncate backdrop-blur-sm", (isCompleted || isTrashItem) && 'line-through')}
+                                          title={tag}>
                                         #{tag}
-                                    </Badge>
+                                    </span>
                                 ))}
-                                {task.tags.length > 2 && <span
-                                    className="text-[10px] text-muted-foreground/80">+{task.tags.length - 2}</span>}
+                                {task.tags.length > 2 &&
+                                    <span className="text-muted-foreground text-[10px]">+{task.tags.length - 2}</span>}
                             </span>
                         )}
-                        {/* Content Snippet */}
+                        {/* Content Snippet Highlight */}
                         {showContentHighlight && (
                             <Highlighter {...highlighterProps}
                                          textToHighlight={generateContentSnippet(task.content!, searchTerm)}
-                                         className={cn("block truncate text-[11px] text-muted-foreground italic w-full mt-0.5", (isCompleted || isTrashItem) && 'line-through')}/>
+                                         className={clsx("block truncate text-[11px] text-muted italic w-full mt-0.5", (isCompleted || isTrashItem) && 'line-through')}/>
                         )}
                     </div>
                 </div>
 
-                {/* More Actions Button & DropdownMenu */}
+                {/* More Actions Button & Dropdown */}
                 {!isOverlay && !isTrashItem && (
-                    <div className={cn(
-                        "absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-100 ease-out",
-                        // Ensure it doesn't block clicks on the main item unless focused/hovered
-                        "pointer-events-none [&>*]:pointer-events-auto"
-                    )}>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost" size="icon"
-                                    className="h-6 w-6 text-muted-foreground hover:bg-accent"
-                                    aria-label={`More actions for ${task.title || 'task'}`}
-                                    // Prevent click from selecting the task item itself
-                                    onClick={(e) => e.stopPropagation()}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                >
-                                    <Icon name="more-horizontal" size={16}/>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end"
-                                                 className="w-48 bg-popover/95 backdrop-blur-xl border-border/50 shadow-xl"
-                                // Prevent clicks inside from selecting task
-                                                 onClick={(e) => e.stopPropagation()}
-                                                 onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                <DropdownMenuGroup>
-                                    <DropdownMenuLabel className="text-xs">Set Progress</DropdownMenuLabel>
-                                    <DropdownMenuRadioGroup
-                                        value={(task.completionPercentage ?? 'null').toString()} // Ensure value is string or undefined
-                                        onValueChange={(value) => handleProgressChange(value === 'null' ? null : parseInt(value, 10))}
+                    <div
+                        className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple"
+                        onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}>
+                        <Button
+                            ref={actionsTriggerRef} variant="ghost" size="icon" icon="more-horizontal"
+                            className="h-6 w-6 text-muted-foreground hover:bg-black/15"
+                            onClick={toggleActionsDropdown} aria-label={`More actions for ${task.title || 'task'}`}
+                            aria-haspopup="true" aria-expanded={isMoreActionsOpen} tabIndex={0}
+                            disabled={isTrashItem}
+                        />
+                        {ReactDOM.createPortal(
+                            <AnimatePresence>
+                                {isMoreActionsOpen && (
+                                    <motion.div
+                                        ref={actionsContentRef} style={actionsStyle} className={actionsMenuClasses}
+                                        initial={{opacity: 0, scale: 0.95}} animate={{opacity: 1, scale: 1}}
+                                        exit={{opacity: 0, scale: 0.95, transition: {duration: 0.1}}}
+                                        transition={{duration: 0.15, ease: 'easeOut'}}
+                                        onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+                                        onTouchStart={(e) => e.stopPropagation()}
                                     >
-                                        {[
-                                            {label: 'Not Started', value: 'null', icon: 'circle'},
-                                            {label: 'Started (20%)', value: '20', icon: 'circle-dot-dashed'},
-                                            {label: 'Halfway (50%)', value: '50', icon: 'circle-dot'},
-                                            {label: 'Almost Done (80%)', value: '80', icon: 'circle-slash'},
-                                            {label: 'Completed (100%)', value: '100', icon: 'circle-check'},
-                                        ].map(item => (
-                                            <DropdownMenuRadioItem key={item.value} value={item.value}
-                                                                   disabled={isCompleted && item.value !== '100'}
-                                                                   className="cursor-pointer">
-                                                <Icon name={item.icon as IconName} size={14}
-                                                      className="mr-1.5 opacity-80"/>
-                                                {item.label}
-                                            </DropdownMenuRadioItem>
-                                        ))}
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuGroup>
-                                <DropdownMenuSeparator/>
-                                {/* Due Date Popover inside Dropdown */}
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isCompleted}
-                                                          className="cursor-pointer">
-                                            <Icon name="calendar-plus" size={14} className="mr-1.5 opacity-80"/> Set Due
-                                            Date...
-                                        </DropdownMenuItem>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start" side="right" sideOffset={5}>
-                                        <CustomDatePickerPopover
-                                            initialDate={dueDate ?? undefined}
-                                            onSelect={handleDateSelect}
-                                            trigger={<></>} // Trigger handled by PopoverTrigger above
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                <DropdownMenuSeparator/>
-                                {/* Priority Submenu */}
-                                <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger disabled={isCompleted}>
-                                        <Icon name="flag" size={14} className="mr-1.5 opacity-80"/> Priority
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuPortal>
-                                        <DropdownMenuSubContent
-                                            className="bg-popover/95 backdrop-blur-xl border-border/50 shadow-xl">
-                                            <DropdownMenuRadioGroup value={(task.priority ?? 'null').toString()}
-                                                                    onValueChange={handlePriorityChange}>
-                                                {[
-                                                    {label: 'None', value: 'null', iconColor: undefined},
-                                                    {
-                                                        label: `P1 ${priorityMap[1].label}`,
-                                                        value: '1',
-                                                        iconColor: priorityMap[1].iconColor
-                                                    },
-                                                    {
-                                                        label: `P2 ${priorityMap[2].label}`,
-                                                        value: '2',
-                                                        iconColor: priorityMap[2].iconColor
-                                                    },
-                                                    {
-                                                        label: `P3 ${priorityMap[3].label}`,
-                                                        value: '3',
-                                                        iconColor: priorityMap[3].iconColor
-                                                    },
-                                                    {
-                                                        label: `P4 ${priorityMap[4].label}`,
-                                                        value: '4',
-                                                        iconColor: priorityMap[4].iconColor
-                                                    },
-                                                ].map(p => (
-                                                    <DropdownMenuRadioItem key={p.value} value={p.value}
-                                                                           className="cursor-pointer">
-                                                        <Icon name="flag" size={14}
-                                                              className={cn("mr-1.5 opacity-80", p.iconColor)}/> {p.label}
-                                                    </DropdownMenuRadioItem>
-                                                ))}
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuSubContent>
-                                    </DropdownMenuPortal>
-                                </DropdownMenuSub>
-                                {/* Move to List Submenu */}
-                                <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger disabled={isCompleted}>
-                                        <Icon name="list" size={14} className="mr-1.5 opacity-80"/> Move to List
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuPortal>
-                                        <DropdownMenuSubContent
-                                            className="max-h-48 overflow-y-auto styled-scrollbar-thin bg-popover/95 backdrop-blur-xl border-border/50 shadow-xl">
-                                            <DropdownMenuRadioGroup value={task.list} onValueChange={handleListChange}>
+                                        <div className="space-y-0.5">
+                                            {/* Progress Setting Section */}
+                                            <div
+                                                className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Set
+                                                Progress
+                                            </div>
+                                            {progressMenuItems.map(item => (
+                                                <MenuItem
+                                                    key={item.label} icon={item.icon}
+                                                    selected={task.completionPercentage === item.value || (task.completionPercentage === null && item.value === null)}
+                                                    onClick={() => handleProgressChange(item.value)}
+                                                    disabled={isTrashItem}
+                                                >
+                                                    {item.label}
+                                                </MenuItem>
+                                            ))}
+                                            <hr className="my-1 border-black/10"/>
+                                            {/* Other Actions */}
+                                            <MenuItem icon="calendar-plus" onClick={handleSetDueDateClickFromDropdown}
+                                                      className="w-full ignore-click-away" disabled={isCompleted}> Set
+                                                Due Date... </MenuItem>
+                                            <hr className="my-1 border-black/10"/>
+                                            <div
+                                                className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Priority
+                                            </div>
+                                            {[1, 2, 3, 4, null].map(p => (
+                                                <MenuItem key={p ?? 'none'} icon="flag"
+                                                          iconColor={p ? priorityMap[p]?.iconColor : undefined}
+                                                          selected={task.priority === p}
+                                                          onClick={() => handlePriorityChange(p)}
+                                                          disabled={isCompleted}>
+                                                    {p ? `P${p} ${priorityMap[p]?.label}` : 'None'}
+                                                </MenuItem>
+                                            ))}
+                                            <hr className="my-1 border-black/10"/>
+                                            <div
+                                                className="px-2.5 pt-1 pb-0.5 text-xs text-muted-foreground font-medium">Move
+                                                to List
+                                            </div>
+                                            <div className="max-h-32 overflow-y-auto styled-scrollbar px-0.5">
                                                 {availableLists.map(list => (
-                                                    <DropdownMenuRadioItem key={list} value={list}
-                                                                           className="cursor-pointer">
-                                                        <Icon name={list === 'Inbox' ? 'inbox' : 'list'} size={14}
-                                                              className="mr-1.5 opacity-80"/> {list}
-                                                    </DropdownMenuRadioItem>
+                                                    <MenuItem key={list} icon={list === 'Inbox' ? 'inbox' : 'list'}
+                                                              selected={task.list === list}
+                                                              onClick={() => handleListChange(list)}
+                                                              disabled={isCompleted}>
+                                                        {list}
+                                                    </MenuItem>
                                                 ))}
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuSubContent>
-                                    </DropdownMenuPortal>
-                                </DropdownMenuSub>
-                                <DropdownMenuSeparator/>
-                                <DropdownMenuItem onClick={handleDuplicateTask} disabled={isCompleted}
-                                                  className="cursor-pointer">
-                                    <Icon name="copy-plus" size={14} className="mr-1.5 opacity-80"/> Duplicate Task
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={openDeleteConfirm}
-                                                  className="!text-destructive focus:!bg-destructive/10 focus:!text-destructive cursor-pointer">
-                                    <Icon name="trash" size={14} className="mr-1.5 opacity-80"/> Move to Trash
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                            </div>
+                                            <hr className="my-1 border-black/10"/>
+                                            <MenuItem icon="copy-plus" onClick={handleDuplicateTask}
+                                                      disabled={isCompleted}> Duplicate Task </MenuItem>
+                                            {!isTrashItem &&
+                                                <MenuItem icon="trash" className="!text-red-600 hover:!bg-red-500/15"
+                                                          onClick={openDeleteConfirm}> Move to Trash </MenuItem>}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>,
+                            document.body
+                        )}
                     </div>
                 )}
 
+                {/* Date Picker Portal */}
+                {isDatePickerOpen && datePickerReferenceElement && ReactDOM.createPortal(
+                    (
+                        <div ref={setDatePickerPopperElement} style={{...datePickerStyles.popper, zIndex: 60}}
+                             {...datePickerAttributes.popper} className="ignore-click-away date-picker-popover-wrapper">
+                            <CustomDatePickerPopover
+                                usePortal={false} initialDate={dueDate ?? undefined}
+                                onSelect={handleDateSelect} close={closeDatePicker}
+                                triggerElement={datePickerReferenceElement}
+                            />
+                        </div>
+                    ), document.body
+                )}
             </div>
-            {/* Delete Confirmation Dialog */}
-            <ConfirmDeleteModal
-                isOpen={isDeleteDialogOpen}
-                onClose={closeDeleteConfirm}
-                onConfirm={confirmDeleteTask}
-                taskTitle={task.title || 'Untitled Task'}
-            />
+            {/* Delete Modal */}
+            <ConfirmDeleteModal isOpen={isDeleteDialogOpen} onClose={closeDeleteConfirm} onConfirm={confirmDeleteTask}
+                                taskTitle={task.title || 'Untitled Task'}/>
         </>
     );
 });

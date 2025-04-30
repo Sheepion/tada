@@ -1,135 +1,96 @@
 // src/components/layout/IconBar.tsx
 import React, { memo, useCallback, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import Icon from '../common/Icon';
 import { useAtom, useAtomValue } from 'jotai';
-import { currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom } from '@/store/atoms';
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { currentUserAtom, isSettingsOpenAtom } from '@/store/atoms';
+import { twMerge } from 'tailwind-merge';
+import Button from "@/components/common/Button";
 import { IconName } from "@/components/common/IconMap";
 
+// Performance: Memoize IconBar
 const IconBar: React.FC = memo(() => {
     const currentUser = useAtomValue(currentUserAtom);
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
-    const [, setSettingsTab] = useAtom(settingsSelectedTabAtom);
-    const location = useLocation();
+    const location = useLocation(); // Get current location
 
     const navigationItems: { path: string; icon: IconName, label: string }[] = useMemo(() => [
-        { path: '/all', icon: 'archive', label: 'Tasks' }, // Shortened label for tooltip
+        { path: '/all', icon: 'archive', label: 'All Tasks' },
         { path: '/calendar', icon: 'calendar-days', label: 'Calendar' },
         { path: '/summary', icon: 'sparkles', label: 'AI Summary' },
     ], []);
 
-    // Handler to open settings modal directly to account tab
-    const handleOpenSettings = useCallback((tab: 'account' | 'logout' = 'account') => {
-        if (tab === 'logout') {
-            console.log("Logout action triggered");
-            // Implement actual logout logic here
-            // Maybe clear currentUserAtom, redirect to login page, etc.
-        } else {
-            setSettingsTab(tab);
-            setIsSettingsOpen(true);
-        }
-    }, [setIsSettingsOpen, setSettingsTab]);
+    const handleAvatarClick = useCallback(() => {
+        setIsSettingsOpen(true);
+    }, [setIsSettingsOpen]);
 
-    // Determine active state for NavLink-like buttons
-    const isNavItemActive = useCallback((itemPath: string): boolean => {
+    // Update NavLink class logic to correctly highlight 'All Tasks'
+    const getNavLinkClass = useCallback((itemPath: string) => ({ isActive }: { isActive: boolean }): string => {
+        let isEffectivelyActive = isActive; // Start with react-router's determination
+
+        // If this is the 'All Tasks' icon...
         if (itemPath === '/all') {
-            // Active if not Calendar or Summary
-            return !location.pathname.startsWith('/calendar') && !location.pathname.startsWith('/summary');
+            // It should be active if the current path is *not* Calendar or Summary
+            // And also check if the base path is one of the task list views
+            const isTaskListRelatedView = !location.pathname.startsWith('/calendar') && !location.pathname.startsWith('/summary');
+            isEffectivelyActive = isTaskListRelatedView;
         }
-        // Exact match for other top-level routes
-        return location.pathname === itemPath || location.pathname.startsWith(itemPath + '/');
-    }, [location.pathname]);
+        // For other icons (Calendar, Summary), rely solely on react-router's isActive
+        // (assuming their paths are unique prefixes like /calendar, /summary)
 
-    const avatarInitial = useMemo(() => currentUser?.name?.charAt(0).toUpperCase(), [currentUser?.name]);
+        return twMerge(
+            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-30 ease-apple group relative', // Base styling
+            isEffectivelyActive
+                ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30' // Active state
+                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm', // Inactive state
+            // Tooltip styles (example - requires a tooltip library setup)
+            'before:content-[attr(title)] before:absolute before:left-full before:ml-2 before:px-1.5 before:py-0.5 before:rounded before:bg-black/80 before:text-white before:text-xs before:whitespace-nowrap before:opacity-0 before:invisible group-hover:before:opacity-100 group-hover:before:visible before:transition-opacity before:delay-500 before:z-50'
+        );
+    }, [location.pathname]); // Dependency on location.pathname
 
     return (
-        <div className="w-16 bg-background/60 dark:bg-black/30 backdrop-blur-xl border-r border-border/60 flex flex-col items-center py-3 flex-shrink-0 z-20 shadow-lg">
+        <div className="w-16 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 flex flex-col items-center py-4 flex-shrink-0 z-20 shadow-strong">
             {/* App Logo */}
-            <Link to="/all" className="mb-5 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-lg text-primary-foreground font-bold text-xl shadow-inner select-none hover:opacity-90 transition-opacity" aria-label="Tada Home" title="Tada">
+            <div className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary/90 to-blue-500/80 rounded-lg text-white font-bold text-xl shadow-inner select-none" aria-label="Tada App Logo" title="Tada">
                 <span className="-mt-0.5">T</span>
-            </Link>
+            </div>
 
             {/* Main Navigation */}
             <nav className="flex flex-col items-center space-y-2 flex-1">
-                {navigationItems.map((item) => {
-                    const isActive = isNavItemActive(item.path);
-                    return (
-                        <Tooltip key={item.path}>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant={isActive ? "secondary" : "ghost"}
-                                    size="icon"
-                                    className={cn(
-                                        "w-10 h-10 rounded-lg transition-all duration-200 ease-apple", // Consistent size and shape
-                                        isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                    )}
-                                    asChild // Important: Button renders Link
-                                >
-                                    <Link to={item.path} aria-label={item.label} aria-current={isActive ? 'page' : undefined}>
-                                        <Icon name={item.icon} size={20} strokeWidth={isActive ? 2 : 1.75} />
-                                    </Link>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="tooltip-content">
-                                <p>{item.label}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    );
-                })}
+                {navigationItems.map((item) => (
+                    <NavLink
+                        key={item.path}
+                        to={item.path}
+                        // Apply the correct active class logic based on item path
+                        className={getNavLinkClass(item.path)}
+                        title={item.label} // Title is used for tooltip via CSS pseudo-element
+                        aria-label={item.label}
+                        // `end` prop ensures exact match for top-level routes like /calendar, /summary
+                        // For /all, our custom logic handles sub-routes, so `end` isn't strictly needed there, but doesn't hurt.
+                        end={item.path !== '/all'} // only apply 'end' if not '/all'
+                    >
+                        <Icon name={item.icon} size={20} strokeWidth={1.75} />
+                    </NavLink>
+                ))}
             </nav>
 
             {/* User Avatar / Settings Trigger */}
             <div className="mt-auto mb-1">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="ghost" // Changed to ghost for consistency
-                            size="icon"
-                            className="w-9 h-9 rounded-full overflow-hidden p-0 border border-border/50 shadow-inner hover:bg-accent focus:ring-1 focus:ring-ring"
-                            aria-label="Account Menu"
-                        >
-                            <Avatar className="w-full h-full">
-                                <AvatarImage src={currentUser?.avatar} alt={currentUser?.name || 'User'} />
-                                <AvatarFallback className="bg-muted text-muted-foreground font-medium text-sm">
-                                    {avatarInitial || <Icon name="user" size={16} />}
-                                </AvatarFallback>
-                            </Avatar>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" align="center" className="w-48 bg-popover/95 backdrop-blur-xl border-border/50 shadow-xl">
-                        {currentUser && (
-                            <>
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{currentUser.name}</p>
-                                        <p className="text-xs leading-none text-muted-foreground">{currentUser.email}</p>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                            </>
-                        )}
-                        <DropdownMenuItem onSelect={() => handleOpenSettings('account')} className="cursor-pointer">
-                            <Icon name="user" size={14} className="mr-2 opacity-70" />
-                            Account Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleOpenSettings('logout')} className="cursor-pointer !text-destructive focus:!bg-destructive/10 focus:!text-destructive">
-                            <Icon name="logout" size={14} className="mr-2 opacity-70" />
-                            Logout
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                    onClick={handleAvatarClick}
+                    variant="glass" size="icon"
+                    className="w-9 h-9 rounded-full overflow-hidden p-0 border border-black/10 shadow-inner hover:bg-black/15 backdrop-blur-md"
+                    aria-label="Account Settings"
+                    title="Account Settings" // Add tooltip
+                >
+                    {currentUser?.avatar ? (
+                        <img src={currentUser.avatar} alt={currentUser.name || 'User Avatar'} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-medium text-sm">
+                            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : <Icon name="user" size={16} />}
+                        </div>
+                    )}
+                </Button>
             </div>
         </div>
     );
