@@ -1,9 +1,10 @@
 // src/components/common/ConfirmDeleteModal.tsx
 import React, {useCallback} from 'react';
 import Button from './Button';
-import Icon from './Icon';
 import {twMerge} from 'tailwind-merge';
 import * as Dialog from '@radix-ui/react-dialog';
+
+// Ensure VisuallyHidden is imported if you need it elsewhere, but not used here directly for visible text.
 
 interface ConfirmDeleteModalProps {
     isOpen: boolean;
@@ -11,10 +12,6 @@ interface ConfirmDeleteModalProps {
     onConfirm: () => void;
     taskTitle: string;
 }
-
-// Define fixed IDs for accessibility linking
-const TITLE_ID = 'confirm-delete-title';
-const DESCRIPTION_ID = 'confirm-delete-description';
 
 const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
                                                                         isOpen,
@@ -30,7 +27,6 @@ const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
 
     const handleConfirmClick = useCallback(() => {
         onConfirm();
-        // Dialog closes automatically via Dialog.Close
     }, [onConfirm]);
 
     return (
@@ -46,29 +42,23 @@ const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
                         "data-[state=open]:animate-contentShow", "data-[state=closed]:animate-contentHide"
                     )}
                     onEscapeKeyDown={onClose}
-                    aria-labelledby={TITLE_ID} // Explicitly link title ID
-                    aria-describedby={DESCRIPTION_ID} // Explicitly link description ID
+                    // REMOVED aria-labelledby and aria-describedby - Rely on automatic linking
                 >
-                    {/* Icon and Title/Description */}
-                    <div className="flex flex-col items-center text-center mb-4">
-                        <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
-                            <Icon name="trash" size={24} className="text-red-600 dark:text-red-400"/>
-                        </div>
-                        <Dialog.Title id={TITLE_ID} // Assign ID
-                                      className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-1">
-                            Move to Trash?
-                        </Dialog.Title>
-                        <Dialog.Description id={DESCRIPTION_ID} // Assign ID
-                                            className="text-sm text-muted-foreground dark:text-neutral-400 px-4">
-                            Are you sure you want to move the task "{taskTitle || 'Untitled Task'}" to the Trash?
-                        </Dialog.Description>
-                    </div>
+                    {/* Title and Description FIRST */}
+                    <Dialog.Title
+                        className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-1 text-center">
+                        Move to Trash?
+                    </Dialog.Title>
+                    <Dialog.Description
+                        className="text-sm text-muted-foreground dark:text-neutral-400 px-4 text-center mb-4">
+                        Are you sure you want to move the task "{taskTitle || 'Untitled Task'}" to the Trash?
+                    </Dialog.Description>
+
                     {/* Actions */}
-                    <div className="flex justify-center space-x-3 mt-4">
+                    <div className="flex justify-center space-x-3 mt-auto pt-4">
                         <Dialog.Close asChild>
                             <Button variant="glass" size="md" className="flex-1"> Cancel </Button>
                         </Dialog.Close>
-                        {/* Removed Dialog.Close wrapping confirm button - onConfirm handles closing via state */}
                         <Button variant="danger" size="md" onClick={handleConfirmClick} className="flex-1"
                                 autoFocus> Move to Trash </Button>
                     </div>

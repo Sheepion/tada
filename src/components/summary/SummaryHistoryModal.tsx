@@ -11,6 +11,7 @@ import useDebounce from '@/hooks/useDebounce';
 import Highlighter from 'react-highlight-words';
 import {IconName} from "@/components/common/IconMap";
 import * as Dialog from '@radix-ui/react-dialog';
+import {VisuallyHidden} from '@radix-ui/react-visually-hidden'; // Keep this import
 
 // --- Helper: Get Filter Labels ---
 const getFilterLabels = (periodKey: string, listKey: string): { periodLabel: string, listLabel: string } => {
@@ -104,10 +105,6 @@ interface SummaryHistoryModalProps {
     summaries: StoredSummary[];
     allTasks: Task[];
 }
-
-// Define fixed IDs for accessibility linking
-const HISTORY_TITLE_ID = 'summary-history-title';
-const HISTORY_DESCRIPTION_ID = 'summary-history-description';
 
 const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({
                                                                      isOpen,
@@ -247,14 +244,14 @@ const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({
                         "data-[state=closed]:animate-contentHide"
                     )}
                     onEscapeKeyDown={onClose}
-                    aria-labelledby={HISTORY_TITLE_ID} // Explicitly link title ID
-                    aria-describedby={HISTORY_DESCRIPTION_ID} // Explicitly link description ID
+                    // REMOVED aria-labelledby and aria-describedby - Rely on automatic linking
                 >
-                    {/* Header */}
+                    {/* Header: Contains Title */}
                     <div
                         className="px-5 py-3 border-b border-neutral-200/70 dark:border-neutral-700/50 flex justify-between items-center flex-shrink-0 h-[50px]">
-                        <Dialog.Title id={HISTORY_TITLE_ID} // Assign ID
-                                      className="text-base font-semibold text-neutral-800 dark:text-neutral-100 flex items-center">
+                        {/* Title is FIRST semantic element inside header */}
+                        <Dialog.Title
+                            className="text-base font-semibold text-neutral-800 dark:text-neutral-100 flex items-center">
                             <Icon name="history" size={16} className="mr-2 text-neutral-500 dark:text-neutral-400"/>
                             Summary History
                         </Dialog.Title>
@@ -265,10 +262,13 @@ const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({
                         </Dialog.Close>
                     </div>
 
-                    {/* Add a visually hidden description */}
-                    <Dialog.Description id={HISTORY_DESCRIPTION_ID} className="sr-only">
-                        Browse and search through previously generated AI summaries. Select a summary from the list to
-                        view its details and the tasks it references.
+                    {/* Description: Placed immediately after header, visually hidden */}
+                    <Dialog.Description asChild>
+                        <VisuallyHidden>
+                            Browse and search through previously generated AI summaries. Select a summary from the list
+                            to
+                            view its details and the tasks it references.
+                        </VisuallyHidden>
                     </Dialog.Description>
 
                     {/* Main Content: Two Panes */}
