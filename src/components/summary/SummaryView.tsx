@@ -111,38 +111,60 @@ const SummaryView: React.FC = () => {
 
     // --- Effects ---
     useEffect(() => {
+        // Reset selections when filters change
         setSelectedTaskIds(new Set());
-        setCurrentIndex(0);
+        setCurrentIndex(0); // Go back to the newest summary for the new filter
+        hasUnsavedChangesRef.current = false; // Discard unsaved changes on filter change
     }, [period, listFilter, setCurrentIndex, setSelectedTaskIds]);
 
     useEffect(() => {
+        // Load content when the current summary changes (due to index or filter change)
         const summaryToLoad = relevantSummaries[currentIndex];
         const summaryText = summaryToLoad?.summaryText ?? '';
         const currentEditorText = editorRef.current?.getView()?.state.doc.toString();
 
         if (summaryText !== currentEditorText) {
-            isInternalEditorUpdate.current = true;
+            isInternalEditorUpdate.current = true; // Mark as internal update
             setSummaryEditorContent(summaryText);
-            hasUnsavedChangesRef.current = false;
+            hasUnsavedChangesRef.current = false; // Reset unsaved flag when loading new content
+            // No need to focus editor here, let user interact naturally
         }
-    }, [currentIndex, relevantSummaries]);
+        // Make sure dropdowns close if summary changes
+        setIsRefTasksDropdownOpen(false);
+    }, [currentIndex, relevantSummaries]); // Depend only on index and the relevant summaries list
 
     useEffect(() => {
+        // Debounced save for editor changes
         if (hasUnsavedChangesRef.current && currentSummary?.id) {
             const summaryIdToUpdate = currentSummary.id;
+            // console.log(`Debounced save triggered for summary ${summaryIdToUpdate}`);
             setStoredSummaries(prev => prev.map(s => s.id === summaryIdToUpdate ? {
                 ...s,
                 summaryText: debouncedEditorContent,
                 updatedAt: Date.now()
             } : s));
-            hasUnsavedChangesRef.current = false;
+            hasUnsavedChangesRef.current = false; // Reset flag after saving
         }
     }, [debouncedEditorContent, currentSummary?.id, setStoredSummaries]);
 
 
     // --- Callbacks ---
+    const forceSaveCurrentSummary = useCallback(() => {
+        if (hasUnsavedChangesRef.current && currentSummary?.id) {
+            const id = currentSummary.id;
+            // console.log(`Force saving summary ${id}`);
+            setStoredSummaries(p => p.map(s => s.id === id ? {
+                ...s,
+                summaryText: summaryEditorContent, // Use direct state, not debounced
+                updatedAt: Date.now()
+            } : s));
+            hasUnsavedChangesRef.current = false; // Reset flag after saving
+        }
+    }, [currentSummary?.id, setStoredSummaries, summaryEditorContent]);
+
     // Combined handler for period dropdown changes
     const handlePeriodValueChange = useCallback((selectedValue: string) => {
+        forceSaveCurrentSummary(); // Save before changing filter
         if (selectedValue === 'custom') {
             // Use setTimeout to ensure dropdown closes before popover opens
             setTimeout(() => {
@@ -152,15 +174,16 @@ const SummaryView: React.FC = () => {
             setPeriod(selectedValue as SummaryPeriodOption);
             setIsRangePickerOpen(false);
         }
-    }, [setPeriod, setIsRangePickerOpen]);
+    }, [setPeriod, setIsRangePickerOpen, forceSaveCurrentSummary]); // Added forceSave
 
 
     const handleListChange = useCallback((newList: string) => {
+        forceSaveCurrentSummary(); // Save before changing filter
         setListFilter(newList);
-    }, [setListFilter]);
+    }, [setListFilter, forceSaveCurrentSummary]); // Added forceSave
 
     const handleTaskSelectionChange = useCallback((taskId: string, isSelected: boolean | 'indeterminate') => {
-        if (isSelected === 'indeterminate') return;
+        if (isSelected === 'indeterminate') return; // Ignore clicks on indeterminate state itself
         setSelectedTaskIds(prev => {
             const newSet = new Set(prev);
             if (isSelected) newSet.add(taskId); else newSet.delete(taskId);
@@ -177,6 +200,7 @@ const SummaryView: React.FC = () => {
     }, [setSelectedTaskIds]);
 
     const handleGenerateClick = useCallback(async () => {
+        forceSaveCurrentSummary(); // Save any pending edits before generating
         setIsGenerating(true);
         const tasksToSummarize = allTasks.filter(t => selectedTaskIds.has(t.id));
         try {
@@ -190,40 +214,35 @@ const SummaryView: React.FC = () => {
                 taskIds: tasksToSummarize.map(t => t.id),
                 summaryText: newSummaryText,
             };
+            // Update stored summaries, putting the new one first
             setStoredSummaries(prev => [newSummaryEntry, ...prev]);
+            // Set index to 0 to view the newly generated summary
             setCurrentIndex(0);
-            isInternalEditorUpdate.current = true;
-            setSummaryEditorContent(newSummaryText);
-            hasUnsavedChangesRef.current = false;
+            // The useEffect listening to [currentIndex, relevantSummaries] will handle loading the editor
+            // No need to set editor content directly here anymore
         } catch (error) {
             console.error("Error generating summary:", error);
+            // Optionally, show an error message to the user
+            // Maybe update editor content with error temporarily?
             isInternalEditorUpdate.current = true;
             setSummaryEditorContent(`Error generating summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
             hasUnsavedChangesRef.current = false;
         } finally {
             setIsGenerating(false);
         }
-    }, [selectedTaskIds, allTasks, filterKey, setIsGenerating, setStoredSummaries, setCurrentIndex]);
+        // Deselect tasks after generation? Optional, based on desired UX.
+        // handleDeselectAllTasks();
+    }, [selectedTaskIds, allTasks, filterKey, setIsGenerating, setStoredSummaries, setCurrentIndex, forceSaveCurrentSummary]); // Added forceSave
 
     const handleEditorChange = useCallback((newValue: string) => {
-        setSummaryEditorContent(newValue);
+        // Only update local state and mark unsaved if it's not an internal update
         if (!isInternalEditorUpdate.current) {
+            setSummaryEditorContent(newValue);
             hasUnsavedChangesRef.current = true;
         }
+        // Reset the internal update flag after the first change event
         isInternalEditorUpdate.current = false;
     }, []);
-
-    const forceSaveCurrentSummary = useCallback(() => {
-        if (hasUnsavedChangesRef.current && currentSummary?.id) {
-            const id = currentSummary.id;
-            setStoredSummaries(p => p.map(s => s.id === id ? {
-                ...s,
-                summaryText: summaryEditorContent,
-                updatedAt: Date.now()
-            } : s));
-            hasUnsavedChangesRef.current = false;
-        }
-    }, [currentSummary?.id, setStoredSummaries, summaryEditorContent]);
 
     const handlePrevSummary = useCallback(() => {
         forceSaveCurrentSummary();
@@ -237,11 +256,15 @@ const SummaryView: React.FC = () => {
 
     // Callback for the Date Range Picker Popover Content
     const handleRangeApply = useCallback((startDate: Date, endDate: Date) => {
+        forceSaveCurrentSummary(); // Save before applying range
         setPeriod({start: startDate.getTime(), end: endDate.getTime()});
         setIsRangePickerOpen(false); // Close the popover after applying
-    }, [setPeriod, setIsRangePickerOpen]);
+    }, [setPeriod, setIsRangePickerOpen, forceSaveCurrentSummary]); // Added forceSave
 
-    const openHistoryModal = useCallback(() => setIsHistoryModalOpen(true), []);
+    const openHistoryModal = useCallback(() => {
+        forceSaveCurrentSummary(); // Save before opening modal
+        setIsHistoryModalOpen(true);
+    }, [forceSaveCurrentSummary]);
     const closeHistoryModal = useCallback(() => setIsHistoryModalOpen(false), []);
     const closeRangePicker = useCallback(() => setIsRangePickerOpen(false), []);
 
@@ -477,7 +500,6 @@ const SummaryView: React.FC = () => {
                 {/* Center Section: Filters */}
                 <div className="flex-1 flex justify-center items-center space-x-2">
                     {/* Popover Root for the Date Range Picker */}
-                    {/* ADD modal={true} */}
                     <Popover.Root modal={true} open={isRangePickerOpen} onOpenChange={setIsRangePickerOpen}>
                         <DropdownMenu.Root open={isPeriodDropdownOpen} onOpenChange={setIsPeriodDropdownOpen}>
                             <Popover.Anchor asChild>
@@ -613,6 +635,7 @@ const SummaryView: React.FC = () => {
                             aria-label={allTasksSelected ? "Deselect all tasks" : (someTasksSelected ? "Deselect all tasks" : "Select all tasks")}
                             className="mr-1"
                             size={18}
+                            disabled={filteredTasks.length === 0} // Disable if no tasks to select
                         />
                     </div>
                     <div className="flex-1 overflow-y-auto styled-scrollbar p-2 space-y-1">
@@ -669,8 +692,9 @@ const SummaryView: React.FC = () => {
                                                 <DropdownMenu.Content
                                                     className={twMerge("z-[55] radix-dropdown-content")}
                                                     sideOffset={4} align="end"
-                                                    onInteractOutside={e => e.preventDefault()} // Keep dropdown open on click inside content
-                                                    onFocusOutside={e => e.preventDefault()} // Keep dropdown open on focus inside content
+                                                    // Keep dropdown open on interaction inside
+                                                    onInteractOutside={e => e.preventDefault()}
+                                                    onFocusOutside={e => e.preventDefault()}
                                                 >
                                                     {renderReferencedTasksDropdown()}
                                                 </DropdownMenu.Content>
@@ -697,10 +721,16 @@ const SummaryView: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                {/* CodeMirror Editor */}
+                                {/* CodeMirror Editor - ADD KEY PROP */}
                                 <div
                                     className="flex-1 min-h-0 border border-black/10 dark:border-white/10 rounded-md overflow-hidden bg-glass-inset-100 dark:bg-neutral-700/30 shadow-inner relative">
                                     <CodeMirrorEditor
+                                        // --- FIX: Add key prop ---
+                                        // This key forces React to unmount and remount the component when the
+                                        // displayed summary ID changes, ensuring a fresh CodeMirror instance.
+                                        // We use a placeholder key during generation or when no summary is selected.
+                                        key={isGenerating ? 'generating' : (currentSummary?.id ?? 'no-summary')}
+                                        // --- End FIX ---
                                         ref={editorRef}
                                         value={summaryEditorContent}
                                         onChange={handleEditorChange}
