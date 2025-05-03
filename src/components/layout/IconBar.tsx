@@ -3,7 +3,7 @@ import React, {memo, useCallback, useMemo} from 'react';
 import {NavLink, useLocation} from 'react-router-dom';
 import Icon from '../common/Icon';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/atoms'; // Added settingsSelectedTabAtom
+import {currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/atoms';
 import {twMerge} from 'tailwind-merge';
 import Button from "@/components/common/Button";
 import {IconName} from "@/components/common/IconMap";
@@ -19,7 +19,7 @@ const IconBar: React.FC = memo(() => {
     const location = useLocation();
 
     const navigationItems: { path: string; icon: IconName, label: string }[] = useMemo(() => [
-        {path: '/all', icon: 'archive', label: 'All Tasks'},
+        {path: '/all', icon: 'archive', label: 'All Tasks'}, // Represents the main task section
         {path: '/calendar', icon: 'calendar-days', label: 'Calendar'},
         {path: '/summary', icon: 'sparkles', label: 'AI Summary'},
     ], []);
@@ -30,20 +30,34 @@ const IconBar: React.FC = memo(() => {
         setIsSettingsOpen(true);
     }, [setIsSettingsOpen, setSettingsTab]);
 
-    // NavLink class logic remains the same
-    const getNavLinkClass = useCallback((itemPath: string) => ({isActive}: { isActive: boolean }): string => {
-        let isEffectivelyActive = isActive;
-        if (itemPath === '/all') {
-            isEffectivelyActive = !location.pathname.startsWith('/calendar') && !location.pathname.startsWith('/summary');
+    // --- CORRECTED: Active state logic based on section ---
+    const getNavLinkClass = useCallback((itemPath: string): string => {
+        // Determine the active state based on the current location pathname representing the broader section
+        let isSectionActive = false;
+        const currentPath = location.pathname;
+
+        if (itemPath === '/calendar') {
+            // Calendar section is active if the path starts with /calendar
+            isSectionActive = currentPath.startsWith('/calendar');
+        } else if (itemPath === '/summary') {
+            // Summary section is active if the path starts with /summary
+            isSectionActive = currentPath.startsWith('/summary');
+        } else if (itemPath === '/all') {
+            // The 'All Tasks' icon represents the main task management area.
+            // It should be active for any path *not* starting with /calendar or /summary.
+            // This covers /, /all, /today, /list/*, /tag/*, etc.
+            isSectionActive = !currentPath.startsWith('/calendar') && !currentPath.startsWith('/summary');
         }
+
+        // Apply styles based on the calculated section activity
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-30 ease-apple group relative', // Ensure flex centering
-            isEffectivelyActive
-                ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30'
-                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm',
+            isSectionActive // Use the calculated section activity
+                ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30' // Active state style
+                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm', // Inactive state style
             'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100' // Focus style
         );
-    }, [location.pathname]);
+    }, [location.pathname]); // Recalculate when pathname changes
 
     // Tooltip content class
     const tooltipContentClass = "text-xs bg-black/80 text-white px-2 py-1 rounded shadow-md select-none z-[60] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
@@ -66,9 +80,9 @@ const IconBar: React.FC = memo(() => {
                         <Tooltip.Trigger asChild>
                             <NavLink
                                 to={item.path}
-                                className={getNavLinkClass(item.path)}
+                                className={getNavLinkClass(item.path)} // Apply the calculated class string directly
                                 aria-label={item.label}
-                                end={item.path !== '/all'} // Ensure correct active matching
+                                // `end` prop is not needed here as our custom logic determines section activity
                             >
                                 {/* Icon is centered due to NavLink's flex properties */}
                                 <Icon name={item.icon} size={20} strokeWidth={1.75}/>
