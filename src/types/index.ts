@@ -7,12 +7,25 @@ export interface User {
     isPremium: boolean; // Premium status flag
 }
 
+export interface Subtask {
+    id: string;
+    parentId: string;
+    title: string;
+    completed: boolean;
+    completedAt: number | null;
+    dueDate?: number | null; // Store as timestamp
+    content?: string; // Optional Markdown content for notes
+    order: number; // Fractional index for sorting within the parent
+    createdAt: number;
+    updatedAt: number;
+}
+
 export interface Task {
     id: string;
     title: string;
     completed: boolean;
     completedAt: number | null;
-    completionPercentage: number | null;
+    completionPercentage: number | null; // For parent task progress
     dueDate?: number | null; // Store as timestamp (milliseconds since epoch) or null
     list: string; // List name (e.g., 'Inbox', 'Work', 'Trash')
     content?: string; // Optional Markdown content for notes
@@ -22,6 +35,7 @@ export interface Task {
     tags?: string[]; // Optional array of tag strings
     priority?: number | null; // Priority level (e.g., 1-4) or null
     groupCategory: TaskGroupCategory; // Derived category for grouping (non-optional)
+    subtasks?: Subtask[]; // Array of subtasks
 }
 
 // Defines the possible filter strings used for routing and state

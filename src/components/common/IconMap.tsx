@@ -26,6 +26,12 @@ export const iconMap = {
     'moon': LucideIcons.Moon,
     'calendar-plus': LucideIcons.CalendarPlus,
     'edit': LucideIcons.Edit3,
+    'network': LucideIcons.Network,
+    'message-square-text': LucideIcons.MessageSquareText,
+    'message-square-plus': LucideIcons.MessageSquarePlus,
+    'sticky-note': LucideIcons.StickyNote,
+    'file-pen': LucideIcons.FilePen,
+    'git-fork': LucideIcons.GitFork,
     'check': LucideIcons.Check,
     'x': LucideIcons.X,
     'arrow-left': LucideIcons.ArrowLeft,
@@ -66,6 +72,8 @@ export const iconMap = {
     'calendar-check': LucideIcons.CalendarCheck,
     'refresh-cw': LucideIcons.RefreshCw,
     'copy-plus': LucideIcons.CopyPlus,
+    'plus-circle': LucideIcons.PlusCircle,
+    'check-circle': LucideIcons.CheckCircle,
     'circle': LucideIcons.Circle,                // For 0% / Not Started
     'circle-dot': LucideIcons.CircleDot,          // For 20%
     'circle-dot-dashed': LucideIcons.CircleDotDashed, // For 50%
