@@ -153,14 +153,14 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
             cursor: 'grabbing',
             zIndex: 1000,
             boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-            background: 'hsla(var(--canvas-alt-h), var(--canvas-alt-s), calc(var(--canvas-alt-l) + 3%), 0.9)'
+            background: 'var(--color-canvas-alt, hsla(var(--canvas-alt-h), var(--canvas-alt-s), calc(var(--canvas-alt-l) + 3%), 0.9))'
         };
         if (isDragging) return {
             transform: baseTransform,
             transition,
             opacity: 0.6,
             cursor: 'grabbing',
-            background: 'hsla(var(--glass-alt-h), var(--glass-alt-s), var(--glass-alt-l), 0.2)'
+            background: 'var(--color-glass-alt, hsla(var(--glass-alt-h), var(--glass-alt-s), var(--glass-alt-l), 0.2))'
         };
         return {transform: baseTransform, transition};
     }, [transform, transition, isDragging, isDraggingOverlay]);
@@ -168,19 +168,23 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
     useEffect(() => {
         setLocalTitle(subtask.title);
     }, [subtask.title]);
+
     useEffect(() => {
         if (isEditingTitle && titleInputRef.current) {
             titleInputRef.current.focus();
             titleInputRef.current.select();
         }
     }, [isEditingTitle]);
+
     useEffect(() => {
         if (isEditingContentForThis && contentTextareaRef.current) {
             setLocalContentCache(subtask.content || '');
             contentTextareaRef.current.focus();
-            contentTextareaRef.current.style.height = 'auto';
-            requestAnimationFrame(() => {
-                if (contentTextareaRef.current) contentTextareaRef.current.style.height = `${contentTextareaRef.current.scrollHeight}px`;
+            contentTextareaRef.current.style.height = 'auto'; // Reset height
+            requestAnimationFrame(() => { // Ensure DOM has updated
+                if (contentTextareaRef.current) {
+                    contentTextareaRef.current.style.height = `${contentTextareaRef.current.scrollHeight}px`;
+                }
             });
         }
     }, [isEditingContentForThis, subtask.content]);
@@ -189,25 +193,32 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => setLocalTitle(e.target.value);
     const saveTitle = () => {
         const trimmedTitle = localTitle.trim();
-        if (trimmedTitle && trimmedTitle !== subtask.title) onUpdate(subtask.id, {title: trimmedTitle}); else if (!trimmedTitle && subtask.title) setLocalTitle(subtask.title);
+        if (trimmedTitle && trimmedTitle !== subtask.title) {
+            onUpdate(subtask.id, {title: trimmedTitle});
+        } else if (!trimmedTitle && subtask.title) { // Revert if cleared but had a title
+            setLocalTitle(subtask.title);
+        }
         setIsEditingTitle(false);
     };
     const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') saveTitle();
         if (e.key === 'Escape') {
-            setLocalTitle(subtask.title);
+            setLocalTitle(subtask.title); // Revert to original on Escape
             setIsEditingTitle(false);
         }
     };
     const handleCompletionToggle = () => {
-        if (!isDisabledByParent) onUpdate(subtask.id, {
-            completed: !subtask.completed,
-            completedAt: !subtask.completed ? Date.now() : null
-        });
+        if (!isDisabledByParent) {
+            onUpdate(subtask.id, {
+                completed: !subtask.completed,
+                completedAt: !subtask.completed ? Date.now() : null
+            });
+        }
     };
 
     const handleContentTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setLocalContentCache(e.target.value);
+        // Auto-resize textarea
         e.target.style.height = 'auto';
         e.target.style.height = `${e.target.scrollHeight}px`;
     };
@@ -215,18 +226,21 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
         if (localContentCache !== (subtask.content || '')) {
             onUpdate(subtask.id, {content: localContentCache});
         }
-        onToggleEditContent(null);
+        onToggleEditContent(null); // Close editor
     };
     const cancelSubtaskContentEdit = () => {
-        setLocalContentCache(subtask.content || '');
-        onToggleEditContent(null);
+        setLocalContentCache(subtask.content || ''); // Revert changes
+        onToggleEditContent(null); // Close editor
     };
 
     const handleDateSelect = useCallback((dateWithTime: Date | undefined) => {
-        if (!isDisabledByParent) onUpdate(subtask.id, {dueDate: dateWithTime ? dateWithTime.getTime() : null});
+        if (!isDisabledByParent) {
+            onUpdate(subtask.id, {dueDate: dateWithTime ? dateWithTime.getTime() : null});
+        }
         setIsDatePickerOpen(false);
         setIsDateTooltipOpen(false);
     }, [onUpdate, subtask.id, isDisabledByParent]);
+
     const closeDatePickerPopover = useCallback(() => {
         setIsDatePickerOpen(false);
         setIsDateTooltipOpen(false);
@@ -249,30 +263,46 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
 
 
     return (
-        <div ref={setNodeRef} style={style}
-             className={twMerge(subtaskItemBaseClasses, subtaskItemHoverClasses, subtaskItemEditingContentClasses, isDraggingOverlay && "bg-canvas-alt dark:bg-neutral-750 shadow-lg px-1.5")}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes} // Apply sortable attributes here for whole item dragging
+            {...listeners} // Apply sortable listeners here
+            className={twMerge(
+                subtaskItemBaseClasses,
+                subtaskItemHoverClasses,
+                subtaskItemEditingContentClasses,
+                isDraggingOverlay && "bg-canvas-alt dark:bg-neutral-750 shadow-lg px-1.5",
+                !isDisabledByParent && !isDragging && !isDraggingOverlay && "cursor-grab", // Default cursor when draggable
+                isDisabledByParent && "cursor-not-allowed" // Cursor when not draggable
+            )}
+        >
             <div className="flex items-center h-9 px-1.5">
-                <Button variant="ghost" size="icon" {...listeners} {...attributes}
-                        className={twMerge("w-7 h-7 text-muted-foreground/30 dark:text-neutral-600 opacity-0 group-hover/subtask-detail:opacity-100 focus-visible:opacity-100 transition-opacity cursor-grab mr-1 flex-shrink-0", isDisabledByParent && "cursor-not-allowed !opacity-10")}
-                        icon="grip-vertical" aria-label="Reorder subtask" tabIndex={-1} disabled={isDisabledByParent}
-                />
                 <SelectionCheckboxRadix
                     id={`subtask-detail-check-${subtask.id}`} checked={subtask.completed}
                     onChange={handleCompletionToggle}
                     aria-label={`Mark subtask ${subtask.title} as ${subtask.completed ? 'incomplete' : 'complete'}`}
                     className="mr-2.5 flex-shrink-0" size={16} disabled={isDisabledByParent}
                 />
-                <div className="flex-1 min-w-0 py-1"
+                <div className={twMerge(
+                    "flex-1 min-w-0 py-1 h-full flex items-center" // MODIFIED: Ensure wrapper has full height and centers content
+                )}
                      onClick={() => !isEditingTitle && !isDisabled && setIsEditingTitle(true)}>
                     {isEditingTitle ? (
                         <input ref={titleInputRef} type="text" value={localTitle} onChange={handleTitleChange}
                                onBlur={saveTitle} onKeyDown={handleTitleKeyDown}
-                               className={twMerge("w-full text-[13px] bg-transparent focus:outline-none focus:ring-0 border-none p-0 leading-tight h-full font-medium", subtask.completed ? "line-through text-neutral-500/70 dark:text-neutral-400/70" : "text-neutral-700 dark:text-neutral-100")}
+                               className={twMerge(
+                                   "w-full text-[13px] bg-transparent focus:outline-none focus:ring-0 border-none p-0 leading-tight font-medium", // MODIFIED: Removed h-full
+                                   subtask.completed ? "line-through text-neutral-500/70 dark:text-neutral-400/70" : "text-neutral-700 dark:text-neutral-100"
+                               )}
                                placeholder="Subtask title..." disabled={isDisabled}
                         />
                     ) : (
                         <span
-                            className={twMerge("text-[13px] cursor-text block truncate leading-tight font-medium", subtask.completed ? "line-through text-neutral-500/70 dark:text-neutral-400/70" : "text-neutral-700 dark:text-neutral-100")}>
+                            className={twMerge(
+                                "text-[13px] cursor-text block truncate leading-tight font-medium",
+                                subtask.completed ? "line-through text-neutral-500/70 dark:text-neutral-400/70" : "text-neutral-700 dark:text-neutral-100"
+                            )}>
                             {subtask.title || <span className="italic text-muted-foreground/70">Untitled Subtask</span>}
                         </span>
                     )}
@@ -306,7 +336,7 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                 </Tooltip.Content></Tooltip.Portal>
                             </Tooltip.Root></Tooltip.Provider>
                             <Popover.Portal><Popover.Content
-                                className={datePickerPopoverWrapperClasses} // Applied corrected classes
+                                className={datePickerPopoverWrapperClasses}
                                 sideOffset={5}
                                 align="end" onOpenAutoFocus={(e) => e.preventDefault()}
                                 onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -423,7 +453,8 @@ const TaskDetail: React.FC = () => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
             savePendingChanges();
         };
-    }, []);
+    }, []); // Removed savePendingChanges from deps as it's stable
+
     const savePendingChanges = useCallback(() => {
         if (!selectedTask || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
         if (saveTimeoutRef.current) {
@@ -432,12 +463,12 @@ const TaskDetail: React.FC = () => {
         }
         const currentTitle = latestTitleRef.current;
         const currentContent = latestContentRef.current;
-        const currentDueDate = localDueDate;
+        const currentDueDate = localDueDate; // Use the state value directly
         const currentTagsString = latestTagsStringRef.current;
         const processedTitle = currentTitle.trim();
         const processedDueDateTimestamp = currentDueDate && isValid(currentDueDate) ? currentDueDate.getTime() : null;
         const processedTags = currentTagsString.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
-        const originalTaskState = selectedTask;
+        const originalTaskState = selectedTask; // Capture for comparison
         const changesToSave: Partial<Task> = {};
         if (processedTitle !== originalTaskState.title) changesToSave.title = processedTitle;
         if (currentContent !== (originalTaskState.content || '')) changesToSave.content = currentContent;
@@ -447,12 +478,16 @@ const TaskDetail: React.FC = () => {
         const processedTagsSorted = processedTags.slice().sort();
         if (JSON.stringify(processedTagsSorted) !== JSON.stringify(originalTagsSorted)) changesToSave.tags = processedTags;
         if (Object.keys(changesToSave).length > 0) {
-            setTasks(prevTasks => prevTasks.map((t) => (t.id === originalTaskState.id ? {...t, ...changesToSave} : t)));
+            setTasks(prevTasks => prevTasks.map((t) => (t.id === originalTaskState.id ? {
+                ...t, ...changesToSave,
+                updatedAt: Date.now()
+            } : t)));
         }
         hasUnsavedChangesRef.current = false;
-    }, [selectedTask, setTasks, localDueDate]);
+    }, [selectedTask, setTasks, localDueDate]); // Added localDueDate
+
     useEffect(() => {
-        savePendingChanges();
+        savePendingChanges(); // Save any pending changes from the previously selected task
         if (selectedTask) {
             const isTitleFocused = titleInputRef.current === document.activeElement;
             const isTagsFocused = tagInputElementRef.current === document.activeElement;
@@ -508,7 +543,9 @@ const TaskDetail: React.FC = () => {
             setEditingSubtaskContentId(null);
             setNewSubtaskTitle('');
         }
-    }, [selectedTask]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedTask]); // savePendingChanges is stable
+
     useEffect(() => {
         latestTitleRef.current = localTitle;
     }, [localTitle]);
@@ -518,6 +555,7 @@ const TaskDetail: React.FC = () => {
     useEffect(() => {
         latestTagsStringRef.current = localTagsString;
     }, [localTagsString]);
+
     const triggerSave = useCallback(() => {
         if (!selectedTask || !isMountedRef.current) return;
         hasUnsavedChangesRef.current = true;
@@ -526,6 +564,7 @@ const TaskDetail: React.FC = () => {
             savePendingChanges();
         }, 700);
     }, [selectedTask, savePendingChanges]);
+
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks'>>) => {
         if (!selectedTask || !isMountedRef.current) return;
         if (hasUnsavedChangesRef.current) savePendingChanges();
@@ -534,53 +573,70 @@ const TaskDetail: React.FC = () => {
             saveTimeoutRef.current = null;
         }
         hasUnsavedChangesRef.current = false;
-        setTasks(prevTasks => prevTasks.map(t => (t.id === selectedTask.id ? {...t, ...updates} : t)));
+        setTasks(prevTasks => prevTasks.map(t => (t.id === selectedTask.id ? {
+            ...t, ...updates,
+            updatedAt: Date.now()
+        } : t)));
     }, [selectedTask, setTasks, savePendingChanges]);
+
     const handleClose = useCallback(() => {
         savePendingChanges();
         setSelectedTaskId(null);
     }, [setSelectedTaskId, savePendingChanges]);
+
     const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalTitle(e.target.value);
         triggerSave();
     }, [triggerSave]);
+
     const handleContentChange = useCallback((newValue: string) => {
         setLocalContent(newValue);
         triggerSave();
     }, [triggerSave]);
+
     const handleMainContentBlur = useCallback(() => {
-        savePendingChanges();
+        if (hasUnsavedChangesRef.current) {
+            savePendingChanges();
+        }
     }, [savePendingChanges]);
+
     const handleDatePickerSelect = useCallback((dateWithTime: Date | undefined) => {
         setLocalDueDate(dateWithTime);
         updateTask({dueDate: dateWithTime ? dateWithTime.getTime() : null});
         setIsDatePickerOpen(false);
         setIsDateTooltipOpen(false);
     }, [updateTask]);
+
     const closeDatePickerPopover = useCallback(() => {
         setIsDatePickerOpen(false);
         setIsDateTooltipOpen(false);
     }, []);
+
     const handleListChange = useCallback((newList: string) => updateTask({list: newList}), [updateTask]);
     const handlePriorityChange = useCallback((newPriority: number | null) => updateTask({priority: newPriority}), [updateTask]);
     const handleProgressChange = useCallback((newPercentage: number | null) => updateTask({completionPercentage: newPercentage}), [updateTask]);
+
     const cycleCompletionPercentage = useCallback(() => {
         if (!selectedTask || selectedTask.list === 'Trash') return;
         const currentPercentage = selectedTask.completionPercentage ?? 0;
         let nextPercentage: number | null = currentPercentage === 100 ? null : 100;
         updateTask({completionPercentage: nextPercentage});
     }, [selectedTask, updateTask]);
+
     const openDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(true), []);
     const closeDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(false), []);
+
     const confirmDelete = useCallback(() => {
         if (!selectedTask) return;
         updateTask({list: 'Trash', completionPercentage: null});
         setSelectedTaskId(null);
     }, [selectedTask, updateTask, setSelectedTaskId]);
+
     const handleRestore = useCallback(() => {
         if (!selectedTask || selectedTask.list !== 'Trash') return;
         updateTask({list: 'Inbox'});
     }, [selectedTask, updateTask]);
+
     const handleDuplicateTask = useCallback(() => {
         if (!selectedTask) return;
         const now = Date.now();
@@ -615,6 +671,7 @@ const TaskDetail: React.FC = () => {
         setSelectedTaskId(newTaskData.id!);
         setIsMoreActionsOpen(false);
     }, [selectedTask, setTasks, setSelectedTaskId]);
+
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -631,10 +688,12 @@ const TaskDetail: React.FC = () => {
             titleInputRef.current?.blur();
         }
     }, [selectedTask, localTitle, savePendingChanges]);
+
     const tagsArray = useMemo(() => localTagsString.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i), [localTagsString]);
     const isTrash = useMemo(() => selectedTask?.list === 'Trash', [selectedTask?.list]);
     const isCompleted = useMemo(() => (selectedTask?.completionPercentage ?? 0) === 100 && !isTrash, [selectedTask?.completionPercentage, isTrash]);
     const isInteractiveDisabled = useMemo(() => isTrash || isCompleted, [isTrash, isCompleted]);
+
     const addTag = useCallback((tagToAdd: string) => {
         const trimmedTag = tagToAdd.trim();
         if (!trimmedTag || isInteractiveDisabled) return;
@@ -646,6 +705,7 @@ const TaskDetail: React.FC = () => {
         }
         setTagInputValue('');
     }, [localTagsString, isInteractiveDisabled, triggerSave]);
+
     const removeTag = useCallback((tagToRemove: string) => {
         if (isInteractiveDisabled) return;
         const newTagsArray = tagsArray.filter(t => t !== tagToRemove);
@@ -653,6 +713,7 @@ const TaskDetail: React.FC = () => {
         triggerSave();
         tagInputElementRef.current?.focus();
     }, [tagsArray, isInteractiveDisabled, triggerSave]);
+
     const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (isInteractiveDisabled) return;
         const value = tagInputValue.trim();
@@ -669,11 +730,13 @@ const TaskDetail: React.FC = () => {
             setIsTagsPopoverOpen(false);
         }
     }, [tagInputValue, tagsArray, addTag, removeTag, isInteractiveDisabled]);
+
     const handleTagInputBlur = useCallback(() => {
         const value = tagInputValue.trim();
         if (value && !isInteractiveDisabled) addTag(value);
-        savePendingChanges();
-    }, [tagInputValue, addTag, isInteractiveDisabled, savePendingChanges]);
+        // Do not call savePendingChanges here, rely on triggerSave from addTag
+    }, [tagInputValue, addTag, isInteractiveDisabled]);
+
     const handleTagContainerClick = useCallback(() => {
         if (!isInteractiveDisabled) tagInputElementRef.current?.focus();
     }, [isInteractiveDisabled]);
@@ -807,7 +870,7 @@ const TaskDetail: React.FC = () => {
                                        onClick={cycleCompletionPercentage} size={24} className="flex-shrink-0"
                                        ariaLabelledby={`task-title-input-${selectedTask.id}`}/>
                     <input ref={titleInputRef} type="text" value={localTitle} onChange={handleTitleChange}
-                           onKeyDown={handleTitleKeyDown} onBlur={savePendingChanges} className={titleInputClasses}
+                           onKeyDown={handleTitleKeyDown} onBlur={handleMainContentBlur} className={titleInputClasses}
                            placeholder="Task title..." disabled={isTrash} aria-label="Task title"
                            id={`task-title-input-${selectedTask.id}`}/>
                     <div className="flex items-center space-x-1 flex-shrink-0">
@@ -930,7 +993,7 @@ const TaskDetail: React.FC = () => {
                             className={tooltipContentClass} side="top"
                             sideOffset={6}>{displayDueDateForRender && isValid(displayDueDateForRender) ? `Due: ${formatRelativeDate(displayDueDateForRender, true)}` : 'Set Due Date'}<Tooltip.Arrow
                             className="fill-black/80 dark:fill-neutral-900/90"/></Tooltip.Content></Tooltip.Portal></Tooltip.Root><Popover.Portal><Popover.Content
-                            className={datePickerPopoverWrapperClasses} // Applied corrected classes
+                            className={datePickerPopoverWrapperClasses}
                             sideOffset={5}
                             align="start"
                             onOpenAutoFocus={(e) => e.preventDefault()}
@@ -974,8 +1037,9 @@ const TaskDetail: React.FC = () => {
                             onValueChange={(value) => handlePriorityChange(value === 'none' ? null : Number(value))}>{[null, 1, 2, 3, 4].map(p => (
                             <RadixMenuItem key={p ?? 'none'} selected={displayPriority === p}
                                            onSelect={() => handlePriorityChange(p)}
-                                           className={p ? priorityMap[p]?.color : ''}><Icon name="flag" size={15}
-                                                                                            className="mr-2"/>{p ? `P${p} ${priorityMap[p]?.label}` : 'None'}
+                                           className={twMerge(p ? priorityMap[p]?.color : '', "data-[highlighted]:opacity-100")}><Icon
+                                name="flag" size={15}
+                                className={twMerge("mr-2", !p && "opacity-50")}/>{p ? `P${p} ${priorityMap[p]?.label}` : 'None'}
                             </RadixMenuItem>))}</DropdownMenu.RadioGroup></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></Tooltip.Provider>
                         <Tooltip.Provider><Popover.Root open={isTagsPopoverOpen} onOpenChange={(open) => {
                             setIsTagsPopoverOpen(open);
