@@ -19,7 +19,7 @@ import {useTaskItemMenu} from '@/context/TaskItemMenuContext';
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import * as Tooltip from '@radix-ui/react-tooltip';
 import SelectionCheckboxRadix from '../common/SelectionCheckbox';
-import {useAtomValue} from "jotai/index"; // Using the Radix based checkbox
+import {useAtomValue} from "jotai/index";
 
 
 export const ProgressIndicator: React.FC<{
@@ -340,7 +340,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
     const actionsMenuContentClasses = useMemo(() => twMerge('z-[55] min-w-[200px] p-1.5 w-52 bg-glass-menu dark:bg-neutral-800/90 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10 data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade'), []);
-    const datePickerPopoverContentClasses = useMemo(() => twMerge("z-[60] radix-popover-content data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade"), []);
+
+    const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
+        "z-[60] p-0 bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10",
+        "data-[state=open]:animate-slideUpAndFade",
+        "data-[state=closed]:animate-slideDownAndFade"
+    ), []);
+
     const progressMenuItems = useMemo(() => [{
         label: 'Not Started',
         value: null,
@@ -383,14 +389,11 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                        onClick={cycleCompletionPercentage} onKeyDown={handleProgressIndicatorKeyDown}
                                        ariaLabelledby={`task-title-${task.id}`} size={18}/>
                 </div>
-                <div className="flex-1 min-w-0 pt-0.5 pb-0.5 flex flex-col"> {/* Allow vertical stacking */}
+                <div className="flex-1 min-w-0 pt-0.5 pb-0.5 flex flex-col">
                     <div className="flex items-baseline">
                         <Highlighter {...highlighterProps} textToHighlight={task.title || 'Untitled Task'}
                                      id={`task-title-${task.id}`} className={titleClasses}/>
-                        {/* Progress Label removed for cleaner look, progress indicator is primary */}
                     </div>
-
-                    {/* Metadata Row */}
                     <div
                         className={twMerge("flex items-center flex-wrap text-muted-foreground dark:text-neutral-400 mt-1 leading-tight gap-x-2.5 gap-y-1 min-h-[18px]")}>
                         {!!task.priority && task.priority <= 4 && !isCompleted && !isTrashItem && (
@@ -426,7 +429,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                 </Popover.Trigger>
                                 {isDateClickable && (
                                     <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={5}
-                                                                     className={datePickerPopoverContentClasses}
+                                                                     className={datePickerPopoverWrapperClasses} // Applied corrected classes
                                                                      onCloseAutoFocus={(e) => {
                                                                          e.preventDefault();
                                                                          dateDisplayRef.current?.focus();
@@ -472,8 +475,6 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                                                                                className="ml-1"/>
                         </div>)}
                     </div>
-
-                    {/* Subtasks Display in Task List Item */}
                     {task.subtasks && task.subtasks.length > 0 && !isTrashItem && !isCompleted && (
                         <div className="mt-1.5 pt-1.5 border-t border-black/5 dark:border-white/[.02] -mx-1 px-1">
                             {subtasksToDisplayInList.map(sub => (
@@ -481,12 +482,12 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                     <SelectionCheckboxRadix
                                         id={`subtask-list-item-check-${sub.id}`}
                                         checked={sub.completed}
-                                        onChange={() => { /* Non-interactive in list view */
+                                        onChange={() => {
                                         }}
                                         aria-label={`Subtask: ${sub.title} status`}
                                         className="mr-1.5 flex-shrink-0 pointer-events-none"
                                         size={12}
-                                        disabled={true} // Visually disabled
+                                        disabled={true}
                                     />
                                     <span className={twMerge(
                                         "truncate text-muted-foreground dark:text-neutral-400/90",
@@ -595,7 +596,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
                             <Popover.Portal><Popover.Content side="bottom" align="end" sideOffset={5}
-                                                             className={datePickerPopoverContentClasses}
+                                                             className={datePickerPopoverWrapperClasses} // Applied corrected classes
                                                              onCloseAutoFocus={(e) => {
                                                                  e.preventDefault();
                                                                  moreActionsButtonRef.current?.focus();

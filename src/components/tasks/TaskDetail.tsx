@@ -215,11 +215,11 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
         if (localContentCache !== (subtask.content || '')) {
             onUpdate(subtask.id, {content: localContentCache});
         }
-        onToggleEditContent(null); // Close editor after saving
+        onToggleEditContent(null);
     };
     const cancelSubtaskContentEdit = () => {
-        setLocalContentCache(subtask.content || ''); // Revert to original
-        onToggleEditContent(null); // Close editor
+        setLocalContentCache(subtask.content || '');
+        onToggleEditContent(null);
     };
 
     const handleDateSelect = useCallback((dateWithTime: Date | undefined) => {
@@ -240,7 +240,12 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
     const subtaskItemHoverClasses = !isDraggingOverlay && !isDragging && !isEditingContentForThis ? "hover:bg-black/[.025] dark:hover:bg-white/[.025]" : "";
     const subtaskItemEditingContentClasses = isEditingContentForThis ? "bg-black/[.02] dark:bg-white/[.02]" : "";
     const tooltipContentClass = "text-xs bg-black/80 dark:bg-neutral-900/90 text-white px-2 py-1 rounded shadow-md select-none z-[75] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
-    const datePickerContentClasses = "z-[70] p-0 border-0 shadow-none bg-transparent data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade";
+
+    const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
+        "z-[70] p-0 bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10",
+        "data-[state=open]:animate-slideUpAndFade",
+        "data-[state=closed]:animate-slideDownAndFade"
+    ), []);
 
 
     return (
@@ -272,11 +277,9 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                         </span>
                     )}
                 </div>
-
-                {/* Subtask Meta: Date & Notes Icon - Shown if they exist or on hover for adding */}
                 <div
                     className={twMerge("flex items-center flex-shrink-0 ml-2 space-x-1 transition-opacity duration-150", (isEditingContentForThis || isEditingTitle) ? "opacity-100" : "opacity-0 group-hover/subtask-detail:opacity-100 focus-within:opacity-100")}>
-                    {(subtask.dueDate || !isDisabled) && ( // Show date picker if not disabled OR if a date is already set
+                    {(subtask.dueDate || !isDisabled) && (
                         <Popover.Root open={isDatePickerOpen} onOpenChange={(open) => {
                             setIsDatePickerOpen(open);
                             if (!open) setIsDateTooltipOpen(false);
@@ -289,7 +292,7 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                                 className={twMerge("w-7 h-7",
                                                     isSubtaskOverdue && !subtask.completed && "text-red-500 dark:text-red-400",
                                                     !isSubtaskOverdue && "text-muted-foreground/60 dark:text-neutral-500/60 hover:text-muted-foreground dark:hover:text-neutral-400",
-                                                    isDisabled && !subtask.dueDate && "opacity-50 cursor-not-allowed", // Reduced opacity further if no date and disabled
+                                                    isDisabled && !subtask.dueDate && "opacity-50 cursor-not-allowed",
                                                     isDisabled && subtask.dueDate && "opacity-60 cursor-not-allowed",
                                                 )}
                                                 aria-label={subtask.dueDate ? `Subtask due: ${formatRelativeDate(subtaskDueDate, true)}` : "Set subtask due date"}
@@ -302,9 +305,11 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                     <Tooltip.Arrow className="fill-black/80 dark:fill-neutral-900/90"/>
                                 </Tooltip.Content></Tooltip.Portal>
                             </Tooltip.Root></Tooltip.Provider>
-                            <Popover.Portal><Popover.Content className={datePickerContentClasses} sideOffset={5}
-                                                             align="end" onOpenAutoFocus={(e) => e.preventDefault()}
-                                                             onCloseAutoFocus={(e) => e.preventDefault()}>
+                            <Popover.Portal><Popover.Content
+                                className={datePickerPopoverWrapperClasses} // Applied corrected classes
+                                sideOffset={5}
+                                align="end" onOpenAutoFocus={(e) => e.preventDefault()}
+                                onCloseAutoFocus={(e) => e.preventDefault()}>
                                 <CustomDatePickerContent initialDate={subtaskDueDate ?? undefined}
                                                          onSelect={handleDateSelect}
                                                          closePopover={closeDatePickerPopover}/>
@@ -336,7 +341,7 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                         initial={{height: 0, opacity: 0.5, marginTop: 0}}
                         animate={{height: 'auto', opacity: 1, marginTop: '4px', marginBottom: '4px'}}
                         exit={{height: 0, opacity: 0, marginTop: 0, marginBottom: 0}}
-                        transition={{duration: 0.25, ease: [0.33, 1, 0.68, 1]}} // Smoother ease for height auto
+                        transition={{duration: 0.25, ease: [0.33, 1, 0.68, 1]}}
                         className="overflow-hidden pl-[calc(28px+10px+16px+10px)] pr-2"
                     >
                         <textarea
@@ -755,11 +760,17 @@ const TaskDetail: React.FC = () => {
     const headerClass = useMemo(() => twMerge("px-4 py-2 h-16 flex items-center justify-between flex-shrink-0 border-b border-neutral-200/60 dark:border-neutral-700/50"), []);
     const titleInputClasses = useMemo(() => twMerge("flex-1 text-xl font-semibold border-none focus:ring-0 focus:outline-none bg-transparent p-0 mx-3 leading-tight placeholder:text-neutral-400 dark:placeholder:text-neutral-500 placeholder:font-normal", (isInteractiveDisabled) && "line-through text-neutral-500 dark:text-neutral-400", "text-neutral-800 dark:text-neutral-100 tracking-tight"), [isInteractiveDisabled]);
     const editorContainerClass = useMemo(() => twMerge("flex-grow-0 flex-shrink-0 prose dark:prose-invert max-w-none prose-sm prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2"), []);
-    const editorClasses = useMemo(() => twMerge("!min-h-[150px] h-auto text-sm !bg-transparent !border-none !shadow-none", (isInteractiveDisabled) && "opacity-60", isTrash && "pointer-events-none", "dark:!text-neutral-300"), [isInteractiveDisabled, isTrash]); // Increased min-height for main editor
+    const editorClasses = useMemo(() => twMerge("!min-h-[150px] h-auto text-sm !bg-transparent !border-none !shadow-none", (isInteractiveDisabled) && "opacity-60", isTrash && "pointer-events-none", "dark:!text-neutral-300"), [isInteractiveDisabled, isTrash]);
     const footerClass = useMemo(() => twMerge("px-3 py-2 h-12 flex items-center justify-between flex-shrink-0 border-t border-neutral-200/60 dark:border-neutral-700/50"), []);
     const footerButtonClass = useMemo(() => twMerge("text-neutral-500 dark:text-neutral-400 hover:bg-neutral-500/10 dark:hover:bg-neutral-700/50 hover:text-neutral-700 dark:hover:text-neutral-200 focus-visible:ring-offset-neutral-100 dark:focus-visible:ring-offset-neutral-900"), []);
     const dropdownContentClasses = "min-w-[220px] z-[65] bg-glass-menu dark:bg-neutral-800/90 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10 p-1.5 data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade";
-    const datePickerContentClasses = "z-[70] p-0 border-0 shadow-none bg-transparent data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade";
+
+    const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
+        "z-[70] p-0 bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10",
+        "data-[state=open]:animate-slideUpAndFade",
+        "data-[state=closed]:animate-slideDownAndFade"
+    ), []);
+
     const tagsPopoverContentClasses = "min-w-[280px] z-[65] bg-glass-menu dark:bg-neutral-800/90 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10 p-3 data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade";
     const tooltipContentClass = "text-xs bg-black/80 dark:bg-neutral-900/90 text-white dark:text-neutral-100 px-2 py-1 rounded shadow-md select-none z-[75] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
     const progressMenuItems = useMemo(() => [{
@@ -826,8 +837,6 @@ const TaskDetail: React.FC = () => {
                                           placeholder="Add notes, links, or details here... Markdown is supported."
                                           className={editorClasses} readOnly={isInteractiveDisabled}/>
                     </div>
-
-                    {/* Subtasks Section - Redesigned */}
                     <div
                         className="px-5 pt-4 pb-5 border-t border-neutral-200/50 dark:border-neutral-700/50 flex-1 min-h-0 flex flex-col">
                         <div className="flex justify-between items-center mb-3 flex-shrink-0">
@@ -843,7 +852,7 @@ const TaskDetail: React.FC = () => {
                         </div>
 
                         <div
-                            className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]"> {/* Ensure some min height */}
+                            className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
                             <DndContext sensors={sensors} collisionDetection={closestCenter}
                                         onDragStart={handleSubtaskDragStart} onDragEnd={handleSubtaskDragEnd}
                                         measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
@@ -866,10 +875,14 @@ const TaskDetail: React.FC = () => {
                                         <SubtaskItemDetail
                                             subtask={selectedTask.subtasks.find(s => s.id === draggingSubtaskId)!}
                                             onUpdate={() => {
-                                            }} onDelete={() => {
-                                        }} isEditingContentForThis={false} onToggleEditContent={() => {
-                                        }}
-                                            isTaskCompletedOrTrashed={isInteractiveDisabled} isDraggingOverlay={true}
+                                            }}
+                                            onDelete={() => {
+                                            }}
+                                            isEditingContentForThis={false}
+                                            onToggleEditContent={() => {
+                                            }}
+                                            isTaskCompletedOrTrashed={isInteractiveDisabled}
+                                            isDraggingOverlay={true}
                                         />
                                     ) : null}
                                 </DragOverlay>
@@ -905,7 +918,7 @@ const TaskDetail: React.FC = () => {
                 </div>
 
                 <div className={footerClass}>
-                    <div className="flex items-center space-x-0.5"> {/* Main actions grouped left */}
+                    <div className="flex items-center space-x-0.5">
                         <Tooltip.Provider><Popover.Root open={isDatePickerOpen} onOpenChange={(open) => {
                             setIsDatePickerOpen(open);
                             if (!open) setIsDateTooltipOpen(false);
@@ -917,7 +930,9 @@ const TaskDetail: React.FC = () => {
                             className={tooltipContentClass} side="top"
                             sideOffset={6}>{displayDueDateForRender && isValid(displayDueDateForRender) ? `Due: ${formatRelativeDate(displayDueDateForRender, true)}` : 'Set Due Date'}<Tooltip.Arrow
                             className="fill-black/80 dark:fill-neutral-900/90"/></Tooltip.Content></Tooltip.Portal></Tooltip.Root><Popover.Portal><Popover.Content
-                            className={datePickerContentClasses} sideOffset={5} align="start"
+                            className={datePickerPopoverWrapperClasses} // Applied corrected classes
+                            sideOffset={5}
+                            align="start"
                             onOpenAutoFocus={(e) => e.preventDefault()}
                             onCloseAutoFocus={(e) => e.preventDefault()}><CustomDatePickerContent
                             initialDate={displayDueDateForPicker} onSelect={handleDatePickerSelect}
@@ -991,7 +1006,6 @@ const TaskDetail: React.FC = () => {
                                                                                      aria-label="Add a new tag (use comma or Enter to confirm)"/>
                             </div>
                         </Popover.Content></Popover.Portal></Popover.Root></Tooltip.Provider>
-                        {/* Progress Dropdown moved to the left for more common actions */}
                         <Tooltip.Provider><DropdownMenu.Root open={isProgressDropdownOpen} onOpenChange={(open) => {
                             setIsProgressDropdownOpen(open);
                             if (!open) setIsProgressTooltipOpen(false);
@@ -1011,7 +1025,7 @@ const TaskDetail: React.FC = () => {
                                            onSelect={() => handleProgressChange(item.value)}>{item.label}</RadixMenuItem>))}</DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></Tooltip.Provider>
                     </div>
 
-                    <div className="flex items-center"> {/* Info button remains on the right */}
+                    <div className="flex items-center">
                         <Tooltip.Provider><Popover.Root open={isInfoPopoverOpen} onOpenChange={(open) => {
                             setIsInfoPopoverOpen(open);
                             if (!open) setIsInfoTooltipOpen(false);
