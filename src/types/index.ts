@@ -13,8 +13,7 @@ export interface Subtask {
     title: string;
     completed: boolean;
     completedAt: number | null;
-    dueDate?: number | null; // Store as timestamp
-    // content?: string; // Optional Markdown content for notes - REMOVED
+    dueDate?: number | null;
     order: number; // Fractional index for sorting within the parent
     createdAt: number;
     updatedAt: number;
