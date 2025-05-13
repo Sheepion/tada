@@ -60,7 +60,7 @@ function generateContentSnippet(content: string, term: string, length: number = 
 const SidebarItem: React.FC<{
     to: string; filter: TaskFilter; icon: IconName; label: string;
     count?: number; isUserList?: boolean;
-}> = memo(({to, filter, icon, label, count, isUserList = false}) => {
+}> = memo(({to, filter, icon, label, count}) => {
     const [currentActiveFilter,] = useAtom(currentFilterAtom);
     const navigate = useNavigate();
     const isActive = useMemo(() => currentActiveFilter === filter, [currentActiveFilter, filter]);
@@ -72,53 +72,61 @@ const SidebarItem: React.FC<{
     const linkClassName = useMemo(() => twMerge(
         'flex items-center justify-between px-2 py-0 h-8 rounded-base mb-0.5 text-[13px] group transition-colors duration-200 ease-in-out cursor-pointer relative',
         isActive
-            ? 'bg-primary-light text-primary font-normal'
+            ? 'bg-grey-ultra-light text-primary font-medium'
             : 'text-grey-dark font-light hover:bg-grey-ultra-light hover:text-grey-dark',
         'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white'
     ), [isActive]);
 
     const countClassName = useMemo(() => twMerge(
         "text-[10px] font-light px-1 py-0 rounded-sm ml-1 tabular-nums flex-shrink-0",
-        isActive ? 'text-primary bg-primary/20' : 'text-grey-medium bg-grey-light group-hover:bg-grey-light' // Count uses new grey-medium
+        isActive ? 'text-primary bg-primary/20' : 'text-grey-medium bg-grey-light group-hover:bg-grey-light'
     ), [isActive]);
 
     return (
         <Link to={to} onClick={handleClick} className={linkClassName} aria-current={isActive ? 'page' : undefined}>
             <div className="flex items-center overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0 mr-1">
                 <Icon name={icon} size={16} strokeWidth={1}
-                      className="mr-2 flex-shrink-0 opacity-90" // Icon opacity increased
+                      className="mr-2 flex-shrink-0 opacity-90"
                       aria-hidden="true"/>
                 <span className="truncate">{label}</span>
             </div>
             {(count !== undefined && count > 0) && (
                 <span className={countClassName} aria-label={`${count} items`}> {count} </span>)}
-            {isUserList && <div className="w-4 h-4 ml-1 flex-shrink-0"></div>}
         </Link>
     );
 });
 SidebarItem.displayName = 'SidebarItem';
 
 const CollapsibleSection: React.FC<{
-    title: string; children: React.ReactNode; icon?: IconName;
+    title: string; children: React.ReactNode;
     initiallyOpen?: boolean; action?: React.ReactNode;
-}> = memo(({title, icon, children, initiallyOpen = true, action}) => {
+    // Removed 'icon' prop from here as it's no longer used for leading section icons.
+    // It could be added back if a different type of icon usage is needed in the future.
+}> = memo(({title, children, initiallyOpen = true, action}) => {
     const [isOpen, setIsOpen] = useState(initiallyOpen);
     const sectionId = useMemo(() => `section-content-${title.replace(/\s+/g, '-')}`, [title]);
     const toggleOpen = useCallback(() => setIsOpen(prev => !prev), []);
-    const chevronClasses = useMemo(() => twMerge("transition-transform duration-200 ease-in-out ml-auto opacity-70 group-hover:opacity-90", isOpen ? "rotate-0" : "-rotate-90"), [isOpen]); // Chevron opacity increased
+
+    // Chevron classes now don't include ml-auto, as it's positioned left.
+    const chevronClasses = useMemo(() => twMerge(
+        "transition-transform duration-200 ease-in-out opacity-70 group-hover:opacity-90",
+        isOpen ? "rotate-0" : "-rotate-90"
+    ), [isOpen]);
 
     return (
         <div className="pt-4 first:pt-2">
+            {/* Removed 'group' class from this div, as action button hover is no longer needed */}
             <div className="flex items-center justify-between px-2 py-0 mb-1">
                 <button onClick={toggleOpen}
-                        className="flex items-center flex-1 min-w-0 h-6 text-[11px] font-normal text-grey-medium uppercase tracking-[0.5px] hover:text-grey-dark focus:outline-none group rounded"
+                    // 'group' class here is for the chevron's group-hover effect. Added pr-1 for spacing.
+                        className="flex items-center flex-1 min-w-0 h-6 text-[11px] font-normal text-grey-medium uppercase tracking-[0.5px] hover:text-grey-dark focus:outline-none group rounded pr-1"
                         aria-expanded={isOpen} aria-controls={sectionId}>
-                    {icon &&
-                        <Icon name={icon} size={14} strokeWidth={1} className="mr-1.5 opacity-80"
-                              aria-hidden="true"/>} {/* Icon opacity increased */}
-                    <span className="mr-1">{title}</span>
-                    <Icon name={'chevron-down'} size={14} strokeWidth={1.5} className={chevronClasses}
+                    {/* Chevron icon moved to the left of the title */}
+                    <Icon name={'chevron-down'} size={14} strokeWidth={1.5}
+                          className={twMerge("mr-1.5 flex-shrink-0", chevronClasses)} // Added flex-shrink-0
                           aria-hidden="true"/>
+                    {/* The leading icon (folder, tag) display logic is removed. */}
+                    <span className="truncate">{title}</span> {/* Title can truncate */}
                 </button>
                 {action && <div className="-mr-1 ml-1 flex-shrink-0">{action}</div>}
             </div>
@@ -200,7 +208,7 @@ const Sidebar: React.FC = () => {
                     <div className="relative flex items-center">
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
                         <Icon name="search" size={12} strokeWidth={1.5}
-                              className="absolute left-3 text-grey-medium pointer-events-none z-10"/> {/* Icon uses new grey-medium */}
+                              className="absolute left-3 text-grey-medium pointer-events-none z-10"/>
                         <input ref={searchInputRef} id="sidebar-search" type="search" placeholder="Search"
                                value={searchTerm} onChange={handleSearchChange} className={searchInputClassName}
                                aria-label="Search tasks"/>
@@ -211,7 +219,7 @@ const Sidebar: React.FC = () => {
                                             transition={{duration: 0.1}}
                                             className="absolute right-1.5 h-full flex items-center z-10">
                                     <Button variant="ghost" size="icon" icon="x-circle" onClick={handleClearSearch}
-                                            className="w-5 h-5 text-grey-medium opacity-70 hover:opacity-100 hover:bg-grey-light" // Icon opacity increased
+                                            className="w-5 h-5 text-grey-medium opacity-70 hover:opacity-100 hover:bg-grey-light"
                                             iconProps={{size: 14, strokeWidth: 1}} aria-label="Clear search"/>
                                 </motion.div>
                             )}
@@ -235,7 +243,7 @@ const Sidebar: React.FC = () => {
                                                 <Icon
                                                     name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')}
                                                     size={15} strokeWidth={1}
-                                                    className="mr-2 mt-[2px] flex-shrink-0 text-grey-medium opacity-80" // Icon opacity increased
+                                                    className="mr-2 mt-[2px] flex-shrink-0 text-grey-medium opacity-80"
                                                     aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
                                                     <Highlighter {...highlighterProps}
@@ -266,12 +274,16 @@ const Sidebar: React.FC = () => {
                                     <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox" label="Inbox"
                                                  count={counts.lists['Inbox']}/>
                                 </nav>
-                                <CollapsibleSection title="My Lists" icon="folder"
-                                                    action={<Button variant="ghost" size="icon" icon="folder-plus"
-                                                                    className="w-6 h-6 text-grey-medium hover:text-primary hover:bg-grey-ultra-light"
-                                                                    iconProps={{size: 16, strokeWidth: 1}}
-                                                                    onClick={handleAddNewListClick}
-                                                                    aria-label="Add New List"/>}>
+                                {/* Removed icon="folder" prop */}
+                                <CollapsibleSection title="My Lists"
+                                                    action={
+                                                        <Button variant="ghost" size="icon" icon="plus"
+                                                            // Removed opacity classes for hover-to-show, button is now always visible
+                                                                className="w-6 h-6 text-grey-medium hover:text-primary hover:bg-grey-ultra-light"
+                                                                iconProps={{size: 16, strokeWidth: 1.5}}
+                                                                onClick={handleAddNewListClick}
+                                                                aria-label="Add New List"/>
+                                                    }>
                                     {myListsToDisplay.length === 0 ? (
                                         <p className="text-[12px] text-grey-medium px-2 py-1 italic font-light">
                                             No custom lists yet.</p>) : (myListsToDisplay.map(listName => (
@@ -279,11 +291,13 @@ const Sidebar: React.FC = () => {
                                                      filter={`list-${listName}`} icon="list" label={listName}
                                                      count={counts.lists[listName]} isUserList={true}/>)))}
                                 </CollapsibleSection>
-                                {tagsToDisplay.length > 0 && (<CollapsibleSection title="Tags" icon="tag"
+                                {/* Removed icon="tag" prop */}
+                                {tagsToDisplay.length > 0 && (<CollapsibleSection title="Tags"
                                                                                   initiallyOpen={false}> {tagsToDisplay.map(tagName => (
                                     <SidebarItem key={tagName} to={`/tag/${encodeURIComponent(tagName)}`}
                                                  filter={`tag-${tagName}`} icon="tag" label={`#${tagName}`}
                                                  count={counts.tags[tagName]}/>))} </CollapsibleSection>)}
+                                {/* System section does not use a leading icon by default */}
                                 <CollapsibleSection title="System" initiallyOpen={false}>
                                     <SidebarItem to="/completed" filter="completed" icon="check-square"
                                                  label="Completed" count={counts.completed}/>
