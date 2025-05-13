@@ -52,6 +52,7 @@ export const iconMap = {
     'info': LucideIcons.Info,
     'help': LucideIcons.HelpCircle,
     'phone': LucideIcons.Phone,
+    'slash': LucideIcons.Slash,
     'mail': LucideIcons.Mail,
     'external-link': LucideIcons.ExternalLink,
     'crown': LucideIcons.Crown,
