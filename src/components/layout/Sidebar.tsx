@@ -22,7 +22,6 @@ import {IconName} from "@/components/common/IconMap";
 import Highlighter from "react-highlight-words";
 import {AnimatePresence, motion} from 'framer-motion';
 
-// ... (useDebounce, generateContentSnippet hooks remain unchanged) ...
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -73,24 +72,21 @@ const SidebarItem: React.FC<{
     const linkClassName = useMemo(() => twMerge(
         'flex items-center justify-between px-2 py-0 h-8 rounded-base mb-0.5 text-[13px] group transition-colors duration-200 ease-in-out cursor-pointer relative',
         isActive
-            ? 'bg-primary-light text-primary font-normal' // Selected: light coral bg, primary text, regular weight
-            // Sidebar item text: font-normal for selected, font-light for others
+            ? 'bg-primary-light text-primary font-normal'
             : 'text-grey-dark font-light hover:bg-grey-ultra-light hover:text-grey-dark',
         'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white'
     ), [isActive]);
 
     const countClassName = useMemo(() => twMerge(
         "text-[10px] font-light px-1 py-0 rounded-sm ml-1 tabular-nums flex-shrink-0",
-        isActive ? 'text-primary bg-primary/20' : 'text-grey-medium bg-grey-light group-hover:bg-grey-light'
+        isActive ? 'text-primary bg-primary/20' : 'text-grey-medium bg-grey-light group-hover:bg-grey-light' // Count uses new grey-medium
     ), [isActive]);
 
     return (
         <Link to={to} onClick={handleClick} className={linkClassName} aria-current={isActive ? 'page' : undefined}>
-            {/* Active indicator line (Not in spec, but common. If not needed, remove this div and pl-1.5 below) */}
-            {/* {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] bg-primary rounded-r-sm"></div>} */}
-            {/* Text and icon padding adjusted. No conditional padding based on active state for now to maintain alignment */}
             <div className="flex items-center overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0 mr-1">
-                <Icon name={icon} size={16} strokeWidth={1} className="mr-2 flex-shrink-0 opacity-80"
+                <Icon name={icon} size={16} strokeWidth={1}
+                      className="mr-2 flex-shrink-0 opacity-90" // Icon opacity increased
                       aria-hidden="true"/>
                 <span className="truncate">{label}</span>
             </div>
@@ -109,17 +105,17 @@ const CollapsibleSection: React.FC<{
     const [isOpen, setIsOpen] = useState(initiallyOpen);
     const sectionId = useMemo(() => `section-content-${title.replace(/\s+/g, '-')}`, [title]);
     const toggleOpen = useCallback(() => setIsOpen(prev => !prev), []);
-    const chevronClasses = useMemo(() => twMerge("transition-transform duration-200 ease-in-out ml-auto opacity-60 group-hover:opacity-80", isOpen ? "rotate-0" : "-rotate-90"), [isOpen]);
+    const chevronClasses = useMemo(() => twMerge("transition-transform duration-200 ease-in-out ml-auto opacity-70 group-hover:opacity-90", isOpen ? "rotate-0" : "-rotate-90"), [isOpen]); // Chevron opacity increased
 
     return (
-        // Section spacing:上下间距16px -> pt-4. First one has less top padding.
         <div className="pt-4 first:pt-2">
             <div className="flex items-center justify-between px-2 py-0 mb-1">
                 <button onClick={toggleOpen}
                         className="flex items-center flex-1 min-w-0 h-6 text-[11px] font-normal text-grey-medium uppercase tracking-[0.5px] hover:text-grey-dark focus:outline-none group rounded"
                         aria-expanded={isOpen} aria-controls={sectionId}>
                     {icon &&
-                        <Icon name={icon} size={14} strokeWidth={1} className="mr-1.5 opacity-70" aria-hidden="true"/>}
+                        <Icon name={icon} size={14} strokeWidth={1} className="mr-1.5 opacity-80"
+                              aria-hidden="true"/>} {/* Icon opacity increased */}
                     <span className="mr-1">{title}</span>
                     <Icon name={'chevron-down'} size={14} strokeWidth={1.5} className={chevronClasses}
                           aria-hidden="true"/>
@@ -144,7 +140,6 @@ const CollapsibleSection: React.FC<{
 CollapsibleSection.displayName = 'CollapsibleSection';
 
 const Sidebar: React.FC = () => {
-    // ... (hooks and state setup - logic unchanged)
     const counts = useAtomValue(taskCountsAtom);
     const userLists = useAtomValue(userListNamesAtom);
     const userTags = useAtomValue(userTagNamesAtom);
@@ -185,7 +180,7 @@ const Sidebar: React.FC = () => {
     const tagsToDisplay = useMemo(() => userTags, [userTags]);
 
     const searchInputClassName = useMemo(() => twMerge(
-        "w-full h-[32px] pl-8 pr-7 text-[13px] font-light rounded-base focus:outline-none", // Font-light for placeholder/input
+        "w-full h-[32px] pl-8 pr-7 text-[13px] font-light rounded-base focus:outline-none",
         "bg-grey-ultra-light",
         "focus:ring-1 focus:ring-primary focus:border-primary",
         "placeholder:text-grey-medium text-grey-dark",
@@ -196,19 +191,16 @@ const Sidebar: React.FC = () => {
         highlightClassName: "bg-primary-light text-primary font-normal rounded-[1px] px-0",
         searchWords: debouncedSearchTerm.split(' ').filter(Boolean), autoEscape: true,
     }), [debouncedSearchTerm]);
-    // Search result item text: font-normal for title, font-light for snippet
     const searchResultButtonClassName = "flex items-start w-full px-2 py-1.5 text-left rounded-base hover:bg-grey-ultra-light text-[13px] group transition-colors duration-100 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary";
 
     return (
         <>
-            {/* Sidebar container padding per spec:左右内边距8px (px-2), 上下内边距10px (pt-2.5 pb-2) */}
             <aside className="w-full bg-white h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2">
-                {/* Search Input Area - Spacing controlled by parent padding and its own margin */}
                 <div className="mb-3 flex-shrink-0">
                     <div className="relative flex items-center">
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
                         <Icon name="search" size={12} strokeWidth={1.5}
-                              className="absolute left-3 text-grey-medium pointer-events-none z-10"/>
+                              className="absolute left-3 text-grey-medium pointer-events-none z-10"/> {/* Icon uses new grey-medium */}
                         <input ref={searchInputRef} id="sidebar-search" type="search" placeholder="Search"
                                value={searchTerm} onChange={handleSearchChange} className={searchInputClassName}
                                aria-label="Search tasks"/>
@@ -219,7 +211,7 @@ const Sidebar: React.FC = () => {
                                             transition={{duration: 0.1}}
                                             className="absolute right-1.5 h-full flex items-center z-10">
                                     <Button variant="ghost" size="icon" icon="x-circle" onClick={handleClearSearch}
-                                            className="w-5 h-5 text-grey-medium opacity-60 hover:opacity-100 hover:bg-grey-light"
+                                            className="w-5 h-5 text-grey-medium opacity-70 hover:opacity-100 hover:bg-grey-light" // Icon opacity increased
                                             iconProps={{size: 14, strokeWidth: 1}} aria-label="Clear search"/>
                                 </motion.div>
                             )}
@@ -243,7 +235,7 @@ const Sidebar: React.FC = () => {
                                                 <Icon
                                                     name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')}
                                                     size={15} strokeWidth={1}
-                                                    className="mr-2 mt-[2px] flex-shrink-0 text-grey-medium opacity-70"
+                                                    className="mr-2 mt-[2px] flex-shrink-0 text-grey-medium opacity-80" // Icon opacity increased
                                                     aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
                                                     <Highlighter {...highlighterProps}

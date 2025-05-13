@@ -84,32 +84,6 @@ const groupTitles: Record<TaskGroupCategory, string> = {
 const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
 
 
-// interface TaskListProps {
-//     title: string;
-// }
-//
-// const TaskGroupHeader: React.FC<{ title: string; groupKey: TaskGroupCategory; }> = React.memo(({title, groupKey}) => (
-//     <div
-//         className={twMerge("flex items-center justify-between px-4 pt-3 pb-1.5", "text-[12px] font-normal text-grey-medium uppercase tracking-[0.5px]", "sticky top-0 z-10 bg-white")}>
-//         <span>{title}</span>
-//         {groupKey === 'overdue' && (<Popover.Anchor asChild> <Popover.Trigger asChild>
-//             <Button variant="link" size="sm" icon="calendar-check"
-//                     className="text-[11px] !h-5 px-1 text-primary hover:text-primary-dark -mr-1"
-//                     title="Reschedule all overdue tasks..." iconProps={{size: 12, strokeWidth: 1.5}}> Reschedule
-//                 All </Button>
-//         </Popover.Trigger> </Popover.Anchor>)}
-//     </div>
-// ));
-// TaskGroupHeader.displayName = 'TaskGroupHeader';
-// const groupTitles: Record<TaskGroupCategory, string> = {
-//     overdue: 'Overdue',
-//     today: 'Today',
-//     next7days: 'Next 7 Days',
-//     later: 'Later',
-//     nodate: 'No Date',
-// };
-// const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
-
 const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const allTasks = useAtomValue(tasksAtom);
     const setTasks = useSetAtom(tasksAtom);
@@ -407,8 +381,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const closeBulkReschedulePopover = useCallback(() => setIsBulkRescheduleOpen(false), []);
 
     const renderTaskGroup = useCallback((groupTasks: Task[], groupKey: TaskGroupCategory | 'flat-list' | string) => (
-        // AnimatePresence seems to conflict with dnd-kit sometimes, or cause perf issues.
-        // Given the minimalist design, we might remove it or simplify. For now, keep.
         <AnimatePresence initial={false} mode="sync">
             {groupTasks.map((task: Task) => (
                 <TaskItem
@@ -439,17 +411,15 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         return `No tasks for "${pageTitle}"`;
     }, [isSearching, searchTerm, currentFilterGlobal, pageTitle]);
 
-    // Header styles per "顶部工具栏" spec
     const headerClass = useMemo(() => twMerge(
-        "px-6 py-0 h-[56px]", // padding L/R 24px -> px-6
-        "border-b border-grey-ultra-light", // 1px极浅灰
+        "px-6 py-0 h-[56px]",
+        "border-b border-grey-light", // Updated border color
         "flex justify-between items-center flex-shrink-0 z-10",
-        "bg-white" // Background
+        "bg-white"
     ), []);
 
     const showAddTaskButton = useMemo(() => !['completed', 'trash'].includes(currentFilterGlobal) && !isSearching, [currentFilterGlobal, isSearching]);
 
-    // Popover content wrapper per spec
     const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
         "z-[60] p-0 bg-white rounded-base shadow-modal",
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
@@ -462,12 +432,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                             onDragEnd={handleDragEnd} measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
                     <div className="h-full flex flex-col bg-white overflow-hidden relative">
                         <div className={headerClass}>
-                            {/* Page Title: Inter Light 18px #545466 */}
                             <h1 className="text-[18px] font-light text-grey-dark truncate pr-2"
                                 title={pageTitle}>{pageTitle}</h1>
                             <div className="flex items-center space-x-2">
                                 {showAddTaskButton && (
-                                    // Button text: Inter Regular 13px
                                     <Button variant="primary" size="md" icon="plus" onClick={handleAddTask}
                                             className="!h-[32px] !px-4 !font-normal">Add Task</Button>
                                 )}
@@ -480,7 +448,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                     <Icon
                                         name={currentFilterGlobal === 'trash' ? 'trash' : (currentFilterGlobal === 'completed' ? 'check-square' : (isSearching ? 'search' : 'archive'))}
                                         size={32} strokeWidth={1} className="mb-3 text-grey-light opacity-80"/>
-                                    {/* Empty state text: font-normal (Regular) for title, font-light for description */}
                                     <p className="text-[13px] font-normal text-grey-dark">{emptyStateTitle}</p>
                                     {showAddTaskButton && (
                                         <p className="text-[11px] mt-1 text-grey-medium font-light">Click the '+' button

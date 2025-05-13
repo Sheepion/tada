@@ -142,11 +142,10 @@ const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.me
         return selectedTimeValue;
     }, [selectedTimeValue]);
 
-    // Updated animation classes for the time dropdown
     const timeDropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const dropdownContentClasses = twMerge(
         "min-w-[100px] max-h-60 styled-scrollbar-thin overflow-y-auto z-[75] bg-white rounded-base shadow-modal p-1",
-        timeDropdownAnimationClasses // Apply the corrected animation
+        timeDropdownAnimationClasses
     );
     const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[80] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
 
@@ -217,18 +216,17 @@ const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.me
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
                         <Button id="time-picker-trigger-single-date" variant="secondary" size="sm"
-                                className="min-w-[90px] !h-7 !px-2.5 !font-light justify-between items-center"
+                                className="min-w-[90px] !h-7 !px-2.5 !font-light justify-between items-center text-grey-dark hover:bg-grey-ultra-light hover:text-grey-dark" // Button text color
                                 disabled={!selectedDate}>
                             <span className="tabular-nums">{displaySelectedTimeLabel}</span> <Icon name="chevron-down"
                                                                                                    size={12}
                                                                                                    strokeWidth={1.5}
-                                                                                                   className="ml-1 opacity-60"/>
+                                                                                                   className="ml-1 opacity-80"/> {/* Icon opacity */}
                         </Button>
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Portal>
-                        {/* Apply corrected animation classes HERE */}
                         <DropdownMenu.Content
-                            className={dropdownContentClasses} // This already includes the correct animation
+                            className={dropdownContentClasses}
                             sideOffset={5}
                             align="end"
                             onCloseAutoFocus={(e) => e.preventDefault()}

@@ -13,9 +13,8 @@ import * as Popover from '@radix-ui/react-popover';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {CustomDatePickerContent} from '../common/CustomDatePickerPopover';
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
-import {ProgressIndicator} from './TaskItem'; // Import from TaskItem
+import {ProgressIndicator} from './TaskItem';
 import {IconName} from "@/components/common/IconMap";
-// import SelectionCheckboxRadix from "@/components/common/SelectionCheckbox"; // Not directly used here
 import {
     closestCenter,
     DndContext,
@@ -30,9 +29,8 @@ import {
     useSensors
 } from "@dnd-kit/core";
 import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/sortable";
-// import {CSS} from "@dnd-kit/utilities"; // Not used directly here
 import {AnimatePresence, motion} from "framer-motion";
-import SubtaskItemDetail from "./SubtaskItemDetail"; // Import the modified SubtaskItemDetail
+import SubtaskItemDetail from "./SubtaskItemDetail";
 
 // --- Helper TagPill Component (Kept for potential future re-use, but not actively used if tags are removed from footer) ---
 interface TagPillProps {
@@ -44,7 +42,7 @@ interface TagPillProps {
 const TagPill: React.FC<TagPillProps> = React.memo(({tag, onRemove, disabled}) => (
     <span
         className={twMerge(
-            "inline-flex items-center bg-black/5 dark:bg-white/5 text-gray-600 dark:text-neutral-300 rounded px-1.5 py-0.5 text-[11px] mr-1 mb-1 group/pill whitespace-nowrap backdrop-blur-sm",
+            "inline-flex items-center bg-black/5 dark:bg-white/5 text-grey-medium dark:text-neutral-300 rounded px-1.5 py-0.5 text-[11px] mr-1 mb-1 group/pill whitespace-nowrap backdrop-blur-sm",
             "transition-colors duration-100 ease-apple",
             disabled ? "opacity-60 cursor-not-allowed" : "hover:bg-black/10 dark:hover:bg-white/10"
         )}
@@ -56,7 +54,7 @@ const TagPill: React.FC<TagPillProps> = React.memo(({tag, onRemove, disabled}) =
                 e.stopPropagation();
                 onRemove();
             }}
-                    className="ml-1 text-gray-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400 opacity-50 group-hover/pill:opacity-100 focus:outline-none rounded-full p-0.5 -mr-0.5 flex items-center justify-center"
+                    className="ml-1 text-grey-medium/70 dark:text-neutral-500 hover:text-error dark:hover:text-red-400 opacity-50 group-hover/pill:opacity-100 focus:outline-none rounded-full p-0.5 -mr-0.5 flex items-center justify-center"
                     aria-label={`Remove tag ${tag}`} tabIndex={-1}>
                 <Icon name="x" size={9} strokeWidth={2.5}/>
             </button>
@@ -87,16 +85,16 @@ const RadixMenuItem: React.FC<RadixMenuItemProps> = React.memo(({
         className={twMerge(
             "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 font-normal",
             isDanger
-                ? "text-red-600 data-[highlighted]:bg-red-500/10 data-[highlighted]:text-red-700 dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
-                : "data-[highlighted]:bg-black/[.07] dark:data-[highlighted]:bg-white/[.07] focus:bg-black/[.07] dark:focus:bg-white/[.07]",
+                ? "text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
+                : "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07] focus:bg-grey-ultra-light dark:focus:bg-white/[.07]",
             selected && !isDanger && "bg-primary/15 text-primary data-[highlighted]:bg-primary/20 dark:bg-primary/25 dark:text-primary-light dark:data-[highlighted]:bg-primary/30",
-            !selected && !isDanger && "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-gray-800 dark:focus:text-neutral-50",
+            !selected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-grey-dark dark:focus:text-neutral-50",
             "data-[disabled]:opacity-50",
             className
         )}
         {...props}
     >
-        {icon && (<Icon name={icon} size={15} className={twMerge("mr-2 flex-shrink-0 opacity-70", iconColor)}
+        {icon && (<Icon name={icon} size={15} className={twMerge("mr-2 flex-shrink-0 opacity-80", iconColor)}
                         aria-hidden="true"/>)}
         <span className="flex-grow">{children}</span>
     </DropdownMenu.Item>
@@ -105,7 +103,7 @@ RadixMenuItem.displayName = 'RadixMenuItem';
 
 // --- TaskDetail Component ---
 const TaskDetail: React.FC = () => {
-    const [selectedTaskInternal] = useAtom(selectedTaskAtom); // Renamed to avoid conflict
+    const [selectedTaskInternal] = useAtom(selectedTaskAtom);
     const selectedTask = useAtomValue(selectedTaskAtom);
     const setTasks = useSetAtom(tasksAtom);
     const selectedTaskId = useAtomValue(selectedTaskIdAtom);
@@ -115,7 +113,7 @@ const TaskDetail: React.FC = () => {
     const [localTitle, setLocalTitle] = useState('');
     const [localContent, setLocalContent] = useState('');
     const [localDueDate, setLocalDueDate] = useState<Date | undefined>(undefined);
-    const [localTagsString, setLocalTagsString] = useState(''); // Kept for task tags
+    const [localTagsString, setLocalTagsString] = useState('');
     const latestTagsStringRef = useRef(localTagsString);
 
 
@@ -128,8 +126,6 @@ const TaskDetail: React.FC = () => {
     const [isDateTooltipOpen, setIsDateTooltipOpen] = useState(false);
     const [isInfoTooltipOpen, setIsInfoTooltipOpen] = useState(false);
 
-    // Subtask related states...
-    // const [editingSubtaskContentId, setEditingSubtaskContentId] = useState<string | null>(null); // REMOVED
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
     const newSubtaskInputRef = useRef<HTMLInputElement>(null);
     const [draggingSubtaskId, setDraggingSubtaskId] = useState<UniqueIdentifier | null>(null);
@@ -148,11 +144,11 @@ const TaskDetail: React.FC = () => {
         return () => {
             isMountedRef.current = false;
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            if (selectedTaskInternal) { // Use selectedTaskInternal from atom for saving on unmount
+            if (selectedTaskInternal) {
                 savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
             }
         };
-    }, [selectedTaskInternal]); // Added selectedTaskInternal to dependency array
+    }, [selectedTaskInternal]);
 
     const savePendingChanges = useCallback((taskId: string, title: string, content: string, dueDate: Date | undefined, tagsString: string) => {
         if (!taskId || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
@@ -167,7 +163,7 @@ const TaskDetail: React.FC = () => {
         const processedTags = tagsString.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
         setTasks(prevTasks => {
-            const originalTaskState = prevTasks.find(t => t.id === taskId); // Find from prevTasks
+            const originalTaskState = prevTasks.find(t => t.id === taskId);
             if (!originalTaskState) return prevTasks;
 
             const changesToSave: Partial<Task> = {};
@@ -200,7 +196,6 @@ const TaskDetail: React.FC = () => {
             savePendingChanges(prevTaskId, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
         }
 
-        // setEditingSubtaskContentId(null); // REMOVED
         setNewSubtaskTitle('');
         hasUnsavedChangesRef.current = false;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -254,7 +249,7 @@ const TaskDetail: React.FC = () => {
         hasUnsavedChangesRef.current = true;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
-            if (selectedTaskInternal) { // Check again inside timeout
+            if (selectedTaskInternal) {
                 savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
             }
         }, 700);
@@ -263,7 +258,6 @@ const TaskDetail: React.FC = () => {
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks'>>) => {
         if (!selectedTaskInternal || !isMountedRef.current) return;
         if (hasUnsavedChangesRef.current) {
-            // Check again before direct update
             if (selectedTaskInternal) savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
         }
         if (saveTimeoutRef.current) {
@@ -330,7 +324,6 @@ const TaskDetail: React.FC = () => {
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
         if (newPercentage === 100 && selectedTask?.id === selectedTaskId) {
-            // Optionally close or handle completion side effects
         }
     }, [updateTask, selectedTask?.id, selectedTaskId]);
 
@@ -369,7 +362,7 @@ const TaskDetail: React.FC = () => {
         const taskToDuplicate = selectedTask;
 
         const duplicatedSubtasks = (taskToDuplicate.subtasks || []).map(sub => ({
-            ...sub, // content will not be spread if not in Subtask type
+            ...sub,
             id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
             parentId: newParentTaskId,
             createdAt: now,
@@ -416,7 +409,7 @@ const TaskDetail: React.FC = () => {
             }
             titleInputRef.current?.blur();
         }
-    }, [selectedTask, selectedTaskInternal, localTitle, localDueDate, savePendingChanges]); // Added selectedTaskInternal
+    }, [selectedTask, selectedTaskInternal, localTitle, localDueDate, savePendingChanges]);
 
     const isTrash = useMemo(() => selectedTask?.list === 'Trash', [selectedTask?.list]);
     const isCompleted = useMemo(() => (selectedTask?.completionPercentage ?? 0) === 100 && !isTrash, [selectedTask?.completionPercentage, isTrash]);
@@ -429,7 +422,7 @@ const TaskDetail: React.FC = () => {
             id: `subtask-${now}-${Math.random().toString(16).slice(2)}`, parentId: selectedTask.id,
             title: newSubtaskTitle.trim(), completed: false, completedAt: null,
             order: (selectedTask.subtasks?.reduce((max, s) => Math.max(max, s.order), 0) || 0) + 1000,
-            createdAt: now, updatedAt: now, dueDate: null, // content: '' REMOVED
+            createdAt: now, updatedAt: now, dueDate: null,
         };
         setTasks(prevTasks => prevTasks.map(t => t.id === selectedTask.id ? {
             ...t,
@@ -456,16 +449,9 @@ const TaskDetail: React.FC = () => {
             ...t,
             subtasks: (t.subtasks || []).filter(sub => sub.id !== subtaskId)
         } : t));
-        // if (editingSubtaskContentId === subtaskId) setEditingSubtaskContentId(null); // REMOVED
     }, [selectedTask, setTasks]);
 
-    // const handleToggleEditSubtaskContent = (subtaskId: string | null) => { // REMOVED
-    //     setEditingSubtaskContentId(currentId => currentId === subtaskId ? null : subtaskId);
-    // };
-
-    const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 3}}), useSensor(KeyboardSensor, {
-        // coordinateGetter: sortableKeyboardCoordinates // Keep if SubtaskItemDetail has keyboard interaction for sorting
-    }));
+    const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 3}}), useSensor(KeyboardSensor, {}));
     const handleSubtaskDragStart = (event: DragStartEvent) => {
         if (event.active.data.current?.type === 'subtask-item-detail') setDraggingSubtaskId(event.active.id.toString().replace('subtask-detail-', ''));
     };
@@ -492,21 +478,20 @@ const TaskDetail: React.FC = () => {
     const displayUpdatedAt = useMemo(() => selectedTask ? formatDateTime(selectedTask.updatedAt) : '', [selectedTask]);
 
     const mainPanelClass = useMemo(() => twMerge(
-        "h-full flex flex-col", // Removed shadow & z-index, handled by drawer/container
-        "bg-neutral-50 dark:bg-neutral-850",
-        // "border-l border-neutral-200 dark:border-neutral-700/70" // Border handled by container in MainPage
+        "h-full flex flex-col",
+        "bg-white dark:bg-neutral-850", // Panel background is white
     ), []);
 
     const headerClass = useMemo(() => twMerge(
         "px-4 py-2 h-14 flex items-center justify-between flex-shrink-0",
-        "border-b border-neutral-200/80 dark:border-neutral-700/60"
+        "border-b border-grey-light dark:border-neutral-700/60" // Use updated grey-light
     ), []);
 
     const titleInputClasses = useMemo(() => twMerge(
         "flex-1 text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 mx-3 leading-tight",
-        "placeholder:text-neutral-400 dark:placeholder:text-neutral-500 placeholder:font-normal",
-        (isInteractiveDisabled) && "line-through text-neutral-500/80 dark:text-neutral-400/80",
-        "text-neutral-800 dark:text-neutral-100 tracking-tight"
+        "placeholder:text-grey-medium dark:placeholder:text-neutral-500 placeholder:font-normal", // Placeholder uses new grey-medium
+        (isInteractiveDisabled) && "line-through text-grey-medium dark:text-neutral-400/80", // Disabled uses new grey-medium
+        "text-grey-dark dark:text-neutral-100 tracking-tight" // Main title text uses new grey-dark
     ), [isInteractiveDisabled]);
 
     const editorContainerClass = useMemo(() => twMerge(
@@ -518,20 +503,20 @@ const TaskDetail: React.FC = () => {
         "!h-full text-sm !bg-transparent !border-none !shadow-none",
         (isInteractiveDisabled) && "opacity-60 cursor-not-allowed",
         isTrash && "pointer-events-none",
-        "dark:!text-neutral-300"
+        "dark:!text-neutral-300" // Dark mode specific, light mode inherits from theme (which uses grey-dark)
     ), [isInteractiveDisabled, isTrash]);
 
     const footerClass = useMemo(() => twMerge(
         "px-3 py-2 h-11 flex items-center justify-between flex-shrink-0",
-        "border-t border-neutral-200/80 dark:border-neutral-700/60"
+        "border-t border-grey-light dark:border-neutral-700/60" // Use updated grey-light
     ), []);
 
     const actionButtonClass = useMemo(() => twMerge(
-        "text-neutral-500 dark:text-neutral-400",
-        "hover:bg-neutral-500/10 dark:hover:bg-neutral-700/50",
-        "hover:text-neutral-700 dark:hover:text-neutral-200",
+        "text-grey-medium dark:text-neutral-400", // Default icon color
+        "hover:bg-grey-ultra-light dark:hover:bg-neutral-700/50", // Use updated grey-ultra-light
+        "hover:text-grey-dark dark:hover:text-neutral-200", // Hover icon color
         "focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1",
-        "focus-visible:ring-offset-neutral-50 dark:focus-visible:ring-offset-neutral-850"
+        "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850" // Ring offset for light mode
     ), []);
 
     const dropdownContentClasses = useMemo(() => twMerge(
@@ -547,10 +532,10 @@ const TaskDetail: React.FC = () => {
     const radioItemClasses = (isSelected: boolean, itemSpecificClasses: string = "", isDanger: boolean = false) => twMerge(
         "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 font-normal",
         isDanger
-            ? "text-red-600 data-[highlighted]:bg-red-500/10 data-[highlighted]:text-red-700 dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
-            : "data-[highlighted]:bg-black/[.07] dark:data-[highlighted]:bg-white/[.07] focus:bg-black/[.07] dark:focus:bg-white/[.07]",
+            ? "text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
+            : "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07] focus:bg-grey-ultra-light dark:focus:bg-white/[.07]", // Use updated grey-ultra-light
         isSelected && !isDanger && "bg-primary/15 text-primary data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary dark:bg-primary/25 dark:text-primary-light data-[state=checked]:dark:bg-primary/25 data-[state=checked]:dark:text-primary-light",
-        !isSelected && !isDanger && "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-gray-800 dark:focus:text-neutral-50",
+        !isSelected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-grey-dark dark:focus:text-neutral-50", // Default item text uses grey-dark
         "data-[state=checked]:data-[highlighted]:bg-primary/20 data-[state=checked]:dark:data-[highlighted]:bg-primary/30",
         "data-[disabled]:opacity-50",
         itemSpecificClasses
@@ -563,13 +548,13 @@ const TaskDetail: React.FC = () => {
 
     const subTriggerClasses = useMemo(() => twMerge(
         "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8",
-        "text-gray-700 dark:text-neutral-200",
-        "focus:bg-black/[.07] dark:focus:bg-white/[.07]",
-        "data-[highlighted]:bg-black/[.07] dark:data-[highlighted]:bg-white/[.07]",
-        "data-[state=open]:bg-black/[.07] dark:data-[state=open]:bg-white/[.07]",
-        "focus:text-gray-800 dark:focus:text-neutral-50",
-        "data-[highlighted]:text-gray-800 dark:data-[highlighted]:text-neutral-50",
-        "data-[state=open]:text-gray-800 dark:data-[state=open]:text-neutral-50",
+        "text-grey-dark dark:text-neutral-200", // Subtrigger text uses grey-dark
+        "focus:bg-grey-ultra-light dark:focus:bg-white/[.07]", // Use updated grey-ultra-light
+        "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07]",
+        "data-[state=open]:bg-grey-ultra-light dark:data-[state=open]:bg-white/[.07]",
+        "focus:text-grey-dark dark:focus:text-neutral-50",
+        "data-[highlighted]:text-grey-dark dark:data-[highlighted]:text-neutral-50",
+        "data-[state=open]:text-grey-dark dark:data-[state=open]:text-neutral-50",
         "data-[disabled]:opacity-50"
     ), []);
 
@@ -578,10 +563,10 @@ const TaskDetail: React.FC = () => {
         icon: IconName;
         color: string
     }> = useMemo(() => ({
-        1: {label: 'High', icon: 'flag', color: 'text-red-500 dark:text-red-400'},
-        2: {label: 'Medium', icon: 'flag', color: 'text-orange-500 dark:text-orange-400'},
-        3: {label: 'Low', icon: 'flag', color: 'text-blue-500 dark:text-blue-400'},
-        4: {label: 'Lowest', icon: 'flag', color: 'text-gray-500 dark:text-neutral-400'},
+        1: {label: 'High', icon: 'flag', color: 'text-error dark:text-red-400'},
+        2: {label: 'Medium', icon: 'flag', color: 'text-warning dark:text-orange-400'},
+        3: {label: 'Low', icon: 'flag', color: 'text-info dark:text-blue-400'},
+        4: {label: 'Lowest', icon: 'flag', color: 'text-grey-medium dark:text-neutral-400'}, // Lowest priority flag uses grey-medium
     }), []);
 
     const progressMenuItems = useMemo(() => [{
@@ -639,7 +624,7 @@ const TaskDetail: React.FC = () => {
                                     >
                                         <DropdownMenu.Sub>
                                             <DropdownMenu.SubTrigger className={subTriggerClasses}>
-                                                <Icon name="circle-gauge" size={15} className="mr-2 opacity-70"/>
+                                                <Icon name="circle-gauge" size={15} className="mr-2 opacity-80"/>
                                                 Set Progress
                                                 <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
                                                                                     strokeWidth={1.5}
@@ -663,7 +648,8 @@ const TaskDetail: React.FC = () => {
                                             </DropdownMenu.Portal>
                                         </DropdownMenu.Sub>
 
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator
+                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
 
                                         <RadixMenuItem
                                             icon="calendar-plus"
@@ -676,12 +662,13 @@ const TaskDetail: React.FC = () => {
                                             Set Due Date...
                                         </RadixMenuItem>
 
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator
+                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
 
                                         <DropdownMenu.Sub>
                                             <DropdownMenu.SubTrigger className={subTriggerClasses}
                                                                      disabled={isInteractiveDisabled}>
-                                                <Icon name="flag" size={15} className="mr-2 opacity-70"/>
+                                                <Icon name="flag" size={15} className="mr-2 opacity-80"/>
                                                 Priority
                                                 <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
                                                                                     strokeWidth={1.5}
@@ -705,7 +692,7 @@ const TaskDetail: React.FC = () => {
                                                                 disabled={isInteractiveDisabled}
                                                             >
                                                                 <Icon name={p ? priorityMap[p]?.icon : "flag"} size={15}
-                                                                      className={twMerge("mr-2 flex-shrink-0 opacity-70", p ? priorityMap[p]?.color : "opacity-50")}/>
+                                                                      className={twMerge("mr-2 flex-shrink-0", p ? priorityMap[p]?.color : "opacity-70")}/>
                                                                 <span
                                                                     className="flex-grow">{p ? `P${p} ${priorityMap[p]?.label}` : 'None'}</span>
                                                             </DropdownMenu.RadioItem>
@@ -717,7 +704,7 @@ const TaskDetail: React.FC = () => {
 
                                         <DropdownMenu.Sub>
                                             <DropdownMenu.SubTrigger className={subTriggerClasses} disabled={isTrash}>
-                                                <Icon name="folder" size={15} className="mr-2 opacity-70"/>
+                                                <Icon name="folder" size={15} className="mr-2 opacity-80"/>
                                                 Move to List
                                                 <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
                                                                                     strokeWidth={1.5}
@@ -740,7 +727,7 @@ const TaskDetail: React.FC = () => {
                                                             >
                                                                 <Icon name={list === 'Inbox' ? 'inbox' : 'list'}
                                                                       size={15}
-                                                                      className="mr-2 flex-shrink-0 opacity-70"/>
+                                                                      className="mr-2 flex-shrink-0 opacity-80"/>
                                                                 <span className="flex-grow">{list}</span>
                                                             </DropdownMenu.RadioItem>
                                                         ))}
@@ -749,17 +736,19 @@ const TaskDetail: React.FC = () => {
                                             </DropdownMenu.Portal>
                                         </DropdownMenu.Sub>
 
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator
+                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
                                         <RadixMenuItem icon="copy-plus"
                                                        onSelect={handleDuplicateTask}
                                                        disabled={isTrash}>
                                             Duplicate Task
                                         </RadixMenuItem>
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator
+                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
                                         {isTrash ? (
                                             <RadixMenuItem icon="arrow-left"
                                                            onSelect={handleRestore}
-                                                           className="text-green-600 dark:text-green-500 data-[highlighted]:!bg-green-500/15 data-[highlighted]:!text-green-700 dark:data-[highlighted]:!text-green-400">
+                                                           className="text-success dark:text-green-500 data-[highlighted]:!bg-green-500/15 data-[highlighted]:!text-green-700 dark:data-[highlighted]:!text-green-400">
                                                 Restore Task
                                             </RadixMenuItem>
                                         ) : (
@@ -805,18 +794,18 @@ const TaskDetail: React.FC = () => {
                     </div>
                     <div
                         className={twMerge(
-                            "px-5 pt-4 pb-5 border-t border-neutral-200/50 dark:border-neutral-700/40",
+                            "px-5 pt-4 pb-5 border-t border-grey-light/70 dark:border-neutral-700/40", // Use updated grey-light
                             "flex-shrink-0 flex flex-col",
-                            sortedSubtasks.length > 0 ? "max-h-[45vh]" : "" // Max height for subtask area
+                            sortedSubtasks.length > 0 ? "max-h-[45vh]" : ""
                         )}
                     >
                         {sortedSubtasks.length > 0 && (
                             <>
                                 <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                                    <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+                                    <h3 className="text-sm font-semibold text-grey-dark dark:text-neutral-300">
                                         Subtasks
                                         <span
-                                            className="ml-2 font-normal text-xs text-muted-foreground dark:text-neutral-400">
+                                            className="ml-2 font-normal text-xs text-grey-medium dark:text-neutral-400">
                                             ({sortedSubtasks.filter(s => s.completed).length} of {sortedSubtasks.length} completed)
                                         </span>
                                     </h3>
@@ -834,8 +823,6 @@ const TaskDetail: React.FC = () => {
                                                         key={subtask.id} subtask={subtask}
                                                         onUpdate={handleUpdateSubtask}
                                                         onDelete={handleDeleteSubtask}
-                                                        // isEditingContentForThis={editingSubtaskContentId === subtask.id} // REMOVED
-                                                        // onToggleEditContent={handleToggleEditSubtaskContent} // REMOVED
                                                         isTaskCompletedOrTrashed={isInteractiveDisabled}
                                                     />
                                                 ))}
@@ -849,8 +836,6 @@ const TaskDetail: React.FC = () => {
                                                     }}
                                                     onDelete={() => {
                                                     }}
-                                                    // isEditingContentForThis={false} // REMOVED
-                                                    // onToggleEditContent={() => {}} // REMOVED
                                                     isTaskCompletedOrTrashed={isInteractiveDisabled}
                                                     isDraggingOverlay={true}
                                                 />
@@ -865,7 +850,7 @@ const TaskDetail: React.FC = () => {
                             <div
                                 className={twMerge(
                                     "flex items-center flex-shrink-0 h-10 pt-2.5",
-                                    sortedSubtasks.length > 0 ? "border-t border-neutral-200/40 dark:border-neutral-700/30 mt-auto" : "mt-1"
+                                    sortedSubtasks.length > 0 ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto" : "mt-1" // Use updated grey-light
                                 )}>
                                 <input
                                     ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
@@ -877,11 +862,11 @@ const TaskDetail: React.FC = () => {
                                     placeholder="+ Add subtask..."
                                     className={twMerge(
                                         "flex-1 text-[13px] h-7 px-3 rounded-md transition-all duration-150 ease-apple",
-                                        "bg-neutral-200/50 dark:bg-neutral-700/40",
-                                        "border border-neutral-300/60 dark:border-neutral-600/80",
+                                        "bg-grey-ultra-light dark:bg-neutral-700/40", // Use updated grey-ultra-light
+                                        "border border-grey-light dark:border-neutral-600/80", // Use updated grey-light
                                         "focus:bg-white/70 dark:focus:bg-neutral-700/60 focus:border-primary/60 dark:focus:border-primary/70 focus:ring-1 focus:ring-primary/30 dark:focus:ring-primary/40",
-                                        "placeholder:text-neutral-500/80 dark:placeholder:text-neutral-400/70",
-                                        "text-neutral-800 dark:text-neutral-100",
+                                        "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70", // Placeholder uses new grey-medium
+                                        "text-grey-dark dark:text-neutral-100", // Text uses new grey-dark
                                         "focus:outline-none"
                                     )}
                                     aria-label="New subtask title"
@@ -911,7 +896,7 @@ const TaskDetail: React.FC = () => {
                                 <Tooltip.Trigger asChild>
                                     <Popover.Trigger asChild disabled={isTrash}>
                                         <Button variant="ghost" size="icon" icon="calendar"
-                                                className={twMerge(actionButtonClass, "w-8 h-8", overdue && !isCompleted && !isTrash && "text-red-500 dark:text-red-400")}
+                                                className={twMerge(actionButtonClass, "w-8 h-8", overdue && !isCompleted && !isTrash && "text-error dark:text-red-400")}
                                                 aria-label="Set due date"/>
                                     </Popover.Trigger>
                                 </Tooltip.Trigger>
@@ -966,14 +951,14 @@ const TaskDetail: React.FC = () => {
                                     className={twMerge(dropdownContentClasses, "p-3 text-xs w-auto")}
                                     side="top" align="end" sideOffset={5}
                                     onCloseAutoFocus={(e) => e.preventDefault()}>
-                                    <div className="space-y-1.5 text-neutral-600 dark:text-neutral-300">
+                                    <div className="space-y-1.5 text-grey-medium dark:text-neutral-300">
                                         <p>
                                             <strong
-                                                className="font-medium text-neutral-700 dark:text-neutral-200">Created:</strong>
+                                                className="font-medium text-grey-dark dark:text-neutral-200">Created:</strong>
                                             {displayCreatedAt}
                                         </p>
                                         <p><strong
-                                            className="font-medium text-neutral-700 dark:text-neutral-200">Updated:</strong> {displayUpdatedAt}
+                                            className="font-medium text-grey-dark dark:text-neutral-200">Updated:</strong> {displayUpdatedAt}
                                         </p>
                                     </div>
                                 </Popover.Content>

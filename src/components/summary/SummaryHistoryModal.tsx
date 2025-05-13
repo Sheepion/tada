@@ -55,14 +55,14 @@ interface ReferencedTaskItemProps {
 const ReferencedTaskItem: React.FC<ReferencedTaskItemProps> = React.memo(({task}) => {
     const iconName: IconName = task.completed ? "check-square" : "square";
     const iconColor = task.completed ? "text-success" : "text-grey-medium";
-    const textColor = task.completed ? "text-grey-medium" : "text-grey-dark";
+    const textColor = task.completed ? "text-grey-medium" : "text-grey-dark"; // Use new grey-dark for active task titles
     const showPercentage = !task.completed && task.completionPercentage && task.completionPercentage > 0;
 
     return (
         <li className="flex items-center py-1.5 px-1 rounded-base transition-colors duration-150 ease-out group"
             title={task.title}>
             <Icon name={iconName} size={12} strokeWidth={1.5}
-                  className={twMerge("mr-2 flex-shrink-0 transition-colors", iconColor)}/>
+                  className={twMerge("mr-2 flex-shrink-0 transition-colors opacity-90", iconColor)}/> {/* Icon opacity increased */}
             <div className="flex items-baseline flex-1 overflow-hidden">
                 <span
                     className={twMerge("text-[12px] font-light truncate", textColor, task.completed && "line-through")}>
@@ -176,7 +176,7 @@ const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({isOpen, onClos
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[55]",
-                        "bg-white w-full max-w-5xl rounded-base shadow-modal flex flex-col max-h-[80vh] h-[80vh] overflow-hidden", // Modal styles
+                        "bg-white w-full max-w-5xl rounded-base shadow-modal flex flex-col max-h-[80vh] h-[80vh] overflow-hidden",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     onEscapeKeyDown={onClose}>
@@ -249,14 +249,14 @@ const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({isOpen, onClos
                                                                                 title={periodLabel}><Icon
                                                                                 name="calendar-days" size={10}
                                                                                 strokeWidth={1}
-                                                                                className="mr-1 opacity-70 flex-shrink-0"/><span
+                                                                                className="mr-1 opacity-80 flex-shrink-0"/><span // Icon opacity increased
                                                                                 className="truncate">{periodLabel}</span></span>
                                                                             <span
                                                                                 className={twMerge("inline-flex items-center px-1.5 py-[1px] rounded-full text-[10px] font-light", isSelected ? "bg-primary/20 text-primary-dark" : "bg-grey-light text-grey-medium")}
                                                                                 title={listLabel}><Icon name="list"
                                                                                                         size={10}
                                                                                                         strokeWidth={1}
-                                                                                                        className="mr-1 opacity-70 flex-shrink-0"/><span
+                                                                                                        className="mr-1 opacity-80 flex-shrink-0"/><span // Icon opacity increased
                                                                                 className="truncate">{listLabel}</span></span>
                                                                         </div>
                                                                     </div>
@@ -275,17 +275,17 @@ const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({isOpen, onClos
                         </div>
                         <div className="flex-1 flex flex-col overflow-hidden bg-white">
                             {selectedSummary ? (
-                                <div className="flex-1 flex flex-col p-6 overflow-hidden"> {/* Padding 24px */}
+                                <div className="flex-1 flex flex-col p-6 overflow-hidden">
                                     <div className="flex justify-between items-center mb-3 flex-shrink-0">
                                         <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                                             <span
                                                 className="inline-flex items-center bg-info/10 text-info px-2 py-0.5 rounded-full text-[11px] font-light"><Icon
                                                 name="calendar-days" size={11} strokeWidth={1}
-                                                className="mr-1 opacity-70"/>{getFilterLabels(selectedSummary.periodKey, selectedSummary.listKey).periodLabel}</span>
+                                                className="mr-1 opacity-80"/>{getFilterLabels(selectedSummary.periodKey, selectedSummary.listKey).periodLabel}</span>
                                             <span
                                                 className="inline-flex items-center bg-grey-light text-grey-medium px-2 py-0.5 rounded-full text-[11px] font-light"><Icon
                                                 name="list" size={11} strokeWidth={1}
-                                                className="mr-1 opacity-70"/>{getFilterLabels(selectedSummary.periodKey, selectedSummary.listKey).listLabel}</span>
+                                                className="mr-1 opacity-80"/>{getFilterLabels(selectedSummary.periodKey, selectedSummary.listKey).listLabel}</span>
                                         </div>
                                         <span
                                             className="text-[11px] text-grey-medium whitespace-nowrap pl-2 font-light">
@@ -315,7 +315,7 @@ const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({isOpen, onClos
                             ) : (
                                 <div
                                     className="flex flex-col items-center justify-center h-full text-grey-medium text-[13px] italic p-10 text-center font-light">
-                                    <Icon name="file-text" size={32} strokeWidth={1} className="mb-3 opacity-30"/>Select
+                                    <Icon name="file-text" size={32} strokeWidth={1} className="mb-3 opacity-40"/>Select
                                     a summary<br/>to view details.
                                 </div>
                             )}

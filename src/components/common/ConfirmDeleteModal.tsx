@@ -17,7 +17,7 @@ interface ConfirmDeleteModalProps {
 
 const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
                                                                         isOpen, onClose, onConfirm, itemTitle,
-                                                                        title = "Delete Item?", // Generic default
+                                                                        title = "Delete Item?",
                                                                         description,
                                                                         confirmText = "Delete",
                                                                         confirmVariant = 'danger',
@@ -39,17 +39,17 @@ const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60]",
-                        "bg-white w-full max-w-sm rounded-base shadow-modal flex flex-col p-6", // Padding 24px (p-6)
+                        "bg-white w-full max-w-sm rounded-base shadow-modal flex flex-col p-6",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     onEscapeKeyDown={onClose}
                 >
                     <Dialog.Title
-                        className="text-[16px] font-normal text-grey-dark mb-2 text-center"> {/* Modal Title Style */}
+                        className="text-[16px] font-normal text-grey-dark mb-2 text-center">
                         {title}
                     </Dialog.Title>
                     <Dialog.Description
-                        className="text-[13px] font-light text-grey-medium text-center mb-6"> {/* Content Text Style */}
+                        className="text-[13px] font-light text-grey-medium text-center mb-6"> {/* Description uses new grey-medium */}
                         {finalDescription}
                     </Dialog.Description>
                     <div className="flex justify-center space-x-3 mt-auto">

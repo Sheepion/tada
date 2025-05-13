@@ -16,12 +16,12 @@
         --color-primary-light: 22 100% 91%; /* #FFDED1 */
         --color-primary-dark: 22 80% 61%; /* #E67E50 */
 
-        /* Neutral Colors */
+        /* Neutral Colors - Adjusted for better visibility */
         --color-white: 0 0% 100%; /* #FFFFFF */
-        --color-grey-ultra-light: 220 25% 98%; /* #F9F9FB - Almost invisible */
-        --color-grey-light: 220 17% 94%; /* #EEEEF2 - Separators */
-        --color-grey-medium: 220 10% 78%; /* #C2C2CC - Secondary text */
-        --color-grey-dark: 220 10% 34%; /* #545466 - Primary text */
+        --color-grey-ultra-light: 220 20% 97%; /* #F5F6F9 - Subtle backgrounds, was 220 25% 98% */
+        --color-grey-light: 220 16% 91%; /* #E3E4EA - Separators, was 220 17% 94% */
+        --color-grey-medium: 220 10% 55%; /* #80808C - Darker secondary text, was 220 10% 78% */
+        --color-grey-dark: 220 10% 25%; /* #3A3A47 - Darker primary text, was 220 10% 34% */
 
         /* Functional Colors (Softened) */
         --color-success: 123 40% 63%; /* #66BB6A */
@@ -43,7 +43,7 @@
         font-family: var(--font-primary);
         font-weight: var(--font-primary-light-weight); /* Default to light */
         background-color: hsl(var(--color-white));
-        color: hsl(var(--color-grey-dark));
+        color: hsl(var(--color-grey-dark)); /* Base text color updated */
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         font-size: 13px;
@@ -81,7 +81,7 @@
 
     .styled-scrollbar::-webkit-scrollbar-thumb,
     .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        background-color: hsl(var(--color-grey-medium) / 0.3);
+        background-color: hsl(var(--color-grey-medium) / 0.3); /* Scrollbar thumb uses new grey-medium */
         border-radius: var(--border-radius-small);
     }
 

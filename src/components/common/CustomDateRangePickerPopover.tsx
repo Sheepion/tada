@@ -149,7 +149,7 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
                                 onClick={() => handleSelectDate(day)}
                                 onMouseEnter={() => handleMouseEnterDay(day)}
                                 className={twMerge(
-                                    "h-9 w-9 flex items-center justify-center text-[13px] font-light transition-colors duration-50 ease-linear mx-auto relative rounded-base", // Added rounded-base
+                                    "h-9 w-9 flex items-center justify-center text-[13px] font-light transition-colors duration-50 ease-linear mx-auto relative rounded-base",
                                     "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:z-10",
                                     !isCurrentMonth && "text-grey-light pointer-events-none opacity-60",
                                     isCurrentMonth && !isSelectedStart && !isSelectedEnd && "text-grey-dark",
@@ -157,7 +157,7 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
                                     (isInRange || isHoveringInRange) && isCurrentMonth && "bg-primary-light/50",
                                     isCurrentMonth && !isSelectedStart && !isSelectedEnd && !(isInRange || isHoveringInRange) && "hover:bg-grey-ultra-light",
                                     (isSelectedStart || isSelectedEnd) && "bg-primary text-white font-normal z-[5]",
-                                    isSelectedStart && !endDate && hoveredDate && isAfter(hoveredDate, startDate) && "rounded-l-full rounded-r-none", // Ensure only one side rounded if needed
+                                    isSelectedStart && !endDate && hoveredDate && isAfter(hoveredDate, startDate) && "rounded-l-full rounded-r-none",
                                     isSelectedStart && endDate && !isSameDay(startDate!, endDate!) && "rounded-l-full rounded-r-none",
                                     isSelectedEnd && startDate && !isSameDay(startDate!, endDate!) && "rounded-r-full rounded-l-none",
                                     isSelectedStart && isSelectedEnd && isSameDay(startDate!, endDate!) && "rounded-full",

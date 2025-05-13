@@ -162,7 +162,8 @@ const SettingsModal: React.FC = () => {
                                             selectedTab === item.id ? 'bg-primary-light text-primary font-normal' : 'text-grey-dark font-light hover:bg-grey-light hover:text-grey-dark',
                                             'focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-grey-ultra-light'
                                         )} aria-current={selectedTab === item.id ? 'page' : undefined}>
-                                    <Icon name={item.icon} size={16} strokeWidth={1} className="mr-2.5 opacity-70"
+                                    {/* Icon opacity increased for better visibility */}
+                                    <Icon name={item.icon} size={16} strokeWidth={1} className="mr-2.5 opacity-90"
                                           aria-hidden="true"/>
                                     <span>{item.label}</span>
                                 </button>

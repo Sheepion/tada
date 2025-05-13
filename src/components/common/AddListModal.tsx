@@ -63,7 +63,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-white w-full max-w-md rounded-base shadow-modal flex flex-col", // width, radius, shadow
+                        "bg-white w-full max-w-md rounded-base shadow-modal flex flex-col",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     style={{
@@ -71,17 +71,17 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                         paddingLeft: '24px',
                         paddingRight: '24px',
                         paddingBottom: '20px'
-                    }} // Padding per spec
+                    }}
                     onEscapeKeyDown={() => handleOpenChange(false)}
                     aria-describedby={undefined}
                 >
-                    <div className="flex justify-between items-center mb-4"> {/* Margin per spec for title */}
-                        <Dialog.Title className="text-[16px] font-normal text-grey-dark"> {/* Title style */}
+                    <div className="flex justify-between items-center mb-4">
+                        <Dialog.Title className="text-[16px] font-normal text-grey-dark">
                             Create New List
                         </Dialog.Title>
                         <Dialog.Close asChild>
                             <Button variant="ghost" size="icon" icon="x"
-                                    className="text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark w-6 h-6 -mr-1" // Smaller icon button
+                                    className="text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark w-6 h-6 -mr-1"
                                     iconProps={{strokeWidth: 1.5, size: 12}}
                                     aria-label="Close modal"/>
                         </Dialog.Close>
@@ -90,15 +90,16 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label htmlFor="listNameInput"
-                                   className="block text-[12px] font-light text-grey-medium mb-1.5"> List Name </label>
+                                   className="block text-[12px] font-light text-grey-medium mb-1.5"> List
+                                Name </label> {/* Label uses new grey-medium */}
                             <input ref={inputRef} id="listNameInput" type="text" value={listName}
                                    onChange={handleInputChange}
                                    placeholder="e.g., Groceries, Project X"
-                                   className={twMerge( // Input style per spec
+                                   className={twMerge(
                                        "w-full h-8 px-3 text-[13px] font-light rounded-base",
-                                       "bg-grey-ultra-light border-b border-grey-light focus:border-b-primary", //浅灰色背景, bottom line
+                                       "bg-grey-ultra-light border-b border-grey-light focus:border-b-primary", // Use updated grey colors
                                        error ? 'border-b-error focus:border-b-error' : '',
-                                       "placeholder:text-grey-medium text-grey-dark focus:outline-none"
+                                       "placeholder:text-grey-medium text-grey-dark focus:outline-none" // Placeholder uses new grey-medium, text new grey-dark
                                    )}
                                    required aria-required="true" aria-invalid={!!error}
                                    aria-describedby={error ? "listNameError" : undefined}/>

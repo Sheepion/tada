@@ -5,7 +5,7 @@ import {clsx} from 'clsx';
 import Icon from './Icon';
 import {IconName} from "@/components/common/IconMap";
 
-type ButtonVariant = 'primary' | 'secondary' | 'link' | 'danger' | 'ghost'; // Removed 'outline' and 'glass' as they are covered by 'secondary' or specific styles
+type ButtonVariant = 'primary' | 'secondary' | 'link' | 'danger' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,7 +13,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     size?: ButtonSize;
     icon?: IconName;
     iconPosition?: 'left' | 'right';
-    iconProps?: Partial<React.ComponentProps<typeof Icon>>; // For specific icon styling (size, strokeWidth)
+    iconProps?: Partial<React.ComponentProps<typeof Icon>>;
     fullWidth?: boolean;
     loading?: boolean;
     children?: React.ReactNode;
@@ -30,64 +30,63 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         const isDisabled = disabled || loading;
 
         const baseClasses = clsx(
-            'inline-flex items-center justify-center font-normal whitespace-nowrap select-none outline-none relative', // font-normal (400) for emphasized text
+            'inline-flex items-center justify-center font-normal whitespace-nowrap select-none outline-none relative',
             'focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white',
-            'transition-all duration-200 ease-in-out', // Using spec transition
+            'transition-all duration-200 ease-in-out',
             isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             fullWidth && 'w-full',
-            'rounded-base' // 4px border radius
+            'rounded-base'
         );
 
-        // Variant specific styles - NO BORDERS on buttons per spec. Backgrounds for differentiation.
         const variantClasses: Record<ButtonVariant, string> = {
             primary: clsx(
-                'bg-primary text-white', // Primary bg, white text
-                !isDisabled && 'hover:bg-primary-dark active:scale-[0.98]' // Darker primary on hover, scale on active
+                'bg-primary text-white',
+                !isDisabled && 'hover:bg-primary-dark active:scale-[0.98]'
             ),
             secondary: clsx(
-                'bg-grey-ultra-light text-primary', // No bg, text primary (for secondary button) -> Changed to very light grey background
-                !isDisabled && 'hover:bg-primary-light active:scale-[0.98]' // Light coral bg on hover for secondary
+                'bg-grey-ultra-light text-primary',
+                !isDisabled && 'hover:bg-primary-light active:scale-[0.98]'
             ),
-            link: clsx( // No background, text primary
+            link: clsx(
                 'text-primary underline-offset-2 h-auto px-0 py-0 rounded-none shadow-none',
                 !isDisabled && 'hover:text-primary-dark hover:underline active:scale-[0.98]'
             ),
             danger: clsx(
-                'bg-error text-white', // Error bg, white text
-                !isDisabled && 'hover:bg-error/80 active:scale-[0.98]' // Darker error on hover
+                'bg-error text-white',
+                !isDisabled && 'hover:bg-error/80 active:scale-[0.98]'
             ),
-            ghost: clsx( // No background, text color depends on context (default grey-medium)
-                'text-grey-medium border-transparent',
-                !isDisabled && 'hover:bg-grey-ultra-light hover:text-grey-dark active:scale-[0.98]'
+            ghost: clsx(
+                'text-grey-medium border-transparent', // Default ghost icon color
+                !isDisabled && 'hover:bg-grey-ultra-light hover:text-grey-dark active:scale-[0.98]' // Ghost icon hover text color
             ),
         };
 
         const sizeClasses: Record<ButtonSize, string> = {
-            sm: 'text-[13px] px-3 h-8', // Adjusted small button height & padding
-            md: 'text-[13px] px-4 h-8', // Per spec: height 32px,左右内边距16px -> px-4
-            lg: 'text-[14px] px-5 h-9', // Adjusted large button height & padding
-            icon: 'p-0', // Padding handled by icon size usually
+            sm: 'text-[13px] px-3 h-8',
+            md: 'text-[13px] px-4 h-8',
+            lg: 'text-[14px] px-5 h-9',
+            icon: 'p-0',
         };
 
-        // Specific icon button dimensions
         const iconButtonSizeClasses: Record<ButtonSize, string> = {
             sm: 'h-7 w-7',
             md: 'h-8 w-8',
             lg: 'h-9 w-9',
-            icon: 'h-8 w-8', // Default icon button size is 32x32
+            icon: 'h-8 w-8',
         };
 
 
         const iconSizeMap: Record<ButtonSize, number> = {
-            sm: 14, md: 16, lg: 18, icon: 16, // Default icon size for icon-only buttons
+            sm: 14, md: 16, lg: 18, icon: 16,
         };
         const finalIconSize = iconProps?.size ?? iconSizeMap[size];
         const finalIconStrokeWidth = iconProps?.strokeWidth ?? 1;
+        const iconOpacityClass = iconProps?.className?.includes('opacity-') ? '' : 'opacity-90'; // Default icon opacity increased
 
 
         const getIconMargin = (pos: 'left' | 'right') => {
             if (size === 'icon' || !children) return '';
-            return pos === 'left' ? 'mr-1.5' : 'ml-1.5'; // Consistent spacing
+            return pos === 'left' ? 'mr-1.5' : 'ml-1.5';
         };
 
         const finalAriaLabel = ariaLabel || (size === 'icon' && !children ? undefined : (typeof children === 'string' ? children : undefined));
@@ -102,17 +101,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 disabled={isDisabled} aria-label={finalAriaLabel} {...props} >
                 {loading ? (
                     <Icon name="loader" size={finalIconSize} strokeWidth={finalIconStrokeWidth}
-                          className="animate-spin"/>
+                          className={twMerge("animate-spin", iconOpacityClass)}/>
                 ) : (
                     <>
                         {icon && iconPosition === 'left' && (
                             <Icon name={icon} size={finalIconSize} strokeWidth={finalIconStrokeWidth}
-                                  className={twMerge(getIconMargin('left'))} aria-hidden="true"/>)}
+                                  className={twMerge(getIconMargin('left'), iconOpacityClass)} aria-hidden="true"/>)}
                         <span
                             className={clsx(size === 'icon' && !children && finalAriaLabel ? 'sr-only' : 'flex-shrink-0')}>{children}</span>
                         {icon && iconPosition === 'right' && (
                             <Icon name={icon} size={finalIconSize} strokeWidth={finalIconStrokeWidth}
-                                  className={twMerge(getIconMargin('right'))} aria-hidden="true"/>)}
+                                  className={twMerge(getIconMargin('right'), iconOpacityClass)} aria-hidden="true"/>)}
                     </>
                 )}
             </button>

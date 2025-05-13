@@ -12,13 +12,10 @@ import SelectionCheckboxRadix from "@/components/common/SelectionCheckbox";
 import {useSortable} from "@dnd-kit/sortable";
 import {CSS} from "@dnd-kit/utilities";
 
-// --- Subtask Item Component for TaskDetail (Refined UX) ---
 interface SubtaskItemDetailProps {
     subtask: Subtask;
     onUpdate: (id: string, updates: Partial<Omit<Subtask, 'id' | 'parentId' | 'createdAt'>>) => void;
     onDelete: (id: string) => void;
-    // isEditingContentForThis: boolean; // REMOVED
-    // onToggleEditContent: (id: string | null) => void; // REMOVED
     isTaskCompletedOrTrashed: boolean;
     isDraggingOverlay?: boolean;
 }
@@ -27,8 +24,6 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                                                       subtask,
                                                                       onUpdate,
                                                                       onDelete,
-                                                                      // isEditingContentForThis, // REMOVED
-                                                                      // onToggleEditContent, // REMOVED
                                                                       isTaskCompletedOrTrashed,
                                                                       isDraggingOverlay = false
                                                                   }) => {
@@ -36,10 +31,8 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
     const [localTitle, setLocalTitle] = useState(subtask.title);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const titleInputRef = useRef<HTMLInputElement>(null);
-    // const contentTextareaRef = useRef<HTMLTextAreaElement>(null); // REMOVED
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isDateTooltipOpen, setIsDateTooltipOpen] = useState(false);
-    // const [localContentCache, setLocalContentCache] = useState(subtask.content || ''); // REMOVED
 
     const isDisabledByParent = isTaskCompletedOrTrashed;
     const isDisabled = isDisabledByParent || subtask.completed;
@@ -56,14 +49,14 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
             cursor: 'grabbing',
             zIndex: 1000,
             boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-            background: 'var(--color-canvas-alt, hsl(var(--canvas-alt-h), var(--canvas-alt-s), calc(var(--canvas-alt-l) + 3%)))'
+            background: 'hsl(var(--color-white))' // Updated for consistency
         };
         if (isDragging) return {
             transform: baseTransform,
             transition,
             opacity: 0.6,
             cursor: 'grabbing',
-            background: 'var(--color-glass-alt, hsla(var(--glass-alt-h), var(--glass-alt-s), var(--glass-alt-l), 0.2))'
+            background: 'hsla(var(--color-grey-ultra-light), 0.5)' // Updated for consistency
         };
         return {transform: baseTransform, transition};
     }, [transform, transition, isDragging, isDraggingOverlay]);
@@ -78,8 +71,6 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
             titleInputRef.current.select();
         }
     }, [isEditingTitle]);
-
-    // REMOVED useEffect for isEditingContentForThis
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => setLocalTitle(e.target.value);
     const saveTitle = () => {
@@ -106,8 +97,6 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
             });
         }
     };
-
-    // REMOVED handleContentTextareaChange, saveSubtaskContent, cancelSubtaskContentEdit
 
     const handleDateSelect = useCallback((dateWithTime: Date | undefined) => {
         if (!isDisabledByParent) {
@@ -139,18 +128,15 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
 
     const subtaskDueDate = useMemo(() => safeParseDate(subtask.dueDate), [subtask.dueDate]);
     const isSubtaskOverdue = useMemo(() => subtaskDueDate && isValid(subtaskDueDate) && !subtask.completed && !isDisabledByParent && isOverdue(subtaskDueDate), [subtaskDueDate, subtask.completed, isDisabledByParent]);
-    // const hasContent = useMemo(() => !!subtask.content?.trim(), [subtask.content]); // REMOVED
 
     const subtaskItemBaseClasses = "group/subtask-detail flex flex-col rounded-lg transition-colors duration-150 ease-apple";
-    // const subtaskItemHoverClasses = !isDraggingOverlay && !isDragging && !isEditingContentForThis ? "hover:bg-black/[.025] dark:hover:bg-white/[.025]" : ""; // MODIFIED
-    const subtaskItemHoverClasses = !isDraggingOverlay && !isDragging ? "hover:bg-black/[.025] dark:hover:bg-white/[.025]" : "";
-    // const subtaskItemEditingContentClasses = isEditingContentForThis ? "bg-black/[.02] dark:bg-white/[.02]" : ""; // REMOVED
-    const subtaskItemEditingContentClasses = ""; // Ensure it's an empty string if not used
+    const subtaskItemHoverClasses = !isDraggingOverlay && !isDragging ? "hover:bg-grey-ultra-light dark:hover:bg-white/[.025]" : ""; // Use updated grey-ultra-light
+    const subtaskItemEditingContentClasses = "";
 
     const tooltipContentClass = "text-[11px] bg-grey-dark dark:bg-neutral-900/90 text-white dark:text-neutral-100 px-2 py-1 rounded-base shadow-md select-none z-[75] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
 
     const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[70] p-0 bg-white dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10",
+        "z-[70] p-0 bg-white dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10", // Tailwind shadow-strong not defined, used shadow-modal instead. Reverted to shadow-strong if it's custom. Assuming shadow-modal is fine.
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
@@ -165,12 +151,12 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                     subtaskItemBaseClasses,
                     subtaskItemHoverClasses,
                     subtaskItemEditingContentClasses,
-                    isDraggingOverlay && "bg-canvas-alt dark:bg-neutral-750 shadow-lg px-1.5",
+                    isDraggingOverlay && "bg-white dark:bg-neutral-750 shadow-lg px-1.5", // Use white for overlay bg
                     !isDisabledByParent && !isDragging && !isDraggingOverlay && "cursor-grab",
                     isDisabledByParent && "cursor-not-allowed"
                 )}
             >
-                <div className="flex items-center h-9 px-1.5"> {/* Padding adjusted slightly if needed */}
+                <div className="flex items-center h-9 px-1.5">
                     <SelectionCheckboxRadix
                         id={`subtask-detail-check-${subtask.id}`} checked={subtask.completed}
                         onChange={handleCompletionToggle}
@@ -186,7 +172,7 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                    onBlur={saveTitle} onKeyDown={handleTitleKeyDown}
                                    className={twMerge(
                                        "w-full text-[13px] bg-transparent focus:outline-none focus:ring-0 border-none p-0 leading-tight font-medium",
-                                       subtask.completed ? "line-through text-neutral-500/70 dark:text-neutral-400/70" : "text-neutral-700 dark:text-neutral-100"
+                                       subtask.completed ? "line-through text-grey-medium dark:text-neutral-400/70" : "text-grey-dark dark:text-neutral-100" // Use new grey colors
                                    )}
                                    placeholder="Subtask title..." disabled={isDisabled}
                             />
@@ -194,14 +180,14 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                             <span
                                 className={twMerge(
                                     "text-[13px] cursor-text block truncate leading-tight font-medium",
-                                    subtask.completed ? "line-through text-neutral-500/70 dark:text-neutral-400/70" : "text-neutral-700 dark:text-neutral-100"
+                                    subtask.completed ? "line-through text-grey-medium dark:text-neutral-400/70" : "text-grey-dark dark:text-neutral-100" // Use new grey colors
                                 )}>
-                            {subtask.title || <span className="italic text-muted-foreground/70">Untitled Subtask</span>}
+                            {subtask.title || <span className="italic text-grey-medium/70">Untitled Subtask</span>}
                         </span>
                         )}
                     </div>
                     <div
-                        className={twMerge("flex items-center flex-shrink-0 ml-2 space-x-1 transition-opacity duration-150", isEditingTitle ? "opacity-100" : "opacity-0 group-hover/subtask-detail:opacity-100 focus-within:opacity-100")}> {/* MODIFIED condition */}
+                        className={twMerge("flex items-center flex-shrink-0 ml-2 space-x-1 transition-opacity duration-150", isEditingTitle ? "opacity-100" : "opacity-0 group-hover/subtask-detail:opacity-100 focus-within:opacity-100")}>
                         {(subtask.dueDate || !isDisabled) && (
                             <Popover.Root open={isDatePickerOpen} onOpenChange={(open) => {
                                 setIsDatePickerOpen(open);
@@ -213,8 +199,8 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                         <Popover.Trigger asChild disabled={isDisabled}>
                                             <Button variant="ghost" size="icon" icon="calendar"
                                                     className={twMerge("w-7 h-7",
-                                                        isSubtaskOverdue && !subtask.completed && "text-red-500 dark:text-red-400",
-                                                        !isSubtaskOverdue && "text-muted-foreground/60 dark:text-neutral-500/60 hover:text-muted-foreground dark:hover:text-neutral-400",
+                                                        isSubtaskOverdue && !subtask.completed && "text-error dark:text-red-400", // Use error for overdue
+                                                        !isSubtaskOverdue && "text-grey-medium dark:text-neutral-500/60 hover:text-grey-dark dark:hover:text-neutral-400", // Use new grey colors
                                                         isDisabled && !subtask.dueDate && "opacity-50 cursor-not-allowed",
                                                         isDisabled && subtask.dueDate && "opacity-60 cursor-not-allowed",
                                                     )}
@@ -239,15 +225,13 @@ const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                 </Popover.Content></Popover.Portal>
                             </Popover.Root>
                         )}
-                        {/* REMOVED Content Edit Button */}
                         <Button variant="ghost" size="icon" icon="trash"
                                 onClick={openDeleteConfirm}
-                                className={twMerge("w-7 h-7 text-muted-foreground/40 dark:text-neutral-500/40 hover:text-red-500 dark:hover:text-red-400", isDisabledByParent && "opacity-20 cursor-not-allowed")}
+                                className={twMerge("w-7 h-7 text-grey-medium/60 dark:text-neutral-500/40 hover:text-error dark:hover:text-red-400", isDisabledByParent && "opacity-20 cursor-not-allowed")} // Use error for hover
                                 aria-label="Delete subtask" disabled={isDisabledByParent}
                         />
                     </div>
                 </div>
-                {/* REMOVED AnimatePresence for content editor */}
             </div>
 
             <ConfirmDeleteModalRadix

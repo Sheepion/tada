@@ -1,5 +1,5 @@
 // src/components/common/CodeMirrorEditor.tsx
-import React, {forwardRef, memo, useEffect, useImperativeHandle, useRef} from 'react'; // Added useState
+import React, {forwardRef, memo, useEffect, useImperativeHandle, useRef} from 'react';
 import {Annotation, EditorState, StateEffect} from '@codemirror/state';
 import {
     drawSelection,
@@ -23,10 +23,9 @@ const editorTheme = EditorView.theme({
         height: '100%',
         fontSize: '13px',
         backgroundColor: 'transparent',
-        color: 'hsl(var(--color-grey-dark))',
+        color: 'hsl(var(--color-grey-dark))', // Will use the new darker grey-dark
         borderRadius: 'inherit',
         fontFamily: 'var(--font-primary)',
-        // Description text uses Regular weight (400)
         fontWeight: 'var(--font-primary-regular-weight)',
     },
     '.cm-scroller': {
@@ -49,11 +48,11 @@ const editorTheme = EditorView.theme({
         boxSizing: 'border-box',
     },
     '.cm-gutters': {display: 'none',},
-    '.cm-activeLine': {backgroundColor: 'hsl(var(--color-grey-ultra-light))',},
+    '.cm-activeLine': {backgroundColor: 'hsl(var(--color-grey-ultra-light))',}, // Will use new grey-ultra-light
     '.cm-placeholder': {
-        color: 'hsl(var(--color-grey-medium))',
+        color: 'hsl(var(--color-grey-medium))', // Will use new darker grey-medium
         fontStyle: 'normal',
-        fontWeight: 'var(--font-primary-light-weight)', // Placeholder can be light
+        fontWeight: 'var(--font-primary-light-weight)',
         pointerEvents: 'none',
         padding: '16px',
         position: 'absolute', top: 0, left: 0,
@@ -101,7 +100,6 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
         const onFocusRef = useRef(onFocus);
         const prevReadOnlyRef = useRef(readOnly);
         const prevPlaceholderRef = useRef(placeholder);
-        // No need for isFocused state in this component if styling is on parent
 
         useEffect(() => {
             onChangeRef.current = onChange;
@@ -178,12 +176,9 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             }
         }, [readOnly, placeholder]);
 
-        // Container gets focus styling from parent based on editor's focus state
         const containerClasses = twMerge(
             'cm-editor-container relative h-full w-full overflow-hidden rounded-base',
-            // Background handled by parent or defaults to transparent for editorTheme.
-            // Parent component (TaskDetail) will handle the bottom border focus style.
-            readOnly && 'bg-grey-ultra-light',
+            readOnly && 'bg-grey-ultra-light', // Will use new grey-ultra-light
             className
         );
 

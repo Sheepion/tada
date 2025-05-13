@@ -43,7 +43,6 @@ import {
 import {CSS} from '@dnd-kit/utilities';
 import Icon from "@/components/common/Icon";
 
-// ... (DraggableCalendarTask, MonthYearSelectorContent, DroppableDayCellContent, DroppableDayCell - logic unchanged, ensure styles are picked up)
 interface DraggableTaskProps {
     task: Task;
     onClick: () => void;
@@ -262,13 +261,13 @@ const CalendarView: React.FC = () => {
 
         return (
             <DroppableDayCell key={dateKey} day={day}
-                              className={twMerge('border-r border-b border-grey-ultra-light', !isCurrentMonthDay && 'bg-grey-ultra-light/30 opacity-70', index % 7 === 6 && 'border-r-0', index >= daysInGrid.length - 7 && 'border-b-0', 'overflow-hidden p-1')}>
+                              className={twMerge('border-r border-b border-grey-light', !isCurrentMonthDay && 'bg-grey-ultra-light/30 opacity-70', index % 7 === 6 && 'border-r-0', index >= daysInGrid.length - 7 && 'border-b-0', 'overflow-hidden p-1')}>
                 <div className="flex justify-end items-center h-5 flex-shrink-0 mb-1">
                     <span
                         className={clsx('text-[12px] font-light w-5 h-5 flex items-center justify-center rounded-full transition-colors', isToday ? 'bg-primary text-white' : (isCurrentMonthDay ? 'text-grey-dark' : 'text-grey-medium'))}>{format(day, 'd')}</span>
                 </div>
                 <div
-                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]"> {/* Min height to ensure cells don't collapse */}
+                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]">
                     {isCurrentMonthDay && tasksToShow.map((task) => (
                         <DraggableCalendarTask key={task.id} task={task} onClick={() => handleTaskClick(task.id)}/>))}
                     {isCurrentMonthDay && hasMoreTasks && (<button onClick={() => toggleExpandDay(dateKey)}
@@ -282,7 +281,6 @@ const CalendarView: React.FC = () => {
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
     const isTodayButtonDisabled = useMemo(() => isSameDay(currentMonthDate, new Date()) && isSameMonth(currentMonthDate, new Date()), [currentMonthDate]);
 
-    // Animation class for dropdowns/popovers
     const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
 
     return (
@@ -290,11 +288,10 @@ const CalendarView: React.FC = () => {
                     measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
             <div className="h-full flex flex-col bg-white overflow-hidden">
                 <div
-                    className="px-6 py-0 h-[56px] border-b border-grey-ultra-light flex justify-between items-center flex-shrink-0 bg-white z-10">
+                    className="px-6 py-0 h-[56px] border-b border-grey-light flex justify-between items-center flex-shrink-0 bg-white z-10">
                     <div className="w-1/3"><h1 className="text-[18px] font-light text-grey-dark truncate">Calendar</h1>
                     </div>
                     <div className="flex-1 flex justify-center items-center space-x-1">
-                        {/* "Today" button: text, no background/border */}
                         <Button onClick={goToToday} variant="link" size="sm"
                                 className="!h-8 px-3 !text-primary !font-normal"
                                 disabled={isTodayButtonDisabled}>Today</Button>
@@ -309,7 +306,7 @@ const CalendarView: React.FC = () => {
                                             className="!h-8 px-3 text-[14px] font-normal w-36 text-center tabular-nums text-grey-dark hover:bg-grey-ultra-light">
                                         {format(currentMonthDate, 'MMMM yyyy', {locale: enUS})}
                                         <Icon name="chevron-down" size={14} strokeWidth={1}
-                                              className="ml-1.5 opacity-60"/>
+                                              className="ml-1.5 opacity-70"/> {/* Icon opacity increased */}
                                     </Button>
                                 </DropdownMenu.Trigger>
                                 <DropdownMenu.Portal>
@@ -336,7 +333,7 @@ const CalendarView: React.FC = () => {
                     </div>
                     <div className="flex-1 min-h-0">
                         <div
-                            className={twMerge("grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-ultra-light", numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6")}>
+                            className={twMerge("grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-light", numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6")}>
                             {daysInGrid.map(renderCalendarDay)}
                         </div>
                     </div>

@@ -36,8 +36,8 @@ const IconBar: React.FC = memo(() => {
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-base transition-colors duration-200 ease-in-out group relative',
             isSectionActive
-                ? 'bg-grey-ultra-light text-primary' // Active: Very light grey BG, Primary icon color
-                : 'text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark',
+                ? 'bg-grey-ultra-light text-primary'
+                : 'text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark', // Icon color uses new grey-medium and grey-dark
             'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white'
         );
     }, [location.pathname]);
@@ -45,10 +45,8 @@ const IconBar: React.FC = memo(() => {
     const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[60] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
 
     return (
-        // IconBar is white, no border
         <div
-            className="w-16 bg-white flex flex-col items-center py-4 flex-shrink-0 z-20 border-r border-grey-ultra-light"> {/* Thin separator */}
-            {/* App Logo - using primary color */}
+            className="w-16 bg-white flex flex-col items-center py-4 flex-shrink-0 z-20 border-r border-grey-light"> {/* Use updated grey-light */}
             <div
                 className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-primary rounded-base text-white font-medium text-xl select-none"
                 aria-label="Tada App Logo" title="Tada">
@@ -60,7 +58,7 @@ const IconBar: React.FC = memo(() => {
                     <Tooltip.Root key={item.path} delayDuration={200}>
                         <Tooltip.Trigger asChild>
                             <NavLink to={item.path} className={getNavLinkClass(item.path)} aria-label={item.label}>
-                                <Icon name={item.icon} size={20} strokeWidth={1}/> {/* Icon: 1px stroke */}
+                                <Icon name={item.icon} size={20} strokeWidth={1}/>
                             </NavLink>
                         </Tooltip.Trigger>
                         <Tooltip.Portal>
@@ -84,7 +82,7 @@ const IconBar: React.FC = memo(() => {
                                      className="w-full h-full object-cover"/>
                             ) : (
                                 <div
-                                    className="w-full h-full bg-grey-light flex items-center justify-center text-grey-medium font-normal text-sm">
+                                    className="w-full h-full bg-grey-light flex items-center justify-center text-grey-medium font-normal text-sm"> {/* User initials use new grey-medium */}
                                     {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() :
                                         <Icon name="user" size={16} strokeWidth={1}/>}
                                 </div>

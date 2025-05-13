@@ -38,11 +38,11 @@ import {
 import {twMerge} from 'tailwind-merge';
 import SelectionCheckboxRadix from '../common/SelectionCheckbox';
 import useDebounce from '@/hooks/useDebounce';
-import {CustomDateRangePickerContent} from '../common/CustomDateRangePickerPopover'; // Assuming this is correctly pathed
+import {CustomDateRangePickerContent} from '../common/CustomDateRangePickerPopover';
 import SummaryHistoryModal from './SummaryHistoryModal';
 import {AnimatePresence, motion} from 'framer-motion';
 
-async function generateAiSummary(tasks: Task[]): Promise<string> { /* ... (logic unchanged) ... */
+async function generateAiSummary(tasks: Task[]): Promise<string> {
     console.log("Generating AI summary for tasks:", tasks.map(t => t.title));
     await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
     if (tasks.length === 0) return "No tasks selected or found for summary generation.";
@@ -272,7 +272,6 @@ const SummaryView: React.FC = () => {
     const totalRelevantSummaries = useMemo(() => relevantSummaries.length, [relevantSummaries]);
     const displayedIndex = useMemo(() => totalRelevantSummaries > 0 ? (currentIndex + 1) : 0, [totalRelevantSummaries, currentIndex]);
 
-    // Using more specific animations for dropdowns
     const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const popoverAnimationClasses = "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide";
 
@@ -302,12 +301,12 @@ const SummaryView: React.FC = () => {
                                 className="font-normal text-primary">[{task.completionPercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
                             <span className="flex items-center whitespace-nowrap"><Icon name="calendar" size={10}
                                                                                         strokeWidth={1}
-                                                                                        className="mr-0.5 opacity-60"/>{formatRelativeDate(task.dueDate, false)}</span>)} {task.list && task.list !== 'Inbox' && (
+                                                                                        className="mr-0.5 opacity-80"/>{formatRelativeDate(task.dueDate, false)}</span>)} {task.list && task.list !== 'Inbox' && (
                             <span
                                 className="flex items-center bg-grey-ultra-light px-1 py-0 rounded-sm max-w-[70px] truncate"
                                 title={task.list}><Icon name={task.list === 'Trash' ? 'trash' : 'list'} size={9}
                                                         strokeWidth={1}
-                                                        className="mr-0.5 opacity-60 flex-shrink-0"/><span
+                                                        className="mr-0.5 opacity-80 flex-shrink-0"/><span
                                 className="truncate">{task.list}</span></span>)} </div>
                     </div>
                 </li>))}</ul>) : (
@@ -366,11 +365,11 @@ const SummaryView: React.FC = () => {
                         <span
                             className={twMerge("flex items-center whitespace-nowrap", overdue && !task.completed && !isDisabled && "text-error font-normal", task.completed && !isDisabled && "line-through")}><Icon
                             name="calendar" size={10} strokeWidth={1}
-                            className="mr-0.5 opacity-70"/>{formatRelativeDate(parsedDueDate, false)}</span>)} {task.list && task.list !== 'Inbox' && (
+                            className="mr-0.5 opacity-80"/>{formatRelativeDate(parsedDueDate, false)}</span>)} {task.list && task.list !== 'Inbox' && (
                         <span
                             className="flex items-center bg-grey-ultra-light px-1 rounded-sm text-[10px] max-w-[70px] truncate"
                             title={task.list}><Icon name={task.list === 'Trash' ? 'trash' : 'list'} size={10}
-                                                    strokeWidth={1} className="mr-0.5 opacity-70"/><span
+                                                    strokeWidth={1} className="mr-0.5 opacity-80 flex-shrink-0"/><span
                             className="truncate">{task.list}</span></span>)} {task.tags && task.tags.length > 0 && (
                         <span className="flex items-center space-x-1">{task.tags.slice(0, 1).map(tag => (<span key={tag}
                                                                                                                className="bg-grey-ultra-light px-1 rounded-sm text-[10px] max-w-[60px] truncate">#{tag}</span>))}{task.tags.length > 1 &&
@@ -420,7 +419,7 @@ const SummaryView: React.FC = () => {
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden">
             <div
-                className="px-6 py-0 h-[56px] border-b border-grey-ultra-light flex justify-between items-center flex-shrink-0 bg-white z-10">
+                className="px-6 py-0 h-[56px] border-b border-grey-light flex justify-between items-center flex-shrink-0 bg-white z-10">
                 <div className="w-1/3 flex items-center space-x-2">
                     <h1 className="text-[18px] font-light text-grey-dark truncate">AI Summary</h1>
                     <Tooltip.Provider><Tooltip.Root delayDuration={200}><Tooltip.Trigger asChild><Button variant="ghost"
@@ -443,9 +442,10 @@ const SummaryView: React.FC = () => {
                                 <Button variant="secondary" size="sm"
                                         className="!h-8 px-3 text-grey-dark font-light hover:bg-grey-ultra-light min-w-[120px] tabular-nums"><Icon
                                     name="calendar-days" size={14} strokeWidth={1}
-                                    className="mr-1.5 opacity-70"/>{selectedPeriodLabel}<Icon name="chevron-down"
-                                                                                              size={14} strokeWidth={1}
-                                                                                              className="ml-auto opacity-60 pl-1"/></Button>
+                                    className="mr-1.5 opacity-80"/>{selectedPeriodLabel}<Icon
+                                    name="chevron-down" // Icon opacity increased
+                                    size={14} strokeWidth={1}
+                                    className="ml-auto opacity-70 pl-1"/></Button>
                             </DropdownMenu.Trigger></Popover.Anchor>
                             <DropdownMenu.Portal>
                                 <DropdownMenu.Content
@@ -476,9 +476,10 @@ const SummaryView: React.FC = () => {
                         <DropdownMenu.Trigger asChild><Button variant="secondary" size="sm"
                                                               className="!h-8 px-3 text-grey-dark font-light hover:bg-grey-ultra-light min-w-[110px]"><Icon
                             name="list" size={14} strokeWidth={1}
-                            className="mr-1.5 opacity-70"/>{selectedListLabel}<Icon name="chevron-down" size={14}
+                            className="mr-1.5 opacity-80"/>{selectedListLabel}<Icon name="chevron-down"
+                                                                                    size={14} // Icon opacity increased
                                                                                     strokeWidth={1}
-                                                                                    className="ml-auto opacity-60 pl-1"/></Button></DropdownMenu.Trigger>
+                                                                                    className="ml-auto opacity-70 pl-1"/></Button></DropdownMenu.Trigger>
                         <DropdownMenu.Portal>
                             <DropdownMenu.Content
                                 className={twMerge(dropdownContentBaseClasses, dropdownAnimationClasses, "max-h-60 overflow-y-auto styled-scrollbar-thin")}
@@ -498,11 +499,10 @@ const SummaryView: React.FC = () => {
                         className="font-normal">{isGenerating ? 'Generating...' : 'Generate'}</span></Button>
                 </div>
             </div>
-            {/* ... (rest of the component unchanged) ... */}
             <div
-                className="flex-1 flex flex-col md:flex-row overflow-hidden p-3 md:p-4 gap-3 md:gap-4 min-h-0"> {/* Main content padding */}
+                className="flex-1 flex flex-col md:flex-row overflow-hidden p-3 md:p-4 gap-3 md:gap-4 min-h-0">
                 <div
-                    className="w-full md:w-[360px] h-1/2 md:h-full flex flex-col bg-white rounded-base shadow-ai-summary overflow-hidden flex-shrink-0"> {/* Shadow per spec for AI summary container */}
+                    className="w-full md:w-[360px] h-1/2 md:h-full flex flex-col bg-white rounded-base shadow-ai-summary overflow-hidden flex-shrink-0">
                     <div
                         className="px-4 py-3 border-b border-grey-light flex justify-between items-center flex-shrink-0 h-12">
                         <h2 className="text-[16px] font-normal text-grey-dark truncate">Tasks
@@ -543,9 +543,10 @@ const SummaryView: React.FC = () => {
                                                     className={twMerge("flex items-center text-[11px] font-light h-6 px-1.5 rounded-base transition-colors duration-150 ease-in-out focus:outline-none", !currentSummary || isGenerating ? "text-grey-medium/50 cursor-not-allowed" : "text-primary hover:bg-primary-light focus-visible:ring-1 focus-visible:ring-primary")}
                                                     aria-haspopup="true">
                                                     <Icon name="file-text" size={12} strokeWidth={1}
-                                                          className="mr-1 opacity-70"/>{tasksUsedCount} tasks used<Icon
+                                                          className="mr-1 opacity-80"/>{tasksUsedCount} tasks
+                                                    used<Icon // Icon opacity increased
                                                     name="chevron-down" size={12} strokeWidth={1}
-                                                    className="ml-0.5 opacity-60"/>
+                                                    className="ml-0.5 opacity-70"/>
                                                 </button>
                                             </DropdownMenu.Trigger>
                                             <DropdownMenu.Portal><DropdownMenu.Content
