@@ -89,22 +89,32 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label htmlFor="listNameInput"
-                                   className="block text-[12px] font-light text-grey-medium mb-1.5"> List
-                                Name </label> {/* Label uses new grey-medium */}
-                            <input ref={inputRef} id="listNameInput" type="text" value={listName}
-                                   onChange={handleInputChange}
-                                   placeholder="e.g., Groceries, Project X"
-                                   className={twMerge(
-                                       "w-full h-8 px-3 text-[13px] font-light rounded-base",
-                                       "bg-grey-ultra-light border-b border-grey-light focus:border-b-primary", // Use updated grey colors
-                                       error ? 'border-b-error focus:border-b-error' : '',
-                                       "placeholder:text-grey-medium text-grey-dark focus:outline-none" // Placeholder uses new grey-medium, text new grey-dark
-                                   )}
-                                   required aria-required="true" aria-invalid={!!error}
-                                   aria-describedby={error ? "listNameError" : undefined}/>
-                            {error &&
-                                <p id="listNameError" className="text-[11px] text-error mt-1 font-light">{error}</p>}
+                            {/* Label removed as per request */}
+                            <input
+                                ref={inputRef}
+                                id="listNameInput"
+                                type="text"
+                                value={listName}
+                                onChange={handleInputChange}
+                                placeholder="e.g., Groceries, Project X"
+                                aria-label="List Name" // Added aria-label for accessibility since visible label is removed
+                                className={twMerge(
+                                    "w-full h-8 px-3 text-[13px] font-light rounded-base focus:outline-none", // Base styles
+                                    "bg-grey-ultra-light", // Background color, same as sidebar search
+                                    "placeholder:text-grey-medium text-grey-dark", // Text and placeholder colors
+                                    "transition-colors duration-200 ease-in-out", // Smooth transitions
+                                    error
+                                        ? "border border-error focus:ring-1 focus:ring-error" // Error state: red border and ring
+                                        : "focus:border-primary focus:ring-1 focus:ring-primary" // Normal focus: primary border and ring
+                                )}
+                                required
+                                aria-required="true"
+                                aria-invalid={!!error}
+                                aria-describedby={error ? "listNameError" : undefined}
+                            />
+                            {error && (
+                                <p id="listNameError" className="text-[11px] text-error mt-1.5 font-light">{error}</p> // Adjusted margin-top slightly for better spacing
+                            )}
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">
                             <Dialog.Close asChild>
