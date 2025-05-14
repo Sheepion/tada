@@ -64,6 +64,18 @@ async function generateAiSummary(tasks: Task[]): Promise<string> {
     return summary.trim();
 }
 
+// Aligned with TaskList.tsx style functions
+const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
+    "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
+    "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light",
+    "dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700",
+    checked
+        ? "bg-primary-light text-primary dark:bg-primary-dark/30 dark:text-primary-light" // Checked state
+        : "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100", // Default state
+    "data-[disabled]:opacity-50"
+);
+
+
 const SummaryView: React.FC = () => {
     const [period, setPeriod] = useAtom(summaryPeriodFilterAtom);
     const [listFilter, setListFilter] = useAtom(summaryListFilterAtom);
@@ -298,42 +310,49 @@ const SummaryView: React.FC = () => {
     const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const popoverAnimationClasses = "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide";
 
-    const dropdownContentBaseClasses = "min-w-[160px] z-50 bg-white rounded-base shadow-modal p-1";
-    const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[70] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
+    // Aligned with TaskList.moreOptionsDropdownContentClasses
+    const dropdownContentBaseClasses = useMemo(() => twMerge(
+        "min-w-[200px] z-[60] bg-white rounded-base shadow-modal p-1 dark:bg-neutral-800 dark:border dark:border-neutral-700",
+        dropdownAnimationClasses
+    ), [dropdownAnimationClasses]);
+
+    const tooltipContentClass = "text-[11px] bg-grey-dark dark:bg-neutral-900/95 text-white dark:text-neutral-100 px-2 py-1 rounded-base shadow-md select-none z-[70] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
 
     const renderReferencedTasksDropdown = () => (
-        <div className="bg-white rounded-base shadow-modal max-h-72 w-80 styled-scrollbar-thin overflow-y-auto p-1.5">
+        <div
+            className="bg-white dark:bg-neutral-800 rounded-base shadow-modal max-h-72 w-80 styled-scrollbar-thin overflow-y-auto p-1.5">
             <div
-                className="px-1.5 py-1 text-[11px] font-normal text-grey-medium border-b border-grey-light sticky top-0 bg-white/80 backdrop-blur-sm z-10">Referenced
+                className="px-1.5 py-1 text-[11px] font-normal text-grey-medium dark:text-neutral-400 border-b border-grey-light dark:border-neutral-700 sticky top-0 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm z-10">Referenced
                 Tasks ({referencedTasks.length})
             </div>
             {referencedTasks.length > 0 ? (<ul className="pt-1 space-y-0.5">{referencedTasks.map(task => (
                 <li key={task.id}
-                    className="flex items-start p-1.5 rounded-base hover:bg-grey-ultra-light transition-colors"
+                    className="flex items-start p-1.5 rounded-base hover:bg-grey-ultra-light dark:hover:bg-neutral-700 transition-colors"
                     title={task.title}>
                     <div
-                        className={twMerge("flex-shrink-0 w-3.5 h-3.5 rounded-full border mt-[1px] mr-2 flex items-center justify-center", task.completed ? "bg-primary border-primary" : task.completionPercentage && task.completionPercentage > 0 ? "border-primary/70" : "bg-white border-grey-light")}> {task.completed &&
+                        className={twMerge("flex-shrink-0 w-3.5 h-3.5 rounded-full border mt-[1px] mr-2 flex items-center justify-center", task.completed ? "bg-primary border-primary" : task.completionPercentage && task.completionPercentage > 0 ? "border-primary/70 dark:border-primary-light/70" : "bg-white dark:bg-neutral-750 border-grey-light dark:border-neutral-600")}> {task.completed &&
                         <Icon name="check" size={8} strokeWidth={2}
                               className="text-white"/>} {task.completionPercentage && task.completionPercentage > 0 && !task.completed && (
-                        <div className="w-1.5 h-1.5 bg-primary/80 rounded-full"></div>)} </div>
+                        <div className="w-1.5 h-1.5 bg-primary/80 dark:bg-primary-light/80 rounded-full"></div>)} </div>
                     <div className="flex-1 overflow-hidden"><p
-                        className={twMerge("text-[12px] font-normal text-grey-dark leading-snug truncate", task.completed && "line-through text-grey-medium font-light")}>{task.title || "Untitled"}</p>
+                        className={twMerge("text-[12px] font-normal text-grey-dark dark:text-neutral-100 leading-snug truncate", task.completed && "line-through text-grey-medium dark:text-neutral-400 font-light")}>{task.title || "Untitled"}</p>
                         <div
-                            className="flex items-center space-x-2 mt-0.5 text-[10px] text-grey-medium font-light"> {task.completionPercentage && !task.completed && (
+                            className="flex items-center space-x-2 mt-0.5 text-[10px] text-grey-medium dark:text-neutral-400 font-light"> {task.completionPercentage && !task.completed && (
                             <span
-                                className="font-normal text-primary">[{task.completionPercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
+                                className="font-normal text-primary dark:text-primary-light">[{task.completionPercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
                             <span className="flex items-center whitespace-nowrap"><Icon name="calendar" size={10}
                                                                                         strokeWidth={1}
                                                                                         className="mr-0.5 opacity-80"/>{formatRelativeDate(task.dueDate, false)}</span>)} {task.list && task.list !== 'Inbox' && (
                             <span
-                                className="flex items-center bg-grey-ultra-light px-1 py-0 rounded-sm max-w-[70px] truncate"
+                                className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 px-1 py-0 rounded-sm max-w-[70px] truncate"
                                 title={task.list}><Icon name={task.list === 'Trash' ? 'trash' : 'list'} size={9}
                                                         strokeWidth={1}
                                                         className="mr-0.5 opacity-80 flex-shrink-0"/><span
                                 className="truncate">{task.list}</span></span>)} </div>
                     </div>
                 </li>))}</ul>) : (
-                <p className="text-[12px] text-grey-medium italic p-4 text-center font-light">No referenced tasks
+                <p className="text-[12px] text-grey-medium dark:text-neutral-400 italic p-4 text-center font-light">No
+                    referenced tasks
                     found.</p>)} </div>);
 
     const TaskItemMiniInline: React.FC<{
@@ -378,7 +397,7 @@ const SummaryView: React.FC = () => {
         }, [sortedSubtasks, INITIAL_VISIBLE_SUBTASKS]);
 
         return (<label htmlFor={uniqueId}
-                       className={twMerge("flex flex-col p-2 rounded-base transition-colors duration-150 ease-in-out", isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer", isSelected && !isDisabled ? "bg-primary-light" : "hover:bg-grey-ultra-light")}
+                       className={twMerge("flex flex-col p-2 rounded-base transition-colors duration-150 ease-in-out", isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer", isSelected && !isDisabled ? "bg-primary-light dark:bg-primary-dark/20" : "hover:bg-grey-ultra-light dark:hover:bg-neutral-750")}
                        onClick={handleLabelClick}>
             <div className="flex items-center"><SelectionCheckboxRadix id={uniqueId} checked={isSelected}
                                                                        onChange={(checkedState) => onSelectionChange(task.id, checkedState)}
@@ -386,29 +405,30 @@ const SummaryView: React.FC = () => {
                                                                        className="mr-2 flex-shrink-0 pointer-events-none"
                                                                        size={16} disabled={isDisabled}/>
                 <div className="flex-1 overflow-hidden"><span
-                    className={twMerge("text-[13px] font-normal text-grey-dark block truncate", task.completed && !isDisabled && "line-through text-grey-medium font-light", isDisabled && "text-grey-medium font-light")}>{task.title ||
+                    className={twMerge("text-[13px] font-normal text-grey-dark dark:text-neutral-100 block truncate", task.completed && !isDisabled && "line-through text-grey-medium dark:text-neutral-400 font-light", isDisabled && "text-grey-medium dark:text-neutral-400 font-light")}>{task.title ||
                     <span className="italic">Untitled Task</span>}</span>
                     <div
-                        className="text-[11px] font-light text-grey-medium flex items-center space-x-2 mt-0.5 flex-wrap gap-y-0.5"> {task.completionPercentage && task.completionPercentage < 100 && !isDisabled && (
+                        className="text-[11px] font-light text-grey-medium dark:text-neutral-400 flex items-center space-x-2 mt-0.5 flex-wrap gap-y-0.5"> {task.completionPercentage && task.completionPercentage < 100 && !isDisabled && (
                         <span
-                            className="text-primary font-normal">[{task.completionPercentage}%]</span>)} {parsedDueDate && isValid(parsedDueDate) && (
+                            className="text-primary dark:text-primary-light font-normal">[{task.completionPercentage}%]</span>)} {parsedDueDate && isValid(parsedDueDate) && (
                         <span
-                            className={twMerge("flex items-center whitespace-nowrap", overdue && !task.completed && !isDisabled && "text-error font-normal", task.completed && !isDisabled && "line-through")}><Icon
+                            className={twMerge("flex items-center whitespace-nowrap", overdue && !task.completed && !isDisabled && "text-error dark:text-red-400 font-normal", task.completed && !isDisabled && "line-through")}><Icon
                             name="calendar" size={10} strokeWidth={1}
                             className="mr-0.5 opacity-80"/>{formatRelativeDate(parsedDueDate, false)}</span>)} {task.list && task.list !== 'Inbox' && (
                         <span
-                            className="flex items-center bg-grey-ultra-light px-1 rounded-sm text-[10px] max-w-[70px] truncate"
+                            className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 px-1 rounded-sm text-[10px] max-w-[70px] truncate"
                             title={task.list}><Icon name={task.list === 'Trash' ? 'trash' : 'list'} size={10}
                                                     strokeWidth={1} className="mr-0.5 opacity-80 flex-shrink-0"/><span
                             className="truncate">{task.list}</span></span>)} {task.tags && task.tags.length > 0 && (
                         <span className="flex items-center space-x-1">{task.tags.slice(0, 1).map(tag => (<span key={tag}
-                                                                                                               className="bg-grey-ultra-light px-1 rounded-sm text-[10px] max-w-[60px] truncate">#{tag}</span>))}{task.tags.length > 1 &&
+                                                                                                               className="bg-grey-ultra-light dark:bg-neutral-700 px-1 rounded-sm text-[10px] max-w-[60px] truncate">#{tag}</span>))}{task.tags.length > 1 &&
                             <span
-                                className="text-[10px] text-grey-medium/80">+{task.tags.length - 1}</span>}</span>)} </div>
+                                className="text-[10px] text-grey-medium/80 dark:text-neutral-400/80">+{task.tags.length - 1}</span>}</span>)} </div>
                 </div>
             </div>
             {sortedSubtasks && sortedSubtasks.length > 0 && !isDisabled && (
-                <div className={twMerge("mt-1.5 pt-1.5 border-t border-grey-light", "pl-[calc(0.5rem+16px+0.5rem)]")}>
+                <div
+                    className={twMerge("mt-1.5 pt-1.5 border-t border-grey-light dark:border-neutral-700", "pl-[calc(0.5rem+16px+0.5rem)]")}>
                     <AnimatePresence initial={false}>
                         <motion.div key="subtask-list-animated" initial="collapsed"
                                     animate={isSubtasksExpanded ? "open" : "collapsed"} exit="collapsed" variants={{
@@ -426,7 +446,7 @@ const SummaryView: React.FC = () => {
                                     }} aria-label={`Subtask: ${sub.title || 'Untitled Subtask'} status`}
                                                             className="mr-1.5 flex-shrink-0 pointer-events-none opacity-80"
                                                             size={11} disabled={true}/><span
-                                    className={twMerge("truncate text-grey-medium", sub.completed && "line-through opacity-70")}>{sub.title ||
+                                    className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
                                     <span className="italic">Untitled Subtask</span>}</span></div>))} </div>
                         </motion.div>
                     </AnimatePresence> {!isSubtasksExpanded && subtasksToShow.map(sub => (
@@ -436,41 +456,41 @@ const SummaryView: React.FC = () => {
                         }} aria-label={`Subtask: ${sub.title || 'Untitled Subtask'} status`}
                                                 className="mr-1.5 flex-shrink-0 pointer-events-none opacity-80"
                                                 size={11} disabled={true}/><span
-                        className={twMerge("truncate text-grey-medium", sub.completed && "line-through opacity-70")}>{sub.title ||
+                        className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
                         <span className="italic">Untitled Subtask</span>}</span>
                     </div>))} {sortedSubtasks.length > INITIAL_VISIBLE_SUBTASKS && (
                     <button type="button" data-subtask-expander="true" onClick={toggleSubtaskExpansion}
-                            className={twMerge("text-[10px] text-primary hover:underline mt-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded font-light", "ml-[calc(0.5rem+11px)]")}
+                            className={twMerge("text-[10px] text-primary dark:text-primary-light hover:underline mt-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded font-light", "ml-[calc(0.5rem+11px)]")}
                             aria-expanded={isSubtasksExpanded}>{isSubtasksExpanded ? "Show less" : `+ ${hiddenSubtasksCount} more subtask${hiddenSubtasksCount > 1 ? 's' : ''}`}</button>)}
                 </div>)} </label>);
     });
     TaskItemMiniInline.displayName = 'TaskItemMiniInline';
 
     return (
-        <div className="h-full flex flex-col bg-white overflow-hidden">
+        <div className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden">
             <div
-                className="px-6 py-0 h-[56px] border-b border-grey-light flex justify-between items-center flex-shrink-0 bg-white z-10">
+                className="px-6 py-0 h-[56px] border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-neutral-800 z-10">
                 <div className="w-1/3 flex items-center space-x-2">
-                    <h1 className="text-[18px] font-light text-grey-dark truncate">AI Summary</h1>
+                    <h1 className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">AI Summary</h1>
                     <Tooltip.Provider><Tooltip.Root delayDuration={200}><Tooltip.Trigger asChild><Button variant="ghost"
                                                                                                          size="icon"
                                                                                                          icon="history"
                                                                                                          onClick={openHistoryModal}
-                                                                                                         className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                                                                                                         className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700"
                                                                                                          iconProps={{
                                                                                                              size: 16,
                                                                                                              strokeWidth: 1
                                                                                                          }}
                                                                                                          aria-label="View Summary History"/></Tooltip.Trigger><Tooltip.Portal><Tooltip.Content
                         className={tooltipContentClass} sideOffset={4}>View All Generated Summaries<Tooltip.Arrow
-                        className="fill-grey-dark"/></Tooltip.Content></Tooltip.Portal></Tooltip.Root></Tooltip.Provider>
+                        className="fill-grey-dark dark:fill-neutral-900/95"/></Tooltip.Content></Tooltip.Portal></Tooltip.Root></Tooltip.Provider>
                 </div>
                 <div className="flex-1 flex justify-center items-center space-x-1">
                     <Popover.Root modal={true} open={isRangePickerOpen} onOpenChange={setIsRangePickerOpen}>
                         <DropdownMenu.Root open={isPeriodDropdownOpen} onOpenChange={setIsPeriodDropdownOpen}>
                             <Popover.Anchor asChild><DropdownMenu.Trigger asChild>
                                 <Button variant="secondary" size="sm"
-                                        className="!h-8 px-3 text-grey-dark font-light hover:bg-grey-ultra-light min-w-[120px] tabular-nums"><Icon
+                                        className="!h-8 px-3 text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-ultra-light dark:hover:bg-neutral-700 dark:bg-neutral-750 dark:border-neutral-600 min-w-[120px] tabular-nums"><Icon
                                     name="calendar-days" size={14} strokeWidth={1}
                                     className="mr-1.5 opacity-80"/>{selectedPeriodLabel}<Icon
                                     name="chevron-down"
@@ -479,20 +499,28 @@ const SummaryView: React.FC = () => {
                             </DropdownMenu.Trigger></Popover.Anchor>
                             <DropdownMenu.Portal>
                                 <DropdownMenu.Content
-                                    className={twMerge(dropdownContentBaseClasses, dropdownAnimationClasses)}
+                                    className={dropdownContentBaseClasses}
                                     sideOffset={5} align="center" onCloseAutoFocus={e => e.preventDefault()}>
                                     <DropdownMenu.RadioGroup value={typeof period === 'string' ? period : 'custom'}
                                                              onValueChange={handlePeriodValueChange}>
                                         {periodOptions.map(p => (<DropdownMenu.RadioItem key={p.label}
                                                                                          value={typeof p.value === 'string' ? p.value : 'custom'}
-                                                                                         className={twMerge("relative flex cursor-pointer select-none items-center rounded-[3px] px-2.5 py-1 text-[13px] font-light outline-none transition-colors data-[disabled]:pointer-events-none h-7 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light", ((typeof period === 'string' && period === p.value) || (typeof period === 'object' && p.value === 'custom')) ? "bg-primary-light text-primary font-normal data-[highlighted]:bg-primary-light" : "text-grey-dark data-[highlighted]:text-grey-dark", "data-[disabled]:opacity-50")}>{p.label}</DropdownMenu.RadioItem>))}
+                                                                                         className={getSummaryMenuRadioItemStyle(
+                                                                                             (typeof period === 'string' && period === p.value) || (typeof period === 'object' && p.value === 'custom')
+                                                                                         )}
+                                        >{p.label}
+                                            <DropdownMenu.ItemIndicator
+                                                className="absolute right-2 inline-flex items-center">
+                                                <Icon name="check" size={12} strokeWidth={2}/>
+                                            </DropdownMenu.ItemIndicator>
+                                        </DropdownMenu.RadioItem>))}
                                     </DropdownMenu.RadioGroup>
                                 </DropdownMenu.Content>
                             </DropdownMenu.Portal>
                         </DropdownMenu.Root>
                         <Popover.Portal>
                             <Popover.Content side="bottom" align="center" sideOffset={5}
-                                             className={twMerge("z-[60]", popoverAnimationClasses)}
+                                             className={twMerge("z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", popoverAnimationClasses)} // z-index higher
                                              onOpenAutoFocus={(e) => e.preventDefault()}
                                              onCloseAutoFocus={(e) => e.preventDefault()}>
                                 <CustomDateRangePickerContent
@@ -504,7 +532,7 @@ const SummaryView: React.FC = () => {
                     </Popover.Root>
                     <DropdownMenu.Root open={isListDropdownOpen} onOpenChange={setIsListDropdownOpen}>
                         <DropdownMenu.Trigger asChild><Button variant="secondary" size="sm"
-                                                              className="!h-8 px-3 text-grey-dark font-light hover:bg-grey-ultra-light min-w-[110px]"><Icon
+                                                              className="!h-8 px-3 text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-ultra-light dark:hover:bg-neutral-700 dark:bg-neutral-750 dark:border-neutral-600 min-w-[110px]"><Icon
                             name="list" size={14} strokeWidth={1}
                             className="mr-1.5 opacity-80"/>{selectedListLabel}<Icon name="chevron-down"
                                                                                     size={14}
@@ -512,11 +540,17 @@ const SummaryView: React.FC = () => {
                                                                                     className="ml-auto opacity-70 pl-1"/></Button></DropdownMenu.Trigger>
                         <DropdownMenu.Portal>
                             <DropdownMenu.Content
-                                className={twMerge(dropdownContentBaseClasses, dropdownAnimationClasses, "max-h-60 overflow-y-auto styled-scrollbar-thin")}
+                                className={twMerge(dropdownContentBaseClasses, "max-h-60 overflow-y-auto styled-scrollbar-thin")}
                                 sideOffset={5} align="center" onCloseAutoFocus={e => e.preventDefault()}>
                                 <DropdownMenu.RadioGroup value={listFilter} onValueChange={handleListChange}>
                                     {listOptions.map(l => (<DropdownMenu.RadioItem key={l.value} value={l.value}
-                                                                                   className={twMerge("relative flex cursor-pointer select-none items-center rounded-[3px] px-2.5 py-1 text-[13px] font-light outline-none transition-colors data-[disabled]:pointer-events-none h-7 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=checked]:bg-primary-light data-[state=checked]:text-primary data-[state=checked]:font-normal data-[highlighted]:data-[state=checked]:bg-primary-light data-[state=unchecked]:text-grey-dark data-[highlighted]:data-[state=unchecked]:text-grey-dark data-[disabled]:opacity-50")}>{l.label}</DropdownMenu.RadioItem>))}
+                                                                                   className={getSummaryMenuRadioItemStyle(listFilter === l.value)}
+                                    >{l.label}
+                                        <DropdownMenu.ItemIndicator
+                                            className="absolute right-2 inline-flex items-center">
+                                            <Icon name="check" size={12} strokeWidth={2}/>
+                                        </DropdownMenu.ItemIndicator>
+                                    </DropdownMenu.RadioItem>))}
                                 </DropdownMenu.RadioGroup>
                             </DropdownMenu.Content>
                         </DropdownMenu.Portal>
@@ -532,10 +566,10 @@ const SummaryView: React.FC = () => {
             <div
                 className="flex-1 flex flex-col md:flex-row overflow-hidden p-3 md:p-4 gap-3 md:gap-4 min-h-0">
                 <div
-                    className="w-full md:w-[360px] h-1/2 md:h-full flex flex-col bg-white rounded-base shadow-ai-summary overflow-hidden flex-shrink-0">
+                    className="w-full md:w-[360px] h-1/2 md:h-full flex flex-col bg-white dark:bg-neutral-800 rounded-base shadow-subtle dark:shadow-subtle-dark overflow-hidden flex-shrink-0">
                     <div
-                        className="px-4 py-3 border-b border-grey-light flex justify-between items-center flex-shrink-0 h-12">
-                        <h2 className="text-[16px] font-normal text-grey-dark truncate">Tasks
+                        className="px-4 py-3 border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 h-12">
+                        <h2 className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 truncate">Tasks
                             ({selectableTasks.length})</h2>
                         <SelectionCheckboxRadix id="select-all-summary-tasks" checked={selectAllState === true}
                                                 indeterminate={selectAllState === 'indeterminate'}
@@ -546,11 +580,13 @@ const SummaryView: React.FC = () => {
                     <div className="flex-1 overflow-y-auto styled-scrollbar-thin p-2 space-y-1">
                         {filteredTasks.length === 0 ? (
                             <div
-                                className="flex flex-col items-center justify-center h-full text-grey-medium px-4 text-center pt-10">
+                                className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-4 text-center pt-10">
                                 <Icon name="archive" size={32} strokeWidth={1}
-                                      className="mb-3 text-grey-light opacity-80"/><p
-                                className="text-[13px] font-normal text-grey-dark">No relevant tasks found</p><p
-                                className="text-[11px] mt-1 text-grey-medium font-light">Adjust filters or check task
+                                      className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/><p
+                                className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">No relevant
+                                tasks found</p><p
+                                className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">Adjust
+                                filters or check task
                                 status/progress.</p></div>
                         ) : (filteredTasks.map(task => (
                             <TaskItemMiniInline key={task.id} task={task} isSelected={selectedTaskIds.has(task.id)}
@@ -558,19 +594,19 @@ const SummaryView: React.FC = () => {
                     </div>
                 </div>
                 <div
-                    className="flex-1 h-1/2 md:h-full flex flex-col bg-white rounded-base shadow-ai-summary overflow-hidden">
+                    className="flex-1 h-1/2 md:h-full flex flex-col bg-white dark:bg-neutral-800 rounded-base shadow-subtle dark:shadow-subtle-dark overflow-hidden">
                     <div className="flex-1 flex flex-col overflow-hidden p-4 min-h-0">
                         {totalRelevantSummaries > 0 || isGenerating ? (
                             <>
                                 <div className="flex justify-between items-center mb-3 flex-shrink-0 h-6">
                                     <span
-                                        className="text-[11px] font-light text-grey-medium">{isGenerating ? 'Generating summary...' : (summaryTimestamp ? `Generated: ${summaryTimestamp}` : 'Unsaved Summary')}</span>
+                                        className="text-[11px] font-light text-grey-medium dark:text-neutral-400">{isGenerating ? 'Generating summary...' : (summaryTimestamp ? `Generated: ${summaryTimestamp}` : 'Unsaved Summary')}</span>
                                     <div className="flex items-center space-x-1">
                                         <DropdownMenu.Root open={isRefTasksDropdownOpen}
                                                            onOpenChange={setIsRefTasksDropdownOpen}>
                                             <DropdownMenu.Trigger asChild disabled={!currentSummary || isGenerating}>
                                                 <button
-                                                    className={twMerge("flex items-center text-[11px] font-light h-6 px-1.5 rounded-base transition-colors duration-150 ease-in-out focus:outline-none", !currentSummary || isGenerating ? "text-grey-medium/50 cursor-not-allowed" : "text-primary hover:bg-primary-light focus-visible:ring-1 focus-visible:ring-primary")}
+                                                    className={twMerge("flex items-center text-[11px] font-light h-6 px-1.5 rounded-base transition-colors duration-150 ease-in-out focus:outline-none", !currentSummary || isGenerating ? "text-grey-medium/50 dark:text-neutral-500/50 cursor-not-allowed" : "text-primary dark:text-primary-light hover:bg-primary-light dark:hover:bg-primary-dark/30 focus-visible:ring-1 focus-visible:ring-primary")}
                                                     aria-haspopup="true">
                                                     <Icon name="file-text" size={12} strokeWidth={1}
                                                           className="mr-1 opacity-80"/>{tasksUsedCount} tasks
@@ -581,7 +617,7 @@ const SummaryView: React.FC = () => {
                                             </DropdownMenu.Trigger>
                                             <DropdownMenu.Portal>
                                                 <DropdownMenu.Content
-                                                    className={twMerge("z-[55] p-0", dropdownAnimationClasses)}
+                                                    className={twMerge("z-[60] p-0 dark:border dark:border-neutral-700", dropdownAnimationClasses)} // Use z-[60] and border like other menus
                                                     sideOffset={4}
                                                     align="end"
                                                     onCloseAutoFocus={e => e.preventDefault()}
@@ -594,19 +630,19 @@ const SummaryView: React.FC = () => {
                                             <Button variant="ghost" size="icon" icon="chevron-left"
                                                     onClick={handlePrevSummary}
                                                     disabled={currentIndex >= totalRelevantSummaries - 1}
-                                                    className="w-6 h-6 text-grey-medium"
+                                                    className="w-6 h-6 text-grey-medium dark:text-neutral-400"
                                                     iconProps={{size: 14, strokeWidth: 1}} aria-label="Older summary"/>
                                             <span
-                                                className="text-[11px] font-normal text-grey-medium tabular-nums">{displayedIndex} / {totalRelevantSummaries}</span>
+                                                className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 tabular-nums">{displayedIndex} / {totalRelevantSummaries}</span>
                                             <Button variant="ghost" size="icon" icon="chevron-right"
                                                     onClick={handleNextSummary} disabled={currentIndex <= 0}
-                                                    className="w-6 h-6 text-grey-medium"
+                                                    className="w-6 h-6 text-grey-medium dark:text-neutral-400"
                                                     iconProps={{size: 14, strokeWidth: 1}} aria-label="Newer summary"/>
                                         </>)}
                                     </div>
                                 </div>
                                 <div
-                                    className="flex-1 min-h-0 border border-grey-light rounded-base overflow-hidden bg-white relative">
+                                    className="flex-1 min-h-0 border border-grey-light dark:border-neutral-700 rounded-base overflow-hidden bg-white dark:bg-neutral-800 relative">
                                     <CodeMirrorEditor
                                         key={isGenerating ? 'generating' : (currentSummary?.id ?? 'no-summary')}
                                         ref={editorRef} value={summaryEditorContent} onChange={handleEditorChange}
@@ -614,20 +650,22 @@ const SummaryView: React.FC = () => {
                                         className="!h-full !bg-transparent !border-none"
                                         readOnly={isGenerating || !currentSummary}/>
                                     {hasUnsavedChangesRef.current && !isGenerating && currentSummary && (<span
-                                        className="absolute bottom-2 right-2 text-[10px] text-grey-medium/70 italic animate-pulse font-light">saving...</span>)}
+                                        className="absolute bottom-2 right-2 text-[10px] text-grey-medium/70 dark:text-neutral-400/70 italic animate-pulse font-light">saving...</span>)}
                                     {isGenerating && (<div
-                                        className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
+                                        className="absolute inset-0 bg-white/70 dark:bg-neutral-800/70 backdrop-blur-sm flex items-center justify-center z-10">
                                         <Icon name="loader" size={20} strokeWidth={1.5}
-                                              className="text-primary animate-spin"/></div>)}
+                                              className="text-primary dark:text-primary-light animate-spin"/></div>)}
                                 </div>
                             </>
                         ) : (
                             <div
-                                className="flex flex-col items-center justify-center h-full text-grey-medium px-6 text-center">
+                                className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-6 text-center">
                                 <Icon name="sparkles" size={32} strokeWidth={1}
-                                      className="mb-3 text-grey-light opacity-80"/>
-                                <p className="text-[13px] font-normal text-grey-dark">No Summary Available</p>
-                                <p className="text-[11px] mt-1 text-grey-medium font-light">Select tasks and click
+                                      className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/>
+                                <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">No Summary
+                                    Available</p>
+                                <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">Select
+                                    tasks and click
                                     'Generate' or adjust filters.</p>
                             </div>
                         )}

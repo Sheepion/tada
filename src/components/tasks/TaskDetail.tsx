@@ -30,7 +30,7 @@ import {
 } from "@dnd-kit/core";
 import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/sortable";
 import {AnimatePresence, motion} from "framer-motion";
-import SubtaskItemDetail from "./SubtaskItemDetail"; // Ensure this path is correct
+import SubtaskItemDetail from "./SubtaskItemDetail";
 
 // --- Helper TagPill Component (Kept for potential future re-use, but not actively used if tags are removed from footer) ---
 interface TagPillProps {
@@ -64,11 +64,11 @@ const TagPill: React.FC<TagPillProps> = React.memo(({tag, onRemove, disabled}) =
 TagPill.displayName = 'TagPill';
 
 
-// --- Reusable Radix Dropdown Menu Item Component (Styled to align with TaskItemRadixMenuItem) ---
+// --- Reusable Radix Dropdown Menu Item Component (Styled to align with TaskList styles) ---
 interface RadixMenuItemProps extends DropdownMenu.DropdownMenuItemProps {
     icon?: IconName;
     iconColor?: string;
-    selected?: boolean;
+    selected?: boolean; // For specific "selected" state indication, similar to radio item's checked
     isDanger?: boolean;
 }
 
@@ -83,18 +83,20 @@ const RadixMenuItem: React.FC<RadixMenuItemProps> = React.memo(({
                                                                 }) => (
     <DropdownMenu.Item
         className={twMerge(
-            "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 font-normal",
+            "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
             isDanger
                 ? "text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
-                : "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07] focus:bg-grey-ultra-light dark:focus:bg-white/[.07]",
-            selected && !isDanger && "bg-primary/15 text-primary data-[highlighted]:bg-primary/20 dark:bg-primary/25 dark:text-primary-light dark:data-[highlighted]:bg-primary/30",
-            !selected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-grey-dark dark:focus:text-neutral-50",
+                : selected
+                    ? "bg-primary-light text-primary data-[highlighted]:bg-primary-light/90 dark:bg-primary-dark/30 dark:text-primary-light dark:data-[highlighted]:bg-primary-dark/40" // Selected state
+                    : "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100", // Default state
+            !isDanger && !selected && "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-neutral-700", // Default hover/focus
             "data-[disabled]:opacity-50",
             className
         )}
         {...props}
     >
-        {icon && (<Icon name={icon} size={15} className={twMerge("mr-2 flex-shrink-0 opacity-80", iconColor)}
+        {icon && (<Icon name={icon} size={14} strokeWidth={1.5}
+                        className={twMerge("mr-2 flex-shrink-0 opacity-80", iconColor)}
                         aria-hidden="true"/>)}
         <span className="flex-grow">{children}</span>
     </DropdownMenu.Item>
@@ -106,7 +108,6 @@ const TaskDetail: React.FC = () => {
     const [selectedTaskInternal] = useAtom(selectedTaskAtom);
     const selectedTask = useAtomValue(selectedTaskAtom);
     const setTasks = useSetAtom(tasksAtom);
-    const selectedTaskId = useAtomValue(selectedTaskIdAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const userLists = useAtomValue(userListNamesAtom);
 
@@ -119,7 +120,7 @@ const TaskDetail: React.FC = () => {
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isFooterDatePickerOpen, setIsFooterDatePickerOpen] = useState(false);
-    const [isHeaderMenuDatePickerOpen, setIsHeaderMenuDatePickerOpen] = useState(false); // This state remains for Popover.Root around DropdownMenu
+    const [isHeaderMenuPopoverOpen, setIsHeaderMenuPopoverOpen] = useState(false);
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false);
 
@@ -153,7 +154,7 @@ const TaskDetail: React.FC = () => {
                 savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
             }
         };
-    }, [selectedTaskInternal]); // localDueDate and latestTagsStringRef removed as they are part of savePendingChanges closure or refs
+    }, [selectedTaskInternal]);
 
     const savePendingChanges = useCallback((taskId: string, title: string, content: string, dueDate: Date | undefined, tagsString: string) => {
         if (!taskId || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
@@ -214,7 +215,6 @@ const TaskDetail: React.FC = () => {
 
             if (localTitle !== taskTitle) setLocalTitle(taskTitle);
             if (localContent !== taskContent) setLocalContent(taskContent);
-            // Check time for dates to avoid unnecessary re-renders if only object identity changed
             if (localDueDate?.getTime() !== taskDueDateObj?.getTime()) setLocalDueDate(taskDueDateObj && isValid(taskDueDateObj) ? taskDueDateObj : undefined);
             if (localTagsString !== taskTagsString) setLocalTagsString(taskTagsString);
 
@@ -247,7 +247,6 @@ const TaskDetail: React.FC = () => {
 
             setIsDeleteDialogOpen(false);
             setIsFooterDatePickerOpen(false);
-            // setIsHeaderMenuDatePickerOpen(false); // Keep for Popover.Root
             setIsMoreActionsOpen(false);
             setIsInfoPopoverOpen(false);
         }
@@ -327,35 +326,31 @@ const TaskDetail: React.FC = () => {
         setIsDateTooltipOpen(false);
     }, []);
 
-    // handleHeaderMenuDateSelect and closeHeaderMenuDatePickerPopover are no longer needed as the menu item is removed.
-    // However, isHeaderMenuDatePickerOpen state is still used by the Popover.Root wrapping the Dropdown.
-    // For cleanliness, they can be removed if no other component uses them.
-    // For now, keep them to avoid breaking Popover.Root open logic if it was used for something else.
-    // Re-evaluation: The Popover.Root was specifically for the date picker. Since the menu item is gone,
-    // the Popover.Root and its associated state/handlers for date picking from header are not strictly needed.
-    // However, the prompt asks for "minimal changes" and the Popover.Root is tied to the DropdownMenu.Trigger.
-    // Removing it entirely might be a larger structural change than intended.
-    // Let's simplify: The "Set Due Date..." item is removed, so the Popover.Content for header date picker won't show.
-    // `isHeaderMenuDatePickerOpen` state and its handlers can be kept to avoid changing the Popover.Root structure,
-    // or removed if we are confident that Popover.Root was *only* for that date picker.
-    // Given the code, Popover.Root wraps Popover.Anchor which wraps DropdownMenu.Trigger.
-    // This structure is usually for when a DropdownMenu item itself needs to open a Popover.
-    // Since the "Set Due Date..." item is removed, the `isHeaderMenuDatePickerOpen` and its direct handlers
-    // for date picking logic are no longer directly invoked.
-    // The `onCloseAutoFocus={handleMoreActionsDropdownCloseFocus}` on DropdownMenu.Content still uses `isHeaderMenuDatePickerOpen`.
-    // So, we should keep `isHeaderMenuDatePickerOpen` and `handleMoreActionsDropdownCloseFocus`.
-    // The Popover.Content for header date picker is now effectively dead code if the trigger is removed.
-    // The `RadixMenuItem` onSelect for "Set Due Date" was:
-    // onSelect={(event) => { event.preventDefault(); setIsHeaderMenuDatePickerOpen(true); }}
-    // This is now gone. So `setIsHeaderMenuDatePickerOpen(true)` is never called from the menu.
-    // The Popover.Root itself still exists around the three-dot menu.
-    // Let's keep `isHeaderMenuDatePickerOpen` state for now due to `handleMoreActionsDropdownCloseFocus`
-    // and the Popover.Root structure, but note its primary purpose is gone.
+    const handleHeaderMenuPopoverOpenChange = useCallback((open: boolean) => {
+        setIsHeaderMenuPopoverOpen(open);
+        if (open) {
+            setIsMoreActionsOpen(true); // Keep dropdown open if popover (for date picker) is opened from menu
+        }
+    }, []);
 
-    const handleListChange = useCallback((newList: string) => updateTask({list: newList}), [updateTask]);
-    const handlePriorityChange = useCallback((newPriority: number | null) => updateTask({priority: newPriority}), [updateTask]);
+    const closeHeaderMenuDatePickerPopover = useCallback(() => {
+        setIsHeaderMenuPopoverOpen(false);
+    }, []);
+
+
+    const handleListChange = useCallback((newList: string) => {
+        updateTask({list: newList});
+        setIsMoreActionsOpen(false); // Close main dropdown after selection
+    }, [updateTask]);
+
+    const handlePriorityChange = useCallback((newPriority: number | null) => {
+        updateTask({priority: newPriority});
+        // setIsMoreActionsOpen(false); // Keep dropdown open for this style of selection
+    }, [updateTask]);
+
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
+        // setIsMoreActionsOpen(false); // Keep dropdown open
     }, [updateTask]);
 
     const cycleCompletionPercentage = useCallback(() => {
@@ -399,13 +394,12 @@ const TaskDetail: React.FC = () => {
             createdAt: now,
             updatedAt: now,
             completedAt: sub.completed ? now : null,
-            // Ensure new subtasks get new IDs if they are also duplicated
         }));
         const newTaskData: Partial<Task> = {
             ...taskToDuplicate,
             id: newParentTaskId,
             title: `${taskToDuplicate.title || 'Untitled Task'} (Copy)`,
-            order: taskToDuplicate.order + 0.01, // Consider a more robust ordering strategy if many duplicates
+            order: taskToDuplicate.order + 0.01,
             createdAt: now,
             updatedAt: now,
             completed: false,
@@ -437,7 +431,7 @@ const TaskDetail: React.FC = () => {
                 setLocalTitle(selectedTask.title);
                 latestTitleRef.current = selectedTask.title;
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                hasUnsavedChangesRef.current = false; // Changes reverted
+                hasUnsavedChangesRef.current = false;
             }
             titleInputRef.current?.blur();
         }
@@ -560,7 +554,7 @@ const TaskDetail: React.FC = () => {
     const footerDateTriggerClass = useMemo(() => twMerge(
         "h-8 flex items-center text-xs px-2 py-1 rounded-base transition-colors duration-150",
         "focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1",
-        "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850", // Adjust offset for footer context if needed
+        "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850",
         "hover:bg-grey-ultra-light dark:hover:bg-neutral-700/50",
         (displayDueDateForRender && isValid(displayDueDateForRender))
             ? (overdue && !isCompleted && !isTrash ? "text-error dark:text-red-400 font-medium" : "text-primary dark:text-primary-light font-medium")
@@ -568,43 +562,51 @@ const TaskDetail: React.FC = () => {
         isTrash && "cursor-not-allowed opacity-60"
     ), [displayDueDateForRender, overdue, isCompleted, isTrash]);
 
-
+    // Aligned with TaskList.moreOptionsDropdownContentClasses
     const dropdownContentClasses = useMemo(() => twMerge(
-        "z-[55] bg-white dark:bg-neutral-800 min-w-[200px] w-52 p-1 rounded-base shadow-modal",
+        "z-[60] min-w-[200px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
-    const headerMenuDatePickerPopoverWrapperClasses = useMemo(() => twMerge( // Still used by Popover.Root structure
-        "z-[60] p-0 bg-white dark:bg-neutral-800 rounded-base shadow-modal",
+    // Aligned with TaskList.datePickerPopoverWrapperClasses (used for Popover.Root around DropdownMenu if date picker is opened from menu)
+    const headerMenuDatePickerPopoverWrapperClasses = useMemo(() => twMerge(
+        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", // z-index higher than dropdown
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
     const subtaskDatePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[70] p-0 bg-white dark:bg-neutral-800 rounded-base shadow-modal",
+        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800",
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
     const newSubtaskInputPaddingLeft = useMemo(() => {
-        const iconAreaSpace = 28; // Width of the calendar button (w-7 is 28px)
+        const iconAreaSpace = 28;
         let dateTextSpace = 0;
         if (newSubtaskDueDate && subtaskDateTextWidth > 0) {
-            // pl-1 (4px) + text width + pr-1 (4px) + some buffer (e.g. 4px)
             dateTextSpace = 4 + subtaskDateTextWidth + 4 + 4;
         }
         return iconAreaSpace + dateTextSpace;
     }, [newSubtaskDueDate, subtaskDateTextWidth]);
 
+    // Aligned with TaskList.getNewTaskMenuRadioItemListClasses
+    const getRadioItemClasses = (isSelected: boolean) => twMerge(
+        "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
+        "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light",
+        "dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700",
+        isSelected
+            ? "bg-primary-light text-primary dark:bg-primary-dark/30 dark:text-primary-light"
+            : "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100",
+        "data-[disabled]:opacity-50"
+    );
 
-    const radioItemClasses = (isSelected: boolean, itemSpecificClasses: string = "", isDanger: boolean = false) => twMerge(
-        "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 font-normal",
-        isDanger
-            ? "text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
-            : "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07] focus:bg-grey-ultra-light dark:focus:bg-white/[.07]",
-        isSelected && !isDanger && "bg-primary/15 text-primary data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary dark:bg-primary/25 dark:text-primary-light data-[state=checked]:dark:bg-primary/25 data-[state=checked]:dark:text-primary-light",
-        !isSelected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-grey-dark dark:focus:text-neutral-50",
-        "data-[state=checked]:data-[highlighted]:bg-primary/20 data-[state=checked]:dark:data-[highlighted]:bg-primary/30",
-        "data-[disabled]:opacity-50",
-        itemSpecificClasses
+    // Aligned with TaskList.getNewTaskMenuSubTriggerClasses
+    const getSubTriggerClasses = () => twMerge(
+        "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
+        "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=open]:bg-grey-ultra-light",
+        "dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700 dark:data-[state=open]:bg-neutral-700",
+        "text-grey-dark data-[highlighted]:text-grey-dark data-[state=open]:text-grey-dark",
+        "dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100 dark:data-[state=open]:text-neutral-100",
+        "data-[disabled]:opacity-50"
     );
 
     const tooltipContentClass = useMemo(() => twMerge(
@@ -612,46 +614,40 @@ const TaskDetail: React.FC = () => {
         "data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut"
     ), []);
 
-    const subTriggerClasses = useMemo(() => twMerge(
-        "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8",
-        "text-grey-dark dark:text-neutral-200",
-        "focus:bg-grey-ultra-light dark:focus:bg-white/[.07]",
-        "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07]",
-        "data-[state=open]:bg-grey-ultra-light dark:data-[state=open]:bg-white/[.07]",
-        "focus:text-grey-dark dark:focus:text-neutral-50",
-        "data-[highlighted]:text-grey-dark dark:data-[highlighted]:text-neutral-50",
-        "data-[state=open]:text-grey-dark dark:data-[state=open]:text-neutral-50",
-        "data-[disabled]:opacity-50"
-    ), []);
-
-    const priorityMap: Record<number, {
+    const taskListPriorityMap: Record<number, {
         label: string;
-        icon: IconName;
-        color: string
-    }> = useMemo(() => ({
-        1: {label: 'High', icon: 'flag', color: 'text-error dark:text-red-400'},
-        2: {label: 'Medium', icon: 'flag', color: 'text-warning dark:text-orange-400'},
-        3: {label: 'Low', icon: 'flag', color: 'text-info dark:text-blue-400'},
-        4: {label: 'Lowest', icon: 'flag', color: 'text-grey-medium dark:text-neutral-400'},
+        iconColor: string;
+        bgColor: string;
+        shortLabel: string;
+    }> = {
+        1: {label: 'High Priority', iconColor: 'text-error', bgColor: 'bg-error', shortLabel: 'P1'},
+        2: {label: 'Medium Priority', iconColor: 'text-warning', bgColor: 'bg-warning', shortLabel: 'P2'},
+        3: {label: 'Low Priority', iconColor: 'text-info', bgColor: 'bg-info', shortLabel: 'P3'},
+        4: {label: 'Lowest Priority', iconColor: 'text-grey-medium', bgColor: 'bg-grey-medium', shortLabel: 'P4'},
+    };
+
+    const priorityDisplayMap: Record<number, { label: string; icon: IconName; color: string }> = useMemo(() => ({
+        1: {label: 'High', icon: 'flag', color: taskListPriorityMap[1].iconColor},
+        2: {label: 'Medium', icon: 'flag', color: taskListPriorityMap[2].iconColor},
+        3: {label: 'Low', icon: 'flag', color: taskListPriorityMap[3].iconColor},
+        4: {label: 'Lowest', icon: 'flag', color: taskListPriorityMap[4].iconColor},
     }), []);
 
-    const progressMenuItems = useMemo(() => [{
-        label: 'Not Started', value: null, icon: 'circle' as IconName
-    }, {label: 'Started (20%)', value: 20, icon: 'circle-dot-dashed' as IconName}, {
-        label: 'Halfway (50%)', value: 50, icon: 'circle-dot' as IconName
-    }, {label: 'Almost Done (80%)', value: 80, icon: 'circle-slash' as IconName}, {
-        label: 'Completed (100%)', value: 100, icon: 'circle-check' as IconName
-    },], []);
+    const progressMenuItems = useMemo(() => [
+        {label: 'Not Started', value: null, icon: 'circle' as IconName, iconStroke: 1.5},
+        {label: 'Started', value: 20, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
+        {label: 'Halfway', value: 50, icon: 'circle-dot' as IconName, iconStroke: 1.5},
+        {label: 'Almost Done', value: 80, icon: 'circle-slash' as IconName, iconStroke: 1.5},
+        {label: 'Completed', value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
+    ], []);
 
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
     const handleMoreActionsDropdownCloseFocus = useCallback((event: Event) => {
-        // This check might be less relevant if isHeaderMenuDatePickerOpen is never true from menu interaction
-        // but kept for structural integrity of the existing Popover around the Dropdown.
-        if (isHeaderMenuDatePickerOpen) {
-            event.preventDefault();
+        if (isHeaderMenuPopoverOpen) { // If a popover (like date picker) was opened from the menu
+            event.preventDefault(); // Prevent focusing the trigger, let popover manage focus
         }
-    }, [isHeaderMenuDatePickerOpen]);
+    }, [isHeaderMenuPopoverOpen]);
 
     const sortedSubtasks = useMemo(() => {
         if (!selectedTask?.subtasks) return [];
@@ -672,9 +668,8 @@ const TaskDetail: React.FC = () => {
                            placeholder="Task title..." disabled={isTrash} aria-label="Task title"
                            id={`task-title-input-${selectedTask.id}`}/>
                     <div className="flex items-center space-x-1 flex-shrink-0">
-                        {/* Popover.Root still wraps DropdownMenu for structural reasons or future use, but its date picker content is no longer triggered from menu */}
-                        <Popover.Root modal={true} open={isHeaderMenuDatePickerOpen}
-                                      onOpenChange={setIsHeaderMenuDatePickerOpen}>
+                        <Popover.Root modal={true} open={isHeaderMenuPopoverOpen}
+                                      onOpenChange={handleHeaderMenuPopoverOpenChange}>
                             <DropdownMenu.Root open={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}>
                                 <Popover.Anchor asChild>
                                     <DropdownMenu.Trigger asChild>
@@ -691,88 +686,91 @@ const TaskDetail: React.FC = () => {
                                         align="end"
                                         onCloseAutoFocus={handleMoreActionsDropdownCloseFocus}
                                     >
-                                        <DropdownMenu.Sub>
-                                            <DropdownMenu.SubTrigger className={subTriggerClasses}>
-                                                <Icon name="circle-gauge" size={15} className="mr-2 opacity-80"/>
-                                                Set Progress
-                                                <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
-                                                                                    strokeWidth={1.5}
-                                                                                    className="opacity-70"/></div>
-                                            </DropdownMenu.SubTrigger>
-                                            <DropdownMenu.Portal>
-                                                <DropdownMenu.SubContent className={dropdownContentClasses}
-                                                                         sideOffset={2} alignOffset={-5}>
-                                                    {progressMenuItems.map(item => (
-                                                        <RadixMenuItem
-                                                            key={item.label}
-                                                            icon={item.icon}
-                                                            selected={selectedTask?.completionPercentage === item.value || (selectedTask?.completionPercentage === null && item.value === null)}
-                                                            onSelect={() => handleProgressChange(item.value)}
-                                                            disabled={isTrash}
-                                                        >
-                                                            {item.label}
-                                                        </RadixMenuItem>
-                                                    ))}
-                                                </DropdownMenu.SubContent>
-                                            </DropdownMenu.Portal>
-                                        </DropdownMenu.Sub>
-
-                                        {/* "Set Due Date..." menu item and its separator are removed here */}
-                                        {/* <DropdownMenu.Separator className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/> */}
-                                        {/* RadixMenuItem for Set Due Date removed */}
+                                        <div
+                                            className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Progress
+                                        </div>
+                                        <div className="flex justify-around items-center px-1.5 py-1">
+                                            {progressMenuItems.map(item => {
+                                                const isSelected = (selectedTask.completionPercentage ?? null) === item.value;
+                                                return (
+                                                    <button
+                                                        key={item.label}
+                                                        onClick={() => handleProgressChange(item.value)}
+                                                        className={twMerge(
+                                                            "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                            isSelected ? "bg-grey-ultra-light dark:bg-neutral-700 text-primary dark:text-primary-light"
+                                                                : "text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-200"
+                                                        )}
+                                                        title={item.label}
+                                                        aria-pressed={isSelected}
+                                                        disabled={isInteractiveDisabled}
+                                                    >
+                                                        <Icon name={item.icon} size={14} strokeWidth={item.iconStroke}/>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
 
                                         <DropdownMenu.Separator
-                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
+                                            className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
-
-                                        <DropdownMenu.Sub>
-                                            <DropdownMenu.SubTrigger className={subTriggerClasses}
-                                                                     disabled={isInteractiveDisabled}>
-                                                <Icon name="flag" size={15} className="mr-2 opacity-80"/>
-                                                Priority
-                                                <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
-                                                                                    strokeWidth={1.5}
-                                                                                    className="opacity-70"/></div>
-                                            </DropdownMenu.SubTrigger>
-                                            <DropdownMenu.Portal>
-                                                <DropdownMenu.SubContent className={dropdownContentClasses}
-                                                                         sideOffset={2} alignOffset={-5}>
-                                                    <DropdownMenu.RadioGroup
-                                                        value={String(selectedTask.priority ?? 'none')}
-                                                        onValueChange={(value) => handlePriorityChange(value === 'none' ? null : Number(value))}
+                                        <div
+                                            className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
+                                        </div>
+                                        <div className="flex justify-around items-center px-1.5 py-1">
+                                            {[1, 2, 3, 4].map(pVal => {
+                                                const pData = taskListPriorityMap[pVal];
+                                                const isSelected = selectedTask.priority === pVal;
+                                                return (
+                                                    <button
+                                                        key={pVal}
+                                                        onClick={() => handlePriorityChange(pVal)}
+                                                        className={twMerge(
+                                                            "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                            pData.iconColor,
+                                                            isSelected ? "bg-grey-ultra-light dark:bg-neutral-700"
+                                                                : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
+                                                        )}
+                                                        title={pData.label}
+                                                        aria-pressed={isSelected}
+                                                        disabled={isInteractiveDisabled}
                                                     >
-                                                        {[null, 1, 2, 3, 4].map(p => (
-                                                            <DropdownMenu.RadioItem
-                                                                key={p ?? 'none'}
-                                                                value={String(p ?? 'none')}
-                                                                className={radioItemClasses(
-                                                                    selectedTask.priority === p,
-                                                                    p ? priorityMap[p]?.color : ""
-                                                                )}
-                                                                disabled={isInteractiveDisabled}
-                                                            >
-                                                                <Icon name={p ? priorityMap[p]?.icon : "flag"} size={15}
-                                                                      className={twMerge("mr-2 flex-shrink-0", p ? priorityMap[p]?.color : "opacity-70")}/>
-                                                                <span
-                                                                    className="flex-grow">{p ? `P${p} ${priorityMap[p]?.label}` : 'None'}</span>
-                                                            </DropdownMenu.RadioItem>
-                                                        ))}
-                                                    </DropdownMenu.RadioGroup>
-                                                </DropdownMenu.SubContent>
-                                            </DropdownMenu.Portal>
-                                        </DropdownMenu.Sub>
+                                                        <Icon name="flag" size={14} strokeWidth={1.5}/>
+                                                    </button>
+                                                );
+                                            })}
+                                            <button
+                                                onClick={() => handlePriorityChange(null)}
+                                                className={twMerge(
+                                                    "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                    selectedTask.priority === null
+                                                        ? "text-grey-dark dark:text-neutral-200 bg-grey-ultra-light dark:bg-neutral-700"
+                                                        : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-300 hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
+                                                )}
+                                                title="No Priority"
+                                                aria-pressed={selectedTask.priority === null}
+                                                disabled={isInteractiveDisabled}
+                                            >
+                                                <Icon name="minus" size={14} strokeWidth={1.5}/>
+                                            </button>
+                                        </div>
+
+                                        <DropdownMenu.Separator
+                                            className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
                                         <DropdownMenu.Sub>
-                                            <DropdownMenu.SubTrigger className={subTriggerClasses} disabled={isTrash}>
-                                                <Icon name="folder" size={15} className="mr-2 opacity-80"/>
+                                            <DropdownMenu.SubTrigger className={getSubTriggerClasses()}
+                                                                     disabled={isTrash}>
+                                                <Icon name="folder" size={14} strokeWidth={1.5}
+                                                      className="mr-2 opacity-80"/>
                                                 Move to List
-                                                <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
+                                                <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
                                                                                     strokeWidth={1.5}
                                                                                     className="opacity-70"/></div>
                                             </DropdownMenu.SubTrigger>
                                             <DropdownMenu.Portal>
                                                 <DropdownMenu.SubContent
-                                                    className={twMerge(dropdownContentClasses, "max-h-40 overflow-y-auto styled-scrollbar-thin")}
+                                                    className={twMerge(dropdownContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
                                                     sideOffset={2} alignOffset={-5}>
                                                     <DropdownMenu.RadioGroup
                                                         value={selectedTask.list}
@@ -782,13 +780,17 @@ const TaskDetail: React.FC = () => {
                                                             <DropdownMenu.RadioItem
                                                                 key={list}
                                                                 value={list}
-                                                                className={radioItemClasses(selectedTask.list === list)}
+                                                                className={getRadioItemClasses(selectedTask.list === list)}
                                                                 disabled={isTrash}
                                                             >
                                                                 <Icon name={list === 'Inbox' ? 'inbox' : 'list'}
-                                                                      size={15}
+                                                                      size={14} strokeWidth={1.5}
                                                                       className="mr-2 flex-shrink-0 opacity-80"/>
                                                                 <span className="flex-grow">{list}</span>
+                                                                <DropdownMenu.ItemIndicator
+                                                                    className="absolute right-2 inline-flex items-center">
+                                                                    <Icon name="check" size={12} strokeWidth={2}/>
+                                                                </DropdownMenu.ItemIndicator>
                                                             </DropdownMenu.RadioItem>
                                                         ))}
                                                     </DropdownMenu.RadioGroup>
@@ -797,18 +799,18 @@ const TaskDetail: React.FC = () => {
                                         </DropdownMenu.Sub>
 
                                         <DropdownMenu.Separator
-                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
+                                            className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
                                         <RadixMenuItem icon="copy-plus"
                                                        onSelect={handleDuplicateTask}
                                                        disabled={isTrash}>
                                             Duplicate Task
                                         </RadixMenuItem>
                                         <DropdownMenu.Separator
-                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
+                                            className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
                                         {isTrash ? (
                                             <RadixMenuItem icon="arrow-left"
                                                            onSelect={handleRestore}
-                                                           className="text-success dark:text-green-500 data-[highlighted]:!bg-green-500/15 data-[highlighted]:!text-green-700 dark:data-[highlighted]:!text-green-400">
+                                                           className="text-success dark:text-green-500 data-[highlighted]:!bg-green-500/10 data-[highlighted]:!text-green-600 dark:data-[highlighted]:!bg-green-500/15 dark:data-[highlighted]:!text-green-400">
                                                 Restore Task
                                             </RadixMenuItem>
                                         ) : (
@@ -820,29 +822,31 @@ const TaskDetail: React.FC = () => {
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
-                            {/* The Popover.Content for the header date picker is no longer triggered by a menu item.
-                                 It could be removed, but Popover.Root itself is still part of the structure.
-                                 If `isHeaderMenuDatePickerOpen` is never set to true, this content won't show.
-                             */}
-                            {isHeaderMenuDatePickerOpen && ( // Conditional rendering to be safe
-                                <Popover.Portal>
-                                    <Popover.Content
-                                        className={headerMenuDatePickerPopoverWrapperClasses}
-                                        sideOffset={5}
-                                        align="end"
-                                        onOpenAutoFocus={(e) => e.preventDefault()}
-                                        onCloseAutoFocus={(e) => {
-                                            e.preventDefault();
-                                            moreActionsButtonRef.current?.focus();
+                            <Popover.Portal>
+                                <Popover.Content
+                                    className={headerMenuDatePickerPopoverWrapperClasses}
+                                    sideOffset={5}
+                                    align="end"
+                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                    onCloseAutoFocus={(e) => {
+                                        e.preventDefault();
+                                        // Check if dropdown is still open. If so, focus trigger or keep focus managed by dropdown.
+                                        // If dropdown closed with popover, this won't matter as much.
+                                        if (isMoreActionsOpen) {
+                                            // moreActionsButtonRef.current?.focus(); // Or let Radix manage.
+                                        }
+                                    }}
+                                >
+                                    <CustomDatePickerContent
+                                        initialDate={displayDueDateForPicker}
+                                        onSelect={(date) => {
+                                            handleFooterDatePickerSelect(date); // Re-use footer logic for updating date
+                                            closeHeaderMenuDatePickerPopover();
                                         }}
-                                    >
-                                        {/* Content was CustomDatePicker, but it's not opened via menu now */}
-                                        {/* <CustomDatePickerContent ... /> */}
-                                        <div></div>
-                                        {/* Placeholder if content is truly gone */}
-                                    </Popover.Content>
-                                </Popover.Portal>
-                            )}
+                                        closePopover={closeHeaderMenuDatePickerPopover}
+                                    />
+                                </Popover.Content>
+                            </Popover.Portal>
                         </Popover.Root>
                         <Button variant="ghost" size="icon" icon="x" onClick={handleClose}
                                 className={twMerge(actionButtonClass, "w-8 h-8")}
@@ -1032,8 +1036,8 @@ const TaskDetail: React.FC = () => {
                             </Tooltip.Root>
                             <Popover.Portal>
                                 <Popover.Content
-                                    className={twMerge(
-                                        "z-[65] bg-white dark:bg-neutral-800 backdrop-blur-md rounded-lg shadow-lg border border-black/10 dark:border-white/10 p-0",
+                                    className={twMerge( // Using standard popover classes, similar to TaskList datepicker
+                                        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800",
                                         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
                                     )}
                                     sideOffset={5}
@@ -1071,7 +1075,7 @@ const TaskDetail: React.FC = () => {
                             </Tooltip.Root>
                             <Popover.Portal>
                                 <Popover.Content
-                                    className={twMerge(dropdownContentClasses, "p-3 text-xs w-auto")}
+                                    className={twMerge(dropdownContentClasses, "p-3 text-xs w-auto min-w-0")} // Use dropdownContent for theme, override padding and width
                                     side="top" align="end" sideOffset={5}
                                     onCloseAutoFocus={(e) => e.preventDefault()}>
                                     <div className="space-y-1.5 text-grey-medium dark:text-neutral-300">
