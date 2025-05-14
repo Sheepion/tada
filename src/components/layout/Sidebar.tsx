@@ -189,9 +189,12 @@ const Sidebar: React.FC = () => {
 
     const searchInputClassName = useMemo(() => twMerge(
         "w-full h-[32px] pl-8 pr-7 text-[13px] font-light rounded-base focus:outline-none",
-        "bg-grey-ultra-light",
-        "focus:ring-1 focus:ring-primary focus:border-primary",
-        "placeholder:text-grey-medium text-grey-dark",
+        "bg-grey-ultra-light dark:bg-neutral-700/60",
+        "border border-transparent dark:border-transparent",
+        // Removed primary focus ring/border
+        "focus:border-transparent dark:focus:border-transparent", // Ensure border remains transparent on focus
+        "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+        "text-grey-dark dark:text-neutral-100",
         "transition-colors duration-200 ease-in-out"
     ), []);
 

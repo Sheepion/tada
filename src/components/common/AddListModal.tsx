@@ -99,13 +99,14 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                                 placeholder="e.g., Groceries, Project X"
                                 aria-label="List Name" // Added aria-label for accessibility since visible label is removed
                                 className={twMerge(
-                                    "w-full h-8 px-3 text-[13px] font-light rounded-base focus:outline-none", // Base styles
-                                    "bg-grey-ultra-light", // Background color, same as sidebar search
-                                    "placeholder:text-grey-medium text-grey-dark", // Text and placeholder colors
-                                    "transition-colors duration-200 ease-in-out", // Smooth transitions
+                                    "w-full h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
+                                    "bg-grey-ultra-light dark:bg-neutral-700/60",
+                                    "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+                                    "text-grey-dark dark:text-neutral-100",
+                                    "transition-colors duration-200 ease-in-out",
                                     error
-                                        ? "border border-error focus:ring-1 focus:ring-error" // Error state: red border and ring
-                                        : "focus:border-primary focus:ring-1 focus:ring-primary" // Normal focus: primary border and ring
+                                        ? "border border-error focus:ring-1 focus:ring-error dark:border-error dark:focus:ring-error" // Error state
+                                        : "border border-transparent dark:border-transparent focus:border-transparent dark:focus:border-transparent" // Normal state
                                 )}
                                 required
                                 aria-required="true"

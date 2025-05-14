@@ -510,10 +510,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     const newTaskInputWrapperClass = useMemo(() => twMerge(
         "group relative flex items-center w-full h-[32px]",
-        "bg-grey-ultra-light",
+        "bg-grey-ultra-light dark:bg-neutral-700/60",
         "rounded-base",
         "transition-all duration-150 ease-in-out",
-        "border border-transparent", // Default transparent border
+        "border border-transparent dark:border-transparent", // Default transparent border
         newTaskPriority && priorityMap[newTaskPriority]?.dotColor ? `${priorityMap[newTaskPriority]?.borderColor}` : "border-transparent" // Left border for priority
     ), [newTaskPriority]);
 
@@ -527,7 +527,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const newTaskInputClass = useMemo(() => twMerge(
         "w-full h-full pr-7 text-[13px] font-light",
         "bg-transparent border-none outline-none",
-        "text-grey-dark placeholder:text-grey-medium"
+        "text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70"
     ), []);
 
     const clearDate = (e: React.MouseEvent) => {

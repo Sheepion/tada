@@ -861,13 +861,14 @@ const TaskDetail: React.FC = () => {
                                     }}
                                     placeholder="+ Add subtask..."
                                     className={twMerge(
-                                        "flex-1 text-[13px] h-7 px-3 rounded-md transition-all duration-150 ease-apple",
-                                        "bg-grey-ultra-light dark:bg-neutral-700/40", // Use updated grey-ultra-light
-                                        "border border-grey-light dark:border-neutral-600/80", // Use updated grey-light
-                                        "focus:bg-white/70 dark:focus:bg-neutral-700/60 focus:border-primary/60 dark:focus:border-primary/70 focus:ring-1 focus:ring-primary/30 dark:focus:ring-primary/40",
-                                        "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70", // Placeholder uses new grey-medium
-                                        "text-grey-dark dark:text-neutral-100", // Text uses new grey-dark
-                                        "focus:outline-none"
+                                        "flex-1 text-[13px] h-8 px-3 rounded-base",
+                                        "bg-grey-ultra-light dark:bg-neutral-700/60",
+                                        "border border-transparent dark:border-transparent",
+                                        "focus:border-transparent dark:focus:border-transparent",
+                                        "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+                                        "text-grey-dark dark:text-neutral-100",
+                                        "focus:outline-none",
+                                        "transition-colors duration-150 ease-in-out" // Use transition-colors and standard ease
                                     )}
                                     aria-label="New subtask title"
                                 />
