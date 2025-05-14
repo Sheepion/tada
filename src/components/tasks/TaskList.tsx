@@ -130,7 +130,7 @@ const groupTitles: Record<TaskGroupCategory, string> = {
 const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
 
 const getNewTaskMenuSubTriggerClasses = () => twMerge(
-    "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8",
+    "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
     "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=open]:bg-grey-ultra-light",
     "dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700 dark:data-[state=open]:bg-neutral-700",
     "text-grey-dark data-[highlighted]:text-grey-dark data-[state=open]:text-grey-dark",
@@ -139,7 +139,7 @@ const getNewTaskMenuSubTriggerClasses = () => twMerge(
 );
 
 const getNewTaskMenuRadioItemListClasses = () => twMerge(
-    "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8",
+    "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
     "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light",
     "dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700",
     "data-[state=checked]:bg-primary-light data-[state=checked]:text-primary",
@@ -510,7 +510,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     ), []);
 
     const moreOptionsDropdownContentClasses = useMemo(() => twMerge(
-        "z-[60] min-w-[220px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
+        "z-[60] min-w-[200px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
@@ -647,9 +647,9 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                             }}
                                         >
                                             <div
-                                                className="px-3 pt-2 pb-1 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
+                                                className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
                                             </div>
-                                            <div className="flex justify-around items-center px-2 py-1.5">
+                                            <div className="flex justify-around items-center px-1.5 py-1">
                                                 {[1, 2, 3, 4].map(pVal => {
                                                     const pData = priorityMap[pVal];
                                                     const isSelected = newTaskPriority === pVal;
@@ -658,23 +658,22 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                             key={pVal}
                                                             onClick={() => handlePriorityFlagClick(pVal)}
                                                             className={twMerge(
-                                                                "flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                                "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
                                                                 pData.iconColor,
-                                                                // Conditional background for selected, hover, or focus-visible
                                                                 isSelected ? "bg-grey-ultra-light dark:bg-neutral-700"
                                                                     : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
                                                             )}
                                                             title={pData.label}
                                                             aria-pressed={isSelected}
                                                         >
-                                                            <Icon name="flag" size={16} strokeWidth={1.5}/>
+                                                            <Icon name="flag" size={14} strokeWidth={1.5}/>
                                                         </button>
                                                     );
                                                 })}
                                                 <button
                                                     onClick={() => handlePriorityFlagClick(null)}
                                                     className={twMerge(
-                                                        "flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                        "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
                                                         newTaskPriority === null
                                                             ? "text-grey-dark dark:text-neutral-200"
                                                             : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-300 focus-visible:text-grey-dark dark:focus-visible:text-neutral-300",
@@ -685,7 +684,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                     title="No Priority"
                                                     aria-pressed={newTaskPriority === null}
                                                 >
-                                                    <Icon name="minus" size={16} strokeWidth={1.5}/>
+                                                    <Icon name="minus" size={14} strokeWidth={1.5}/>
                                                 </button>
                                             </div>
 
@@ -694,12 +693,12 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
                                             <DropdownMenu.Sub>
                                                 <DropdownMenu.SubTrigger className={getNewTaskMenuSubTriggerClasses()}>
-                                                    <Icon name="folder" size={16} strokeWidth={1}
+                                                    <Icon name="folder" size={14} strokeWidth={1}
                                                           className="mr-2 flex-shrink-0 opacity-80"/>
                                                     Add to List
                                                     <span
-                                                        className="ml-auto mr-1 text-grey-medium dark:text-neutral-400 text-xs truncate max-w-[70px] text-right">{newTaskListState}</span>
-                                                    <Icon name="chevron-right" size={16} strokeWidth={1}
+                                                        className="ml-auto mr-1 text-grey-medium dark:text-neutral-400 text-[11px] truncate max-w-[60px] text-right">{newTaskListState}</span>
+                                                    <Icon name="chevron-right" size={14} strokeWidth={1}
                                                           className="opacity-70 flex-shrink-0"/>
                                                 </DropdownMenu.SubTrigger>
                                                 <DropdownMenu.Portal>
@@ -718,12 +717,12 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                                                         className={getNewTaskMenuRadioItemListClasses()}>
                                                                     <Icon
                                                                         name={list === 'Inbox' ? 'inbox' : 'list' as IconName}
-                                                                        size={16} strokeWidth={1}
+                                                                        size={14} strokeWidth={1}
                                                                         className="mr-2 flex-shrink-0 opacity-80"/>
                                                                     {list}
                                                                     <DropdownMenu.ItemIndicator
                                                                         className="absolute right-2 inline-flex items-center">
-                                                                        <Icon name="check" size={14} strokeWidth={2}/>
+                                                                        <Icon name="check" size={12} strokeWidth={2}/>
                                                                     </DropdownMenu.ItemIndicator>
                                                                 </DropdownMenu.RadioItem>
                                                             ))}
