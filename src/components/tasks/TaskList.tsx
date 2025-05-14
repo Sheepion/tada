@@ -550,185 +550,191 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 </div>
 
                 {showNewTaskInputArea && (
-                    <div
-                        className="px-4 py-2.5 border-b border-grey-ultra-light dark:border-neutral-700/50 bg-white dark:bg-neutral-800"> {/* px-4 makes border-b inset. Background for this section. */}
-                        <div className={newTaskInputWrapperClass}>
-                            <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
-                                <Popover.Root open={isNewTaskDatePickerOpen} onOpenChange={setIsNewTaskDatePickerOpen}>
-                                    <Popover.Trigger asChild>
-                                        <button
-                                            type="button"
-                                            className={twMerge(
-                                                "flex items-center justify-center w-7 h-7 rounded-l-base hover:bg-grey-light focus:outline-none",
-                                                "dark:hover:bg-neutral-600",
-                                                newTaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
-                                            )}
-                                            aria-label="Set due date"
-                                        >
-                                            <Icon name="calendar" size={16} strokeWidth={1.5}/>
-                                        </button>
-                                    </Popover.Trigger>
-                                    <Popover.Portal>
-                                        <Popover.Content
-                                            sideOffset={5}
-                                            align="start"
-                                            className={datePickerPopoverWrapperClasses}
-                                            onOpenAutoFocus={(e) => e.preventDefault()}
-                                            onCloseAutoFocus={(e) => {
-                                                e.preventDefault();
-                                                newTaskTitleInputRef.current?.focus();
-                                            }}
-                                        >
-                                            <CustomDatePickerContent
-                                                initialDate={newTaskDueDate ?? undefined}
-                                                onSelect={(date) => {
-                                                    setNewTaskDueDate(date ?? null);
-                                                    setIsNewTaskDatePickerOpen(false);
+                    <div className="bg-white dark:bg-neutral-800"> {/* Container for the new task input area section */}
+                        <div className="px-4 py-2.5"> {/* Provides padding around the input field */}
+                            <div className={newTaskInputWrapperClass}>
+                                <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
+                                    <Popover.Root open={isNewTaskDatePickerOpen}
+                                                  onOpenChange={setIsNewTaskDatePickerOpen}>
+                                        <Popover.Trigger asChild>
+                                            <button
+                                                type="button"
+                                                className={twMerge(
+                                                    "flex items-center justify-center w-7 h-7 rounded-l-base hover:bg-grey-light focus:outline-none",
+                                                    "dark:hover:bg-neutral-600",
+                                                    newTaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
+                                                )}
+                                                aria-label="Set due date"
+                                            >
+                                                <Icon name="calendar" size={16} strokeWidth={1.5}/>
+                                            </button>
+                                        </Popover.Trigger>
+                                        <Popover.Portal>
+                                            <Popover.Content
+                                                sideOffset={5}
+                                                align="start"
+                                                className={datePickerPopoverWrapperClasses}
+                                                onOpenAutoFocus={(e) => e.preventDefault()}
+                                                onCloseAutoFocus={(e) => {
+                                                    e.preventDefault();
+                                                    newTaskTitleInputRef.current?.focus();
                                                 }}
-                                                closePopover={() => setIsNewTaskDatePickerOpen(false)}
-                                            />
-                                        </Popover.Content>
-                                    </Popover.Portal>
-                                </Popover.Root>
+                                            >
+                                                <CustomDatePickerContent
+                                                    initialDate={newTaskDueDate ?? undefined}
+                                                    onSelect={(date) => {
+                                                        setNewTaskDueDate(date ?? null);
+                                                        setIsNewTaskDatePickerOpen(false);
+                                                    }}
+                                                    closePopover={() => setIsNewTaskDatePickerOpen(false)}
+                                                />
+                                            </Popover.Content>
+                                        </Popover.Portal>
+                                    </Popover.Root>
 
-                                {newTaskDueDate && (
-                                    <div
-                                        className="flex items-center pl-1 pr-1 h-full pointer-events-none"> {/* pointer-events-none ensures click-through for padding calculation */}
-                                        <span
-                                            ref={dateDisplayRef}
-                                            className="text-[12px] text-primary dark:text-primary-light whitespace-nowrap font-medium"
-                                        >
-                                            {formatRelativeDate(newTaskDueDate, false)}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
+                                    {newTaskDueDate && (
+                                        <div
+                                            className="flex items-center pl-1 pr-1 h-full pointer-events-none"> {/* pointer-events-none ensures click-through for padding calculation */}
+                                            <span
+                                                ref={dateDisplayRef}
+                                                className="text-[12px] text-primary dark:text-primary-light whitespace-nowrap font-medium"
+                                            >
+                                                {formatRelativeDate(newTaskDueDate, false)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
 
-                            <input
-                                ref={newTaskTitleInputRef}
-                                type="text"
-                                value={newTaskTitle}
-                                onChange={(e) => setNewTaskTitle(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && newTaskTitle.trim()) commitNewTask();
-                                }}
-                                placeholder={`Add task to "${newTaskListState}"`}
-                                className={newTaskInputClass}
-                                style={{paddingLeft: `${inputPaddingLeft}px`}}
-                            />
+                                <input
+                                    ref={newTaskTitleInputRef}
+                                    type="text"
+                                    value={newTaskTitle}
+                                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && newTaskTitle.trim()) commitNewTask();
+                                    }}
+                                    placeholder={`Add task to "${newTaskListState}"`}
+                                    className={newTaskInputClass}
+                                    style={{paddingLeft: `${inputPaddingLeft}px`}}
+                                />
 
-                            <div
-                                className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-focus-within:opacity-100 transition-opacity duration-150 pointer-events-none group-focus-within:pointer-events-auto">
-                                <DropdownMenu.Root open={isNewTaskMoreOptionsOpen}
-                                                   onOpenChange={setIsNewTaskMoreOptionsOpen}>
-                                    <DropdownMenu.Trigger asChild>
-                                        <button
-                                            type="button"
-                                            className="flex items-center justify-center w-7 h-7 rounded-r-base hover:bg-grey-light dark:hover:bg-neutral-600 text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-primary"
-                                            aria-label="More task options"
-                                        >
-                                            <Icon name="chevron-down" size={16} strokeWidth={1.5}/>
-                                        </button>
-                                    </DropdownMenu.Trigger>
-                                    <DropdownMenu.Portal>
-                                        <DropdownMenu.Content
-                                            className={moreOptionsDropdownContentClasses}
-                                            sideOffset={5}
-                                            align="end"
-                                            onCloseAutoFocus={(e) => {
-                                                e.preventDefault();
-                                                newTaskTitleInputRef.current?.focus();
-                                            }}
-                                        >
-                                            <div
-                                                className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
-                                            </div>
-                                            <div className="flex justify-around items-center px-1.5 py-1">
-                                                {[1, 2, 3].map(pVal => {
-                                                    const pData = priorityMap[pVal];
-                                                    const isSelected = newTaskPriority === pVal;
-                                                    return (
-                                                        <button
-                                                            key={pVal}
-                                                            onClick={() => handlePriorityFlagClick(pVal)}
-                                                            className={twMerge(
-                                                                "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
-                                                                pData.iconColor,
-                                                                isSelected ? "bg-grey-ultra-light dark:bg-neutral-700"
-                                                                    : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
-                                                            )}
-                                                            title={pData.label}
-                                                            aria-pressed={isSelected}
-                                                        >
-                                                            <Icon name="flag" size={14} strokeWidth={1.5}/>
-                                                        </button>
-                                                    );
-                                                })}
-                                                <button
-                                                    onClick={() => handlePriorityFlagClick(null)}
-                                                    className={twMerge(
-                                                        "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
-                                                        newTaskPriority === null
-                                                            ? "text-grey-dark dark:text-neutral-200"
-                                                            : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-300 focus-visible:text-grey-dark dark:focus-visible:text-neutral-300",
+                                <div
+                                    className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-focus-within:opacity-100 transition-opacity duration-150 pointer-events-none group-focus-within:pointer-events-auto">
+                                    <DropdownMenu.Root open={isNewTaskMoreOptionsOpen}
+                                                       onOpenChange={setIsNewTaskMoreOptionsOpen}>
+                                        <DropdownMenu.Trigger asChild>
+                                            <button
+                                                type="button"
+                                                className="flex items-center justify-center w-7 h-7 rounded-r-base hover:bg-grey-light dark:hover:bg-neutral-600 text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-primary"
+                                                aria-label="More task options"
+                                            >
+                                                <Icon name="chevron-down" size={16} strokeWidth={1.5}/>
+                                            </button>
+                                        </DropdownMenu.Trigger>
+                                        <DropdownMenu.Portal>
+                                            <DropdownMenu.Content
+                                                className={moreOptionsDropdownContentClasses}
+                                                sideOffset={5}
+                                                align="end"
+                                                onCloseAutoFocus={(e) => {
+                                                    e.preventDefault();
+                                                    newTaskTitleInputRef.current?.focus();
+                                                }}
+                                            >
+                                                <div
+                                                    className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
+                                                </div>
+                                                <div className="flex justify-around items-center px-1.5 py-1">
+                                                    {[1, 2, 3].map(pVal => {
+                                                        const pData = priorityMap[pVal];
+                                                        const isSelected = newTaskPriority === pVal;
+                                                        return (
+                                                            <button
+                                                                key={pVal}
+                                                                onClick={() => handlePriorityFlagClick(pVal)}
+                                                                className={twMerge(
+                                                                    "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                                    pData.iconColor,
+                                                                    isSelected ? "bg-grey-ultra-light dark:bg-neutral-700"
+                                                                        : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
+                                                                )}
+                                                                title={pData.label}
+                                                                aria-pressed={isSelected}
+                                                            >
+                                                                <Icon name="flag" size={14} strokeWidth={1.5}/>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        onClick={() => handlePriorityFlagClick(null)}
+                                                        className={twMerge(
+                                                            "flex items-center justify-center w-7 h-7 rounded-md transition-colors duration-150 ease-in-out focus:outline-none",
+                                                            newTaskPriority === null
+                                                                ? "text-grey-dark dark:text-neutral-200"
+                                                                : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-300 focus-visible:text-grey-dark dark:focus-visible:text-neutral-300",
 
-                                                        newTaskPriority === null ? "bg-grey-ultra-light dark:bg-neutral-700"
-                                                            : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
-                                                    )}
-                                                    title="No Priority"
-                                                    aria-pressed={newTaskPriority === null}
-                                                >
-                                                    <Icon name="minus" size={14} strokeWidth={1.5}/>
-                                                </button>
-                                            </div>
-
-                                            <DropdownMenu.Separator
-                                                className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
-
-                                            <DropdownMenu.Sub>
-                                                <DropdownMenu.SubTrigger className={getNewTaskMenuSubTriggerClasses()}>
-                                                    <Icon name="folder" size={14} strokeWidth={1}
-                                                          className="mr-2 flex-shrink-0 opacity-80"/>
-                                                    Add to List
-                                                    <span
-                                                        className="ml-auto mr-1 text-grey-medium dark:text-neutral-400 text-[11px] truncate max-w-[60px] text-right">{newTaskListState}</span>
-                                                    <Icon name="chevron-right" size={14} strokeWidth={1}
-                                                          className="opacity-70 flex-shrink-0"/>
-                                                </DropdownMenu.SubTrigger>
-                                                <DropdownMenu.Portal>
-                                                    <DropdownMenu.SubContent
-                                                        className={twMerge(moreOptionsDropdownContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
-                                                        sideOffset={2} alignOffset={-5}
+                                                            newTaskPriority === null ? "bg-grey-ultra-light dark:bg-neutral-700"
+                                                                : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
+                                                        )}
+                                                        title="No Priority"
+                                                        aria-pressed={newTaskPriority === null}
                                                     >
-                                                        <DropdownMenu.RadioGroup value={newTaskListState}
-                                                                                 onValueChange={(list) => {
-                                                                                     setNewTaskListState(list);
-                                                                                     setIsNewTaskMoreOptionsOpen(false);
-                                                                                     newTaskTitleInputRef.current?.focus();
-                                                                                 }}>
-                                                            {availableListsForNewTask.map(list => (
-                                                                <DropdownMenu.RadioItem key={list} value={list}
-                                                                                        className={getNewTaskMenuRadioItemListClasses()}>
-                                                                    <Icon
-                                                                        name={list === 'Inbox' ? 'inbox' : 'list' as IconName}
-                                                                        size={14} strokeWidth={1}
-                                                                        className="mr-2 flex-shrink-0 opacity-80"/>
-                                                                    {list}
-                                                                    <DropdownMenu.ItemIndicator
-                                                                        className="absolute right-2 inline-flex items-center">
-                                                                        <Icon name="check" size={12} strokeWidth={2}/>
-                                                                    </DropdownMenu.ItemIndicator>
-                                                                </DropdownMenu.RadioItem>
-                                                            ))}
-                                                        </DropdownMenu.RadioGroup>
-                                                    </DropdownMenu.SubContent>
-                                                </DropdownMenu.Portal>
-                                            </DropdownMenu.Sub>
-                                        </DropdownMenu.Content>
-                                    </DropdownMenu.Portal>
-                                </DropdownMenu.Root>
+                                                        <Icon name="minus" size={14} strokeWidth={1.5}/>
+                                                    </button>
+                                                </div>
+
+                                                <DropdownMenu.Separator
+                                                    className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+
+                                                <DropdownMenu.Sub>
+                                                    <DropdownMenu.SubTrigger
+                                                        className={getNewTaskMenuSubTriggerClasses()}>
+                                                        <Icon name="folder" size={14} strokeWidth={1}
+                                                              className="mr-2 flex-shrink-0 opacity-80"/>
+                                                        Add to List
+                                                        <span
+                                                            className="ml-auto mr-1 text-grey-medium dark:text-neutral-400 text-[11px] truncate max-w-[60px] text-right">{newTaskListState}</span>
+                                                        <Icon name="chevron-right" size={14} strokeWidth={1}
+                                                              className="opacity-70 flex-shrink-0"/>
+                                                    </DropdownMenu.SubTrigger>
+                                                    <DropdownMenu.Portal>
+                                                        <DropdownMenu.SubContent
+                                                            className={twMerge(moreOptionsDropdownContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
+                                                            sideOffset={2} alignOffset={-5}
+                                                        >
+                                                            <DropdownMenu.RadioGroup value={newTaskListState}
+                                                                                     onValueChange={(list) => {
+                                                                                         setNewTaskListState(list);
+                                                                                         setIsNewTaskMoreOptionsOpen(false);
+                                                                                         newTaskTitleInputRef.current?.focus();
+                                                                                     }}>
+                                                                {availableListsForNewTask.map(list => (
+                                                                    <DropdownMenu.RadioItem key={list} value={list}
+                                                                                            className={getNewTaskMenuRadioItemListClasses()}>
+                                                                        <Icon
+                                                                            name={list === 'Inbox' ? 'inbox' : 'list' as IconName}
+                                                                            size={14} strokeWidth={1}
+                                                                            className="mr-2 flex-shrink-0 opacity-80"/>
+                                                                        {list}
+                                                                        <DropdownMenu.ItemIndicator
+                                                                            className="absolute right-2 inline-flex items-center">
+                                                                            <Icon name="check" size={12}
+                                                                                  strokeWidth={2}/>
+                                                                        </DropdownMenu.ItemIndicator>
+                                                                    </DropdownMenu.RadioItem>
+                                                                ))}
+                                                            </DropdownMenu.RadioGroup>
+                                                        </DropdownMenu.SubContent>
+                                                    </DropdownMenu.Portal>
+                                                </DropdownMenu.Sub>
+                                            </DropdownMenu.Content>
+                                        </DropdownMenu.Portal>
+                                    </DropdownMenu.Root>
+                                </div>
                             </div>
                         </div>
+                        {/* Inset separator line below the new task input area */}
+                        <div className="h-px bg-grey-ultra-light dark:bg-neutral-700/50 mx-4"></div>
                     </div>
                 )}
 

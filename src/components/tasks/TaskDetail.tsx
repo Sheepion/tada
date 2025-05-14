@@ -896,164 +896,176 @@ const TaskDetail: React.FC = () => {
                 </div>
 
                 {/* Main scrollable content area for editor and subtasks */}
-                {/* This div itself does not need padding if its children (editor, subtasks) have it */}
                 <div
                     className="flex-1 overflow-y-auto styled-scrollbar-thin flex flex-col bg-white dark:bg-neutral-850">
-                    {/* Editor content area - p-5 provides inset */}
+                    {/* Editor content area - p-5 provides inset, pb-3 for bottom space before separator */}
                     <div className={twMerge(editorContainerClass, "p-5 pb-3")}>
                         <CodeMirrorEditor ref={editorRef} value={localContent} onChange={handleContentChange}
                                           onBlur={handleMainContentBlur}
                                           placeholder="Add notes, links, or details here... Markdown is supported."
                                           className={editorClasses} readOnly={isInteractiveDisabled}/>
                     </div>
-                    {/* Subtask section - px-5 makes border-t inset. pb-3 reduces bottom space. */}
+                    {/* Subtask Section Root Container */}
                     <div
                         className={twMerge(
-                            "px-5 pt-4 pb-3 border-t border-grey-light/70 dark:border-neutral-700/40",
-                            "flex-shrink-0 flex flex-col bg-white dark:bg-neutral-850", // Ensure bg for this section
-                            sortedSubtasks.length > 0 ? "max-h-[45vh]" : ""
+                            "px-5", // Horizontal padding for the entire subtask block
+                            "flex-shrink-0 flex flex-col bg-white dark:bg-neutral-850" // Basic layout and background
                         )}
                     >
-                        {sortedSubtasks.length > 0 && (
-                            <>
-                                <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                                    <h3 className="text-sm font-semibold text-grey-dark dark:text-neutral-300">
-                                        Subtasks
-                                        <span
-                                            className="ml-2 font-normal text-xs text-grey-medium dark:text-neutral-400">
-                                            ({sortedSubtasks.filter(s => s.completed).length} of {sortedSubtasks.length} completed)
-                                        </span>
-                                    </h3>
-                                </div>
-                                <div
-                                    className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
-                                    <DndContext sensors={sensors} collisionDetection={closestCenter}
-                                                onDragStart={handleSubtaskDragStart} onDragEnd={handleSubtaskDragEnd}
-                                                measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
-                                        <SortableContext items={sortedSubtasks.map(s => `subtask-detail-${s.id}`)}
-                                                         strategy={verticalListSortingStrategy}>
-                                            <div className="space-y-0.5">
-                                                {sortedSubtasks.map(subtask => (
-                                                    <SubtaskItemDetail
-                                                        key={subtask.id} subtask={subtask}
-                                                        onUpdate={handleUpdateSubtask}
-                                                        onDelete={handleDeleteSubtask}
-                                                        isTaskCompletedOrTrashed={isInteractiveDisabled}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </SortableContext>
-                                        <DragOverlay dropAnimation={null}>
-                                            {draggingSubtaskId && selectedTask.subtasks?.find(s => s.id === draggingSubtaskId) ? (
-                                                <SubtaskItemDetail
-                                                    subtask={selectedTask.subtasks.find(s => s.id === draggingSubtaskId)!}
-                                                    onUpdate={() => {
-                                                    }}
-                                                    onDelete={() => {
-                                                    }}
-                                                    isTaskCompletedOrTrashed={isInteractiveDisabled}
-                                                    isDraggingOverlay={true}
-                                                />
-                                            ) : null}
-                                        </DragOverlay>
-                                    </DndContext>
-                                </div>
-                            </>
-                        )}
+                        {/* Separator line between editor and subtask section */}
+                        <div className="h-px bg-grey-light/70 dark:bg-neutral-700/40 mt-2 mb-3"></div>
 
-                        {!isInteractiveDisabled && (
-                            // Add Subtask input wrapper - pt-2.5 pb-1.5 reduces vertical space.
-                            // Conditional border-t here is inset due to parent's px-5.
-                            <div
-                                className={twMerge(
-                                    "flex items-center flex-shrink-0 pt-2.5 pb-1.5",
-                                    sortedSubtasks.length > 0 ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto" : "mt-1"
-                                )}>
-                                <div
-                                    className="group relative flex items-center flex-1 h-8 bg-grey-ultra-light dark:bg-neutral-700/60 rounded-base transition-all duration-150 ease-in-out border border-transparent dark:border-transparent">
-                                    <div
-                                        className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
-                                        <Popover.Root open={isNewSubtaskDatePickerOpen}
-                                                      onOpenChange={setIsNewSubtaskDatePickerOpen}>
-                                            <Popover.Trigger asChild>
-                                                <button
-                                                    type="button"
-                                                    className={twMerge(
-                                                        "flex items-center justify-center w-7 h-7 rounded-l-base hover:bg-grey-light focus:outline-none",
-                                                        "dark:hover:bg-neutral-600",
-                                                        newSubtaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
-                                                    )}
-                                                    aria-label="Set subtask due date"
-                                                >
-                                                    <Icon name="calendar" size={16} strokeWidth={1.5}/>
-                                                </button>
-                                            </Popover.Trigger>
-                                            <Popover.Portal>
-                                                <Popover.Content
-                                                    sideOffset={5}
-                                                    align="start"
-                                                    className={subtaskDatePickerPopoverWrapperClasses}
-                                                    onOpenAutoFocus={(e) => e.preventDefault()}
-                                                    onCloseAutoFocus={(e) => {
-                                                        e.preventDefault();
-                                                        newSubtaskInputRef.current?.focus();
-                                                    }}
-                                                >
-                                                    <CustomDatePickerContent
-                                                        initialDate={newSubtaskDueDate}
-                                                        onSelect={(date) => {
-                                                            setNewSubtaskDueDate(date ?? undefined);
-                                                            setIsNewSubtaskDatePickerOpen(false);
-                                                        }}
-                                                        closePopover={() => setIsNewSubtaskDatePickerOpen(false)}
-                                                    />
-                                                </Popover.Content>
-                                            </Popover.Portal>
-                                        </Popover.Root>
-
-                                        {newSubtaskDueDate && (
-                                            <div className="flex items-center pl-1 pr-1 h-full pointer-events-none">
-                                                <span
-                                                    ref={newSubtaskDateDisplayRef}
-                                                    className="text-[12px] text-primary dark:text-primary-light whitespace-nowrap font-medium"
-                                                >
-                                                    {formatRelativeDate(newSubtaskDueDate, false)}
-                                                </span>
-                                            </div>
-                                        )}
+                        {/* Content wrapper for all subtask elements (list, add input) */}
+                        <div className={twMerge(
+                            "pb-3", // Bottom padding for the subtask content block (provides 12px below last item)
+                            "flex flex-col",
+                            sortedSubtasks.length > 0 ? "max-h-[45vh]" : ""
+                        )}>
+                            {sortedSubtasks.length > 0 && (
+                                <>
+                                    <div className="flex justify-between items-center mb-3 flex-shrink-0">
+                                        <h3 className="text-sm font-semibold text-grey-dark dark:text-neutral-300">
+                                            Subtasks
+                                            <span
+                                                className="ml-2 font-normal text-xs text-grey-medium dark:text-neutral-400">
+                                                ({sortedSubtasks.filter(s => s.completed).length} of {sortedSubtasks.length} completed)
+                                            </span>
+                                        </h3>
                                     </div>
-                                    <input
-                                        ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
-                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && newSubtaskTitle.trim()) handleAddSubtask();
-                                            if (e.key === 'Escape') {
-                                                setNewSubtaskTitle('');
-                                                setNewSubtaskDueDate(undefined);
-                                            }
-                                        }}
-                                        placeholder=" Add subtask..."
-                                        className={twMerge(
-                                            "w-full h-full pr-3 text-[13px]",
-                                            "bg-transparent border-none outline-none",
-                                            "text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
-                                            "transition-colors duration-150 ease-in-out"
+                                    <div
+                                        className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
+                                        <DndContext sensors={sensors} collisionDetection={closestCenter}
+                                                    onDragStart={handleSubtaskDragStart}
+                                                    onDragEnd={handleSubtaskDragEnd}
+                                                    measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
+                                            <SortableContext items={sortedSubtasks.map(s => `subtask-detail-${s.id}`)}
+                                                             strategy={verticalListSortingStrategy}>
+                                                <div className="space-y-0.5">
+                                                    {sortedSubtasks.map(subtask => (
+                                                        <SubtaskItemDetail
+                                                            key={subtask.id} subtask={subtask}
+                                                            onUpdate={handleUpdateSubtask}
+                                                            onDelete={handleDeleteSubtask}
+                                                            isTaskCompletedOrTrashed={isInteractiveDisabled}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </SortableContext>
+                                            <DragOverlay dropAnimation={null}>
+                                                {draggingSubtaskId && selectedTask.subtasks?.find(s => s.id === draggingSubtaskId) ? (
+                                                    <SubtaskItemDetail
+                                                        subtask={selectedTask.subtasks.find(s => s.id === draggingSubtaskId)!}
+                                                        onUpdate={() => {
+                                                        }}
+                                                        onDelete={() => {
+                                                        }}
+                                                        isTaskCompletedOrTrashed={isInteractiveDisabled}
+                                                        isDraggingOverlay={true}
+                                                    />
+                                                ) : null}
+                                            </DragOverlay>
+                                        </DndContext>
+                                    </div>
+                                </>
+                            )}
+
+                            {!isInteractiveDisabled && (
+                                // Add Subtask input wrapper
+                                <div
+                                    className={twMerge(
+                                        "flex items-center flex-shrink-0",
+                                        "pt-1.5 pb-1.5", // Symmetrical vertical padding for the input group itself
+                                        sortedSubtasks.length > 0
+                                            ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto" // If subtasks exist, add top border and push to bottom
+                                            : "mt-0" // If no subtasks, no top margin. Separator's mb-3 (12px) provides space above.
+                                    )}>
+                                    <div
+                                        className="group relative flex items-center flex-1 h-8 bg-grey-ultra-light dark:bg-neutral-700/60 rounded-base transition-all duration-150 ease-in-out border border-transparent dark:border-transparent">
+                                        <div
+                                            className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
+                                            <Popover.Root open={isNewSubtaskDatePickerOpen}
+                                                          onOpenChange={setIsNewSubtaskDatePickerOpen}>
+                                                <Popover.Trigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        className={twMerge(
+                                                            "flex items-center justify-center w-7 h-7 rounded-l-base hover:bg-grey-light focus:outline-none",
+                                                            "dark:hover:bg-neutral-600",
+                                                            newSubtaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
+                                                        )}
+                                                        aria-label="Set subtask due date"
+                                                    >
+                                                        <Icon name="calendar" size={16} strokeWidth={1.5}/>
+                                                    </button>
+                                                </Popover.Trigger>
+                                                <Popover.Portal>
+                                                    <Popover.Content
+                                                        sideOffset={5}
+                                                        align="start"
+                                                        className={subtaskDatePickerPopoverWrapperClasses}
+                                                        onOpenAutoFocus={(e) => e.preventDefault()}
+                                                        onCloseAutoFocus={(e) => {
+                                                            e.preventDefault();
+                                                            newSubtaskInputRef.current?.focus();
+                                                        }}
+                                                    >
+                                                        <CustomDatePickerContent
+                                                            initialDate={newSubtaskDueDate}
+                                                            onSelect={(date) => {
+                                                                setNewSubtaskDueDate(date ?? undefined);
+                                                                setIsNewSubtaskDatePickerOpen(false);
+                                                            }}
+                                                            closePopover={() => setIsNewSubtaskDatePickerOpen(false)}
+                                                        />
+                                                    </Popover.Content>
+                                                </Popover.Portal>
+                                            </Popover.Root>
+
+                                            {newSubtaskDueDate && (
+                                                <div className="flex items-center pl-1 pr-1 h-full pointer-events-none">
+                                                    <span
+                                                        ref={newSubtaskDateDisplayRef}
+                                                        className="text-[12px] text-primary dark:text-primary-light whitespace-nowrap font-medium"
+                                                    >
+                                                        {formatRelativeDate(newSubtaskDueDate, false)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input
+                                            ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
+                                            onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && newSubtaskTitle.trim()) handleAddSubtask();
+                                                if (e.key === 'Escape') {
+                                                    setNewSubtaskTitle('');
+                                                    setNewSubtaskDueDate(undefined);
+                                                }
+                                            }}
+                                            placeholder=" Add subtask..."
+                                            className={twMerge(
+                                                "w-full h-full pr-3 text-[13px]",
+                                                "bg-transparent border-none outline-none",
+                                                "text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+                                                "transition-colors duration-150 ease-in-out"
+                                            )}
+                                            style={{paddingLeft: `${newSubtaskInputPaddingLeft}px`}}
+                                            aria-label="New subtask title"
+                                        />
+                                    </div>
+                                    <AnimatePresence>
+                                        {newSubtaskTitle.trim() && (
+                                            <motion.div initial={{opacity: 0, scale: 0.8}}
+                                                        animate={{opacity: 1, scale: 1}}
+                                                        exit={{opacity: 0, scale: 0.8}} transition={{duration: 0.15}}>
+                                                <Button variant="primary" size="sm" onClick={handleAddSubtask}
+                                                        className="!h-7 !px-2.5 ml-2 !text-xs">Add</Button>
+                                            </motion.div>
                                         )}
-                                        style={{paddingLeft: `${newSubtaskInputPaddingLeft}px`}}
-                                        aria-label="New subtask title"
-                                    />
+                                    </AnimatePresence>
                                 </div>
-                                <AnimatePresence>
-                                    {newSubtaskTitle.trim() && (
-                                        <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}}
-                                                    exit={{opacity: 0, scale: 0.8}} transition={{duration: 0.15}}>
-                                            <Button variant="primary" size="sm" onClick={handleAddSubtask}
-                                                    className="!h-7 !px-2.5 ml-2 !text-xs">Add</Button>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -1128,7 +1140,8 @@ const TaskDetail: React.FC = () => {
                                     onCloseAutoFocus={(e) => e.preventDefault()}>
                                     <div className="space-y-1.5 text-grey-medium dark:text-neutral-300">
                                         <p>
-                                            <strong className="font-medium text-grey-dark dark:text-neutral-200">Created:</strong>
+                                            <strong
+                                                className="font-medium text-grey-dark dark:text-neutral-200">Created:</strong>
                                             {displayCreatedAt}
                                         </p>
                                         <p><strong
