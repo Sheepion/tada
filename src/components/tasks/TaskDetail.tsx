@@ -145,8 +145,6 @@ const TaskDetail: React.FC = () => {
     const hasUnsavedChangesRef = useRef(false);
     const isMountedRef = useRef(true);
 
-    // Definition for the priority dot when no specific priority is set
-    // Consistent with TaskItem's definition for its dot
     const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
 
     useEffect(() => {
@@ -158,7 +156,7 @@ const TaskDetail: React.FC = () => {
                 savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
             }
         };
-    }, [selectedTaskInternal]); // Added localDueDate and latestTagsStringRef.current to dependencies of outer effect for clarity, though savePendingChanges is memoized
+    }, [selectedTaskInternal]);
 
     const savePendingChanges = useCallback((taskId: string, title: string, content: string, dueDate: Date | undefined, tagsString: string) => {
         if (!taskId || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
@@ -279,7 +277,6 @@ const TaskDetail: React.FC = () => {
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks'>>) => {
         if (!selectedTaskInternal || !isMountedRef.current) return;
         if (hasUnsavedChangesRef.current) {
-            // Pass current localDueDate to savePendingChanges, not from selectedTaskInternal as it might be stale
             savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
         }
         if (saveTimeoutRef.current) {
@@ -292,7 +289,7 @@ const TaskDetail: React.FC = () => {
             ...t, ...updates,
             updatedAt: Date.now()
         } : t)));
-    }, [selectedTaskInternal, setTasks, localDueDate, savePendingChanges]); // Added latestTagsStringRef for consistency with savePendingChanges params, though its value is read inside updateTask via savePendingChanges only.
+    }, [selectedTaskInternal, setTasks, localDueDate, savePendingChanges]);
 
     const handleClose = useCallback(() => {
         if (selectedTaskInternal) {
@@ -334,7 +331,7 @@ const TaskDetail: React.FC = () => {
     const handleHeaderMenuPopoverOpenChange = useCallback((open: boolean) => {
         setIsHeaderMenuPopoverOpen(open);
         if (open) {
-            setIsMoreActionsOpen(true); // Keep dropdown open if popover (for date picker) is opened from menu
+            setIsMoreActionsOpen(true);
         }
     }, []);
 
@@ -345,17 +342,15 @@ const TaskDetail: React.FC = () => {
 
     const handleListChange = useCallback((newList: string) => {
         updateTask({list: newList});
-        setIsMoreActionsOpen(false); // Close main dropdown after selection
+        setIsMoreActionsOpen(false);
     }, [updateTask]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => {
         updateTask({priority: newPriority});
-        // setIsMoreActionsOpen(false); // Keep dropdown open for this style of selection
     }, [updateTask]);
 
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
-        // setIsMoreActionsOpen(false); // Keep dropdown open
     }, [updateTask]);
 
     const cycleCompletionPercentage = useCallback(() => {
@@ -422,7 +417,7 @@ const TaskDetail: React.FC = () => {
         });
         setSelectedTaskId(newTaskData.id!);
         setIsMoreActionsOpen(false);
-    }, [selectedTask, setTasks, setSelectedTaskId, savePendingChanges, selectedTaskInternal, localDueDate, latestTagsStringRef]); // Added latestTagsStringRef
+    }, [selectedTask, setTasks, setSelectedTaskId, savePendingChanges, selectedTaskInternal, localDueDate, latestTagsStringRef]);
 
 
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -440,7 +435,7 @@ const TaskDetail: React.FC = () => {
             }
             titleInputRef.current?.blur();
         }
-    }, [selectedTask, selectedTaskInternal, localTitle, localDueDate, savePendingChanges, latestTagsStringRef]); // Added latestTagsStringRef
+    }, [selectedTask, selectedTaskInternal, localTitle, localDueDate, savePendingChanges, latestTagsStringRef]);
 
     const isTrash = useMemo(() => selectedTask?.list === 'Trash', [selectedTask?.list]);
     const isCompleted = useMemo(() => (selectedTask?.completionPercentage ?? 0) === 100 && !isTrash, [selectedTask?.completionPercentage, isTrash]);
@@ -534,7 +529,6 @@ const TaskDetail: React.FC = () => {
         1: {label: 'High Priority', iconColor: 'text-error', bgColor: 'bg-error', shortLabel: 'P1'},
         2: {label: 'Medium Priority', iconColor: 'text-warning', bgColor: 'bg-warning', shortLabel: 'P2'},
         3: {label: 'Low Priority', iconColor: 'text-info', bgColor: 'bg-info', shortLabel: 'P3'},
-        4: {label: 'Lowest Priority', iconColor: 'text-grey-medium', bgColor: 'bg-grey-medium', shortLabel: 'P4'},
     };
 
     const priorityDotBgColor = useMemo(() => {
@@ -597,7 +591,7 @@ const TaskDetail: React.FC = () => {
     ), [displayDueDateForRender, overdue, isCompleted, isTrash]);
 
     const dropdownContentClasses = useMemo(() => twMerge(
-        "z-[60] min-w-[200px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
+        "z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700", // Adjusted min-width
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
@@ -646,9 +640,8 @@ const TaskDetail: React.FC = () => {
 
     const progressMenuItems = useMemo(() => [
         {label: 'Not Started', value: null, icon: 'circle' as IconName, iconStroke: 1.5},
-        {label: 'Started', value: 20, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
-        {label: 'Halfway', value: 50, icon: 'circle-dot' as IconName, iconStroke: 1.5},
-        {label: 'Almost Done', value: 80, icon: 'circle-slash' as IconName, iconStroke: 1.5},
+        {label: 'In Progress', value: 30, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
+        {label: 'Mostly Done', value: 60, icon: 'circle-dot' as IconName, iconStroke: 1.5},
         {label: 'Completed', value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
     ], []);
 
@@ -671,7 +664,6 @@ const TaskDetail: React.FC = () => {
         <>
             <div className={mainPanelClass}>
                 <div className={headerClass}>
-                    {/* Left group: PI, Dot, Title */}
                     <div className="flex items-center flex-1 min-w-0 gap-x-2.5 mr-3">
                         <ProgressIndicator
                             percentage={selectedTask.completionPercentage}
@@ -682,14 +674,13 @@ const TaskDetail: React.FC = () => {
                             ariaLabelledby={`task-title-input-${selectedTask.id}`}
                         />
 
-                        {/* Priority Dot - only shown for active tasks with a set priority */}
                         {!isInteractiveDisabled && selectedTask && selectedTask.priority && (
                             <Tooltip.Provider delayDuration={300}>
                                 <Tooltip.Root>
                                     <Tooltip.Trigger asChild>
                                          <span
                                              className={twMerge(
-                                                 "w-2.5 h-2.5 rounded-full flex-shrink-0", // 10px dot
+                                                 "w-2.5 h-2.5 rounded-full flex-shrink-0",
                                                  priorityDotBgColor
                                              )}
                                              aria-label={priorityDotLabel}
@@ -720,7 +711,6 @@ const TaskDetail: React.FC = () => {
                         />
                     </div>
 
-                    {/* Right group: Actions */}
                     <div className="flex items-center space-x-1 flex-shrink-0">
                         <Popover.Root modal={true} open={isHeaderMenuPopoverOpen}
                                       onOpenChange={handleHeaderMenuPopoverOpenChange}>
@@ -772,7 +762,7 @@ const TaskDetail: React.FC = () => {
                                             className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
                                         </div>
                                         <div className="flex justify-around items-center px-1.5 py-1">
-                                            {[1, 2, 3, 4].map(pVal => {
+                                            {[1, 2, 3].map(pVal => { // Changed from [1, 2, 3, 4]
                                                 const pData = taskListPriorityMap[pVal];
                                                 const isSelected = selectedTask.priority === pVal;
                                                 return (
@@ -885,7 +875,7 @@ const TaskDetail: React.FC = () => {
                                     onCloseAutoFocus={(e) => {
                                         e.preventDefault();
                                         if (isMoreActionsOpen && moreActionsButtonRef.current) {
-                                            // moreActionsButtonRef.current?.focus(); // This line was commented out in original, kept as is
+                                            // moreActionsButtonRef.current?.focus();
                                         }
                                     }}
                                 >

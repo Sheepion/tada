@@ -194,8 +194,8 @@ const CalendarView: React.FC = () => {
         });
         Object.values(grouped).forEach(dayTasks => {
             dayTasks.sort((a, b) => {
-                const priorityA = a.completed ? 99 : (a.priority ?? 5);
-                const priorityB = b.completed ? 99 : (b.priority ?? 5);
+                const priorityA = a.completed ? 99 : (a.priority ?? 4); // Changed from ?? 5 to ?? 4
+                const priorityB = b.completed ? 99 : (b.priority ?? 4); // Changed from ?? 5 to ?? 4
                 if (priorityA !== priorityB) return priorityA - priorityB;
                 const orderA = a.order ?? a.createdAt ?? 0;
                 const orderB = b.order ?? b.createdAt ?? 0;
@@ -306,7 +306,7 @@ const CalendarView: React.FC = () => {
                                             className="!h-8 px-3 text-[14px] font-normal w-36 text-center tabular-nums text-grey-dark hover:bg-grey-ultra-light">
                                         {format(currentMonthDate, 'MMMM yyyy', {locale: enUS})}
                                         <Icon name="chevron-down" size={14} strokeWidth={1}
-                                              className="ml-1.5 opacity-70"/> {/* Icon opacity increased */}
+                                              className="ml-1.5 opacity-70"/>
                                     </Button>
                                 </DropdownMenu.Trigger>
                                 <DropdownMenu.Portal>

@@ -53,9 +53,13 @@ async function generateAiSummary(tasks: Task[]): Promise<string> {
     summary += `- ${completedCount} completed, ${inProgressCount} in progress.\n`;
     if (inProgressCount > 0) {
         const highPriority = tasks.find(t => !t.completed && t.priority === 1);
+        const mediumPriority = tasks.find(t => !t.completed && t.priority === 2);
         const overdue = tasks.find(t => !t.completed && t.dueDate && isBefore(startOfDay(safeParseDate(t.dueDate)!), startOfDay(new Date())));
         summary += "- Focus areas: ";
-        if (highPriority) summary += `High priority task **"${highPriority.title}"** needs attention. `; else if (overdue) summary += `Overdue task **"${overdue.title}"** requires action. `; else {
+        if (highPriority) summary += `High priority task **"${highPriority.title}"** needs attention. `;
+        else if (mediumPriority) summary += `Medium priority task **"${mediumPriority.title}"** should be addressed. `;
+        else if (overdue) summary += `Overdue task **"${overdue.title}"** requires action. `;
+        else {
             const firstInProgress = tasks.find(t => !t.completed);
             summary += `Continue progress on **"${firstInProgress?.title ?? 'current tasks'}"**. `;
         }
@@ -64,14 +68,13 @@ async function generateAiSummary(tasks: Task[]): Promise<string> {
     return summary.trim();
 }
 
-// Aligned with TaskList.tsx style functions
 const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
     "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light",
     "dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700",
     checked
-        ? "bg-primary-light text-primary dark:bg-primary-dark/30 dark:text-primary-light" // Checked state
-        : "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100", // Default state
+        ? "bg-primary-light text-primary dark:bg-primary-dark/30 dark:text-primary-light"
+        : "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100",
     "data-[disabled]:opacity-50"
 );
 
@@ -310,7 +313,6 @@ const SummaryView: React.FC = () => {
     const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const popoverAnimationClasses = "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide";
 
-    // Aligned with TaskList.moreOptionsDropdownContentClasses
     const dropdownContentBaseClasses = useMemo(() => twMerge(
         "min-w-[200px] z-[60] bg-white rounded-base shadow-modal p-1 dark:bg-neutral-800 dark:border dark:border-neutral-700",
         dropdownAnimationClasses
@@ -520,7 +522,7 @@ const SummaryView: React.FC = () => {
                         </DropdownMenu.Root>
                         <Popover.Portal>
                             <Popover.Content side="bottom" align="center" sideOffset={5}
-                                             className={twMerge("z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", popoverAnimationClasses)} // z-index higher
+                                             className={twMerge("z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", popoverAnimationClasses)}
                                              onOpenAutoFocus={(e) => e.preventDefault()}
                                              onCloseAutoFocus={(e) => e.preventDefault()}>
                                 <CustomDateRangePickerContent
@@ -617,7 +619,7 @@ const SummaryView: React.FC = () => {
                                             </DropdownMenu.Trigger>
                                             <DropdownMenu.Portal>
                                                 <DropdownMenu.Content
-                                                    className={twMerge("z-[60] p-0 dark:border dark:border-neutral-700", dropdownAnimationClasses)} // Use z-[60] and border like other menus
+                                                    className={twMerge("z-[60] p-0 dark:border dark:border-neutral-700", dropdownAnimationClasses)}
                                                     sideOffset={4}
                                                     align="end"
                                                     onCloseAutoFocus={e => e.preventDefault()}

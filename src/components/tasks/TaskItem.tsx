@@ -137,14 +137,6 @@ const taskListPriorityMap: Record<number, {
         borderColor: 'border-info',
         dotColor: 'bg-info'
     },
-    4: {
-        label: 'Lowest Priority',
-        iconColor: 'text-grey-medium',
-        bgColor: 'bg-grey-medium',
-        shortLabel: 'P4',
-        borderColor: 'border-grey-medium',
-        dotColor: 'bg-grey-medium'
-    },
 };
 const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
 
@@ -496,7 +488,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
     const actionsMenuContentClasses = useMemo(() => twMerge(
-        'z-[60] min-w-[200px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700',
+        'z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700', // Adjusted min-width
         'data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide'
     ), []);
 
@@ -507,9 +499,8 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
 
     const progressMenuItems = useMemo(() => [
         {label: 'Not Started', value: null, icon: 'circle' as IconName, iconStroke: 1.5},
-        {label: 'Started', value: 20, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
-        {label: 'Halfway', value: 50, icon: 'circle-dot' as IconName, iconStroke: 1.5},
-        {label: 'Almost Done', value: 80, icon: 'circle-slash' as IconName, iconStroke: 1.5},
+        {label: 'In Progress', value: 30, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
+        {label: 'Mostly Done', value: 60, icon: 'circle-dot' as IconName, iconStroke: 1.5},
         {label: 'Completed', value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
     ], []);
 
@@ -786,7 +777,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                             className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
                                         </div>
                                         <div className="flex justify-around items-center px-1.5 py-1">
-                                            {[1, 2, 3, 4].map(pVal => {
+                                            {[1, 2, 3].map(pVal => {
                                                 const pData = taskListPriorityMap[pVal];
                                                 const isCurrentlySelected = task.priority === pVal;
                                                 return (

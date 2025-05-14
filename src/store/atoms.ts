@@ -55,7 +55,7 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
     {
         id: '11',
         title: '体检预约',
-        completionPercentage: 50,
+        completionPercentage: 60, // Updated
         dueDate: subDays(startOfDay(new Date()), 2).setHours(10, 0, 0, 0),
         list: 'Personal',
         content: 'Called the clinic, waiting for callback.\n\n- Follow up on Friday if no response.\n- Check fasting requirements.',
@@ -91,7 +91,7 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
     {
         id: '1',
         title: '施工组织设计评审表',
-        completionPercentage: 50,
+        completionPercentage: 60, // Updated
         dueDate: new Date().setHours(14, 0, 0, 0),
         list: 'Work',
         content: 'Review the construction plan details. Focus on safety section.\n\nKey points to check:\n- Emergency evacuation plan\n- PPE requirements\n- Hazard identification',
@@ -150,7 +150,7 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
     {
         id: '2',
         title: '开发框架讲解',
-        completionPercentage: 20,
+        completionPercentage: 30, // Updated
         dueDate: addDays(startOfDay(new Date()), 1).setHours(10, 30, 0, 0),
         list: 'Work',
         content: 'Prepare slides for the team meeting. Outline done.\n\nInclude:\n- Core concepts\n- Best practices\n- Common pitfalls',
@@ -162,14 +162,14 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
     {
         id: '10',
         title: '研究 CodeMirror Themes',
-        completionPercentage: 50,
+        completionPercentage: 60, // Updated
         dueDate: null,
         list: 'Dev',
         content: 'Found a few potential themes, need to test compatibility with current setup.\n\nConsiderations:\n- Light/Dark mode support\n- Readability\n- Performance',
         order: 5,
         createdAt: subDays(new Date(), 2).getTime(),
         updatedAt: new Date().getTime(),
-        priority: 3
+        priority: 3 // Changed from 4 (if it was) or ensure no priority 4
     },
     {
         id: '13',
@@ -180,14 +180,15 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         content: 'Try creating your first task! You can add subtasks too, and set precise due dates with times.',
         order: 12,
         createdAt: subDays(new Date(), 1).getTime(),
-        updatedAt: subDays(new Date(), 1).getTime()
+        updatedAt: subDays(new Date(), 1).getTime(),
+        priority: null // No priority
     },
 ];
 
 const initialTasks: Task[] = initialTasksDataRaw
     .map(taskRaw => {
         const now = Date.now();
-        const percentage = taskRaw.completionPercentage ?? null;
+        const percentage = taskRaw.completionPercentage === 0 ? null : taskRaw.completionPercentage ?? null; // 0 is treated as null for initial state
         const isCompleted = percentage === 100;
         let dueDateTimestamp: number | null = null;
         if (taskRaw.dueDate !== null && taskRaw.dueDate !== undefined) {

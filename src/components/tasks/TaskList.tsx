@@ -80,14 +80,6 @@ const priorityMap: Record<number, {
         borderColor: 'border-info',
         dotColor: 'bg-info'
     },
-    4: {
-        label: 'Lowest Priority',
-        iconColor: 'text-grey-medium',
-        bgColor: 'bg-grey-medium',
-        shortLabel: 'P4',
-        borderColor: 'border-grey-medium',
-        dotColor: 'bg-grey-medium'
-    },
 };
 
 interface TaskListProps {
@@ -414,7 +406,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             title: titleToSave,
             completedAt: null,
             list: newTaskListState,
-            completionPercentage: null,
+            completionPercentage: null, // New tasks default to null (0%)
             dueDate: newTaskDueDate ? newTaskDueDate.getTime() : null,
             priority: newTaskPriority,
             order: newOrder,
@@ -510,7 +502,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     ), []);
 
     const moreOptionsDropdownContentClasses = useMemo(() => twMerge(
-        "z-[60] min-w-[200px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
+        "z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700", // Adjusted min-width
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
@@ -650,7 +642,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                 className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
                                             </div>
                                             <div className="flex justify-around items-center px-1.5 py-1">
-                                                {[1, 2, 3, 4].map(pVal => {
+                                                {[1, 2, 3].map(pVal => {
                                                     const pData = priorityMap[pVal];
                                                     const isSelected = newTaskPriority === pVal;
                                                     return (
