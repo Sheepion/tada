@@ -1,111 +1,121 @@
-/* src/styles/index.css */
+/* src/styles/index.css - 方案8: 珊瑚 (Corrected) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
     :root {
-        /* Design System Variables */
+        /* Typography */
         --font-primary: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        --font-primary-light-weight: 300;
         --font-primary-regular-weight: 400;
         --font-primary-medium-weight: 500;
+        --font-primary-semibold-weight: 600;
 
-        /* Main Colors */
-        --color-primary: 22 100% 70%; /* #FF9466 */
-        --color-primary-light: 22 100% 91%; /* #FFDED1 */
-        --color-primary-dark: 22 80% 61%; /* #E67E50 */
+        /* Main Colors - 珊瑚 */
+        --color-primary: 3 76% 58%; /* #E34C45 */
+        --color-primary-light: 5 100% 89%; /* #FFCBC7 */
+        --color-primary-dark: 3 67% 47%; /* #C92E27 */
 
-        /* Neutral Colors - Adjusted for better visibility */
-        --color-white: 0 0% 100%; /* #FFFFFF */
-        --color-grey-ultra-light: 220 20% 97%; /* #F5F6F9 - Subtle backgrounds, was 220 25% 98% */
-        --color-grey-light: 220 16% 91%; /* #E3E4EA - Separators, was 220 17% 94% */
-        --color-grey-medium: 220 10% 55%; /* #80808C - Darker secondary text, was 220 10% 78% */
-        --color-grey-dark: 220 10% 25%; /* #3A3A47 - Darker primary text, was 220 10% 34% */
+        /* Neutral Colors (Monochromatic) */
+        --color-white: 0 0% 100%;
+        --color-almost-white: 0 0% 99.5%;
+        --color-grey-ultra-light: 0 20% 98%; /* #FDF7F7 */
+        --color-grey-light: 220 16% 91%; /* #E3E4EA */
+        --color-grey-medium: 210 13% 60%; /* #8C96A3 */
+        --color-grey-dark: 210 19% 23%; /* #2D3748 */
+        --color-grey-deep: 210 20% 15%; /* #1D2530 */
 
-        /* Functional Colors (Softened) */
-        --color-success: 123 40% 63%; /* #66BB6A */
-        --color-info: 207 88% 63%; /* #4DABF5 */
-        --color-warning: 39 100% 56%; /* #FFA726 */
-        --color-error: 1 82% 63%; /* #EF5350 */
+        /* Functional Colors from Scheme 8 */
+        --color-success: 148 53% 61%; /* #68D391 */
+        --color-info: 207 82% 66%; /* #63B3ED */
+        --color-warning: 39 90% 66%; /* #F6AD55 */
+        --color-error: 3 76% 58%; /* #E34C45 */
 
         /* UI Elements */
-        --border-radius-base: 4px;
-        --border-radius-small: 2px; /* For finer elements like progress bar ends */
+        --border-radius-small: 6px;
+        --border-radius-base: 10px;
+        --border-radius-large: 14px;
+        --border-radius-full: 9999px;
 
-        /* Shadows - As per spec */
-        --shadow-subtle: 0 1px 3px 0 hsl(var(--color-grey-dark) / 0.03);
-        --shadow-ai-summary: 0 2px 8px 0 hsl(var(--color-grey-dark) / 0.03);
-        --shadow-modal: 0 3px 16px 0 hsl(var(--color-grey-dark) / 0.08);
+        /* Shadows (Softer) */
+        --shadow-interactive: 0 2px 5px 0 hsl(var(--color-grey-dark) / 0.04);
+        --shadow-popover: 0 5px 15px 0 hsl(var(--color-grey-dark) / 0.05);
+        --shadow-modal: 0 10px 30px 0 hsl(var(--color-grey-dark) / 0.07);
+        --focus-glow-primary-shadow: 0 0 0 3px hsl(var(--color-primary) / 0.25),
+        0 0 0 6px hsl(var(--color-primary) / 0.1);
+
+        /* CORRECTED: Define transition timing function variable */
+        --timing-app-ease-out: cubic-bezier(0, 0, 0.2, 1);
     }
 
     body {
         font-family: var(--font-primary), sans-serif;
-        font-weight: var(--font-primary-light-weight); /* Default to light */
+        font-weight: var(--font-primary-regular-weight);
+        font-size: 13.5px;
+        line-height: 1.65;
         background-color: hsl(var(--color-white));
-        color: hsl(var(--color-grey-dark)); /* Base text color updated */
+        color: hsl(var(--color-grey-dark));
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        font-size: 13px;
-        line-height: 1.5;
-    }
-
-    *:focus {
-        outline: none;
-    }
-
-    *:focus-visible {
-        outline: 1.5px solid hsl(var(--color-primary) / 0.7); /* Thinner, more subtle outline */
-        outline-offset: 2px;
-    }
-
-    [data-radix-focus-visible] {
-        outline: 1.5px solid hsl(var(--color-primary) / 0.7) !important;
-        outline-offset: 2px !important;
     }
 
     html {
         scroll-behavior: smooth;
     }
 
-    .styled-scrollbar::-webkit-scrollbar,
-    .styled-scrollbar-thin::-webkit-scrollbar {
-        width: 4px;
-        height: 4px;
+    *:focus {
+        outline: none;
     }
 
-    .styled-scrollbar::-webkit-scrollbar-track,
-    .styled-scrollbar-thin::-webkit-scrollbar-track {
+    *:focus-visible, [data-radix-focus-visible]:focus-visible {
+        outline: none !important;
+    }
+
+    /* CORRECTED: Removed problematic Radix transform-origin rule */
+    .styled-scrollbar::-webkit-scrollbar, .styled-scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-track, .styled-scrollbar-thin::-webkit-scrollbar-track {
         background-color: transparent;
     }
 
-    .styled-scrollbar::-webkit-scrollbar-thumb,
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        background-color: hsl(var(--color-grey-medium) / 0.3); /* Scrollbar thumb uses new grey-medium */
-        border-radius: var(--border-radius-small);
+    .styled-scrollbar::-webkit-scrollbar-thumb, .styled-scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: hsl(var(--color-grey-medium) / 0.3);
+        border-radius: var(--border-radius-full);
     }
 
-    .styled-scrollbar::-webkit-scrollbar-thumb:hover,
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background-color: hsl(var(--color-grey-medium) / 0.6);
+    .styled-scrollbar::-webkit-scrollbar-thumb:hover, .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(var(--color-grey-medium) / 0.5);
     }
 
-    .styled-scrollbar::-webkit-scrollbar-corner,
-    .styled-scrollbar-thin::-webkit-scrollbar-corner {
+    .styled-scrollbar::-webkit-scrollbar-corner, .styled-scrollbar-thin::-webkit-scrollbar-corner {
         background: transparent;
     }
 
     .cm-editor {
-        font-family: var(--font-primary), sans-serif !important;
-        font-weight: var(--font-primary-regular-weight) !important; /* Editor content is primary, use regular */
-        font-size: 13px !important;
-        line-height: 1.6 !important;
+        font-family: var(--font-primary), monospace !important;
+        font-weight: var(--font-primary-regular-weight) !important;
+        font-size: 13.5px !important;
+        line-height: 1.65 !important;
+        color: hsl(var(--color-grey-dark)) !important;
     }
 
-    input[type="search"]::-webkit-search-decoration,
-    input[type="search"]::-webkit-search-cancel-button,
-    input[type="search"]::-webkit-search-results-button,
-    input[type="search"]::-webkit-search-results-decoration {
+    .cm-gutters {
+        background-color: hsl(var(--color-grey-ultra-light)) !important;
+        border-right: 0.5px solid hsl(var(--color-grey-light)) !important;
+    }
+
+    .cm-content {
+        caret-color: hsl(var(--color-primary));
+    }
+
+    .cm-selectionBackground, ::selection {
+        background-color: hsl(var(--color-primary-light) / 0.5) !important;
+    }
+
+    input[type="search"]::-webkit-search-decoration, input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webkit-search-results-button, input[type="search"]::-webkit-search-results-decoration {
         -webkit-appearance: none;
         display: none;
     }
@@ -116,8 +126,19 @@
         height: 0;
     }
 
-    /* Ensure Radix popper content respects transform-origin for smoother animations */
-    [data-radix-popper-content-wrapper] {
-        transform-origin: var(--radix-popper-transform-origin);
+    input, textarea, select {
+        border: none;
+        background-color: transparent;
+    }
+
+    input::placeholder, textarea::placeholder {
+        color: hsl(var(--color-grey-medium));
+        opacity: 1;
+    }
+
+    button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+        transition-timing-function: var(--timing-app-ease-out);
+        transition-duration: 150ms;
     }
 }
