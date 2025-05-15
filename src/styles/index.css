@@ -40,7 +40,7 @@
     }
 
     body {
-        font-family: var(--font-primary);
+        font-family: var(--font-primary), sans-serif;
         font-weight: var(--font-primary-light-weight); /* Default to light */
         background-color: hsl(var(--color-white));
         color: hsl(var(--color-grey-dark)); /* Base text color updated */
