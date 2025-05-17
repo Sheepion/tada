@@ -17,7 +17,6 @@ LoadingSpinner.displayName = 'LoadingSpinner';
 const MainLayout: React.FC = () => {
     const location = useLocation();
 
-    // Sidebar is visible for all task-related views, hidden for /calendar and /summary
     const hideSidebar = useMemo(() => {
         return ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
     }, [location.pathname]);
@@ -30,11 +29,9 @@ const MainLayout: React.FC = () => {
                     <Sidebar/>
                 </div>
             )}
-            {/* Main Content Area taking remaining space, with defined padding */}
             <main className={twMerge(
                 "flex-1 overflow-hidden relative flex flex-col min-w-0",
-                "bg-white" // Main content area background is white
-                // Padding for main content区: 左右内边距16px，上下内边距10px will be applied by child pages or tasklist/taskdetail wrappers
+                "bg-white"
             )}>
                 <Suspense fallback={<LoadingSpinner/>}>
                     <Outlet/>

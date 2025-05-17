@@ -1,4 +1,3 @@
-// src/store/atoms.ts
 import {atom} from 'jotai';
 import {atomWithStorage, createJSONStorage, RESET} from 'jotai/utils';
 import {SettingsTab, Task, TaskFilter, TaskGroupCategory, User} from '@/types';
@@ -31,8 +30,6 @@ export const currentUserAtom = atom<User | null>({
     isPremium: true,
 });
 
-// Consistent with dateUtils.isWithinNext7Days definition
-// (e.g., if it checks from tomorrow to 7 days from now, or today to 6 days from now)
 export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): TaskGroupCategory => {
     if (task.completed || task.list === 'Trash') {
         return 'nodate';
@@ -46,18 +43,7 @@ export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): 
 
         if (isBefore(taskDay, today)) return 'overdue';
         if (isSameDay(taskDay, today)) return 'today';
-
-        // isWithinNext7Days from dateUtils:
-        // if true: date is between tomorrow and 7 days from today (inclusive of start, exclusive of end of 7th day typically)
-        // OR date is between today and 6 days from today
-        // Let's assume it's "from tomorrow up to and including day+6" for 7 distinct future days.
-        // Or, if it includes today: "from today up to and including day+6"
-        // For clarity, relying on how dateUtils defines it.
-        // If `isWithinNext7Days` means date is in the next 7 days (excluding today), it's 'next7days'.
         if (isWithinNext7Days(taskDay)) return 'next7days';
-
-        // If it's not overdue, not today, and not within the "next 7 days" window, it's later.
-        // This implies isAfter(taskDay, end boundary of isWithinNext7Days window)
         return 'later';
     }
     return 'nodate';
@@ -76,6 +62,7 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         createdAt: subDays(new Date(), 4).getTime(),
         updatedAt: subDays(new Date(), 1).getTime(),
         priority: 1,
+        tags: ['health', 'appointment'],
         subtasks: [
             {
                 id: 'sub11-1',
@@ -159,6 +146,7 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         createdAt: subDays(new Date(), 1).getTime(),
         updatedAt: new Date().getTime(),
         priority: 1,
+        tags: ['meeting', 'preparation'],
     },
     {
         id: '2',
@@ -170,7 +158,8 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         order: 2,
         createdAt: subDays(new Date(), 1).getTime(),
         updatedAt: new Date().getTime(),
-        priority: 2
+        priority: 2,
+        tags: ['development', 'presentation', 'tada', 'tjweather', 'atmos'] // Added more tags for testing
     },
     {
         id: '10',
@@ -182,7 +171,8 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         order: 5,
         createdAt: subDays(new Date(), 2).getTime(),
         updatedAt: new Date().getTime(),
-        priority: 3
+        priority: 3,
+        tags: ['codemirror', 'frontend', 'research']
     },
     {
         id: '13',
@@ -194,7 +184,8 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         order: 12,
         createdAt: subDays(new Date(), 1).getTime(),
         updatedAt: subDays(new Date(), 1).getTime(),
-        priority: null
+        priority: null,
+        tags: ['welcome']
     },
 ];
 
@@ -221,13 +212,14 @@ const initialTasks: Task[] = initialTasksDataRaw
             dueDate: dueDateTimestamp, list: taskRaw.list, content: taskRaw.content ?? '', order: taskRaw.order,
             createdAt: taskRaw.createdAt, updatedAt: taskRaw.updatedAt ?? now,
             completedAt: isCompleted ? (taskRaw.updatedAt ?? now) : null,
-            tags: taskRaw.tags ?? [], priority: taskRaw.priority ?? null, subtasks: subtasks,
+            tags: taskRaw.tags?.map(tag => tag.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).sort() ?? [],
+            priority: taskRaw.priority ?? null, subtasks: subtasks,
         };
         return {...taskPartial, groupCategory: getTaskGroupCategory(taskPartial)};
     })
     .sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
 
-const baseTasksAtom = atomWithStorage<Task[]>('tasks_v11_ux_final_final', initialTasks, undefined, {getOnInit: true});
+const baseTasksAtom = atomWithStorage<Task[]>('tasks_v11_ux_final_final_tags_popover', initialTasks, undefined, {getOnInit: true});
 
 export const tasksAtom = atom(
     (get) => get(baseTasksAtom),
@@ -292,23 +284,8 @@ export const tasksAtom = atom(
                 }
             }
 
-            let latestSubtaskDueDate: number | null = null;
-            if (updatedTask.subtasks.length > 0) {
-                updatedTask.subtasks.forEach(sub => {
-                    if (sub.dueDate && (latestSubtaskDueDate === null || sub.dueDate > latestSubtaskDueDate)) {
-                        latestSubtaskDueDate = sub.dueDate;
-                    }
-                });
-            }
-
-            if (latestSubtaskDueDate) {
-                if (updatedTask.dueDate !== null) { // Only if parent *has* a due date (i.e. not explicitly "No Date")
-                    if (updatedTask.dueDate === undefined || updatedTask.dueDate < latestSubtaskDueDate) {
-                        updatedTask.dueDate = latestSubtaskDueDate;
-                    }
-                }
-            }
-
+            // Removed logic that synced parent task dueDate with subtask dueDate
+            // Parent task dueDate is now independent
 
             let currentPercentage = updatedTask.completionPercentage ?? null;
             let isCompleted = updatedTask.completed;
@@ -323,7 +300,7 @@ export const tasksAtom = atom(
                 } else if (updatedTask.completed !== undefined && updatedTask.completed !== previousTaskState?.completed) {
                     isCompleted = updatedTask.completed;
                     const prevPercentage = previousTaskState?.completionPercentage;
-                    currentPercentage = isCompleted ? 100 : (prevPercentage === 100 ? null : (prevPercentage ?? null)); // TS Fix: ensure null if undefined
+                    currentPercentage = isCompleted ? 100 : (prevPercentage === 100 ? null : (prevPercentage ?? null));
                 }
                 if (currentPercentage === 100 && !isCompleted) isCompleted = true;
                 else if (currentPercentage !== 100 && isCompleted) currentPercentage = 100;
@@ -334,7 +311,7 @@ export const tasksAtom = atom(
             const validatedTask: Omit<Task, 'groupCategory'> = {
                 ...updatedTask,
                 content: updatedTask.content ?? '',
-                tags: updatedTask.tags ?? [],
+                tags: updatedTask.tags?.map(tag => tag.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).sort() ?? [],
                 priority: updatedTask.priority ?? null,
                 completionPercentage: currentPercentage,
                 completed: isCompleted,
@@ -432,7 +409,7 @@ export const userListNamesAtom = atom((get) => {
 export const userTagNamesAtom = atom((get) => {
     const tasks = get(tasksAtom);
     const tags = new Set<string>();
-    tasks.filter(t => t.list !== 'Trash').forEach(task => task.tags?.forEach(tag => tags.add(tag)));
+    tasks.forEach(task => task.tags?.forEach(tag => tags.add(tag.trim())));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
 });
 export const taskCountsAtom = atom((get) => {
@@ -483,7 +460,6 @@ export const rawSearchResultsAtom = atom<Task[]>((get) => {
     const searchWords = search.split(' ').filter(Boolean);
 
     return allTasks.filter(task => {
-        // Check if all search words are found in the task's combined text content
         return searchWords.every(word => {
             const titleMatch = task.title.toLowerCase().includes(word);
             const contentMatch = task.content && task.content.toLowerCase().includes(word);
@@ -508,8 +484,7 @@ export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     } else if (period && typeof period === 'object' && period.start && period.end) {
         periodStr = `custom_${startOfDay(new Date(period.start)).getTime()}_${endOfDay(new Date(period.end)).getTime()}`;
     } else {
-        // Handle cases where period might be an object but not the expected structure, or null/undefined
-        periodStr = 'invalid_period'; // Or some other default/error indicator
+        periodStr = 'invalid_period';
     }
     const listStr = list === 'all' ? 'all' : `list-${list}`;
     return `${periodStr}__${listStr}`;
@@ -572,7 +547,7 @@ export const filteredTasksForSummaryAtom = atom<Task[]>((get) => {
 export const relevantStoredSummariesAtom = atom<StoredSummary[]>((get) => {
     const allSummaries = get(storedSummariesAtom);
     const filterKey = get(currentSummaryFilterKeyAtom);
-    if (filterKey.startsWith('invalid_period')) return []; // Don't try to filter if period is bad
+    if (filterKey.startsWith('invalid_period')) return [];
     const [periodKey, listKey] = filterKey.split('__');
     return allSummaries.filter(s => s.periodKey === periodKey && s.listKey === listKey).sort((a, b) => b.createdAt - a.createdAt);
 });
