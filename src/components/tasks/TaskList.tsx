@@ -47,15 +47,15 @@ import {
 import {twMerge} from 'tailwind-merge';
 import {TaskItemMenuProvider} from '@/context/TaskItemMenuContext';
 import {IconName} from '../common/IconMap';
-import {analyzeTaskWithAI} from '@/services/aiService'; // <-- 新增AI服务导入
+import {analyzeTaskWithAI} from '@/services/aiService';
 
 const priorityMap: Record<number, {
     label: string;
     iconColor: string;
     bgColor: string;
     shortLabel: string;
-    borderColor?: string; // For input bar border
-    dotColor?: string; // For input bar dot
+    borderColor?: string;
+    dotColor?: string;
 }> = {
     1: {
         label: 'High Priority',
@@ -142,6 +142,15 @@ const getNewTaskMenuRadioItemListClasses = () => twMerge(
     "data-[disabled]:opacity-50"
 );
 
+// Helper function to get AI glow theme class
+const getAiGlowThemeClass = (priority: number | null): string => {
+    if (priority === 1) return 'ai-glow-theme-red';
+    if (priority === 2) return 'ai-glow-theme-yellow';
+    if (priority === 3) return 'ai-glow-theme-blue';
+    return 'ai-glow-theme-neutral'; // Default neutral glow
+};
+
+
 const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const allTasks = useAtomValue(tasksAtom);
     const setTasks = useSetAtom(tasksAtom);
@@ -167,10 +176,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const [isNewTaskMoreOptionsOpen, setIsNewTaskMoreOptionsOpen] = useState(false);
     const [dateTextWidth, setDateTextWidth] = useState(0);
 
-    // --- AI Task States ---
     const [isAiTaskInputVisible, setIsAiTaskInputVisible] = useState(false);
     const [isAiProcessing, setIsAiProcessing] = useState(false);
-    // --- End AI Task States ---
 
     const availableListsForNewTask = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
@@ -392,7 +399,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
         const now = Date.now();
         let newOrder: number;
-        const allCurrentTasks = allTasks; // get current tasks for order calculation
+        const allCurrentTasks = allTasks;
         const topTaskOrder = allCurrentTasks
             .filter(t => !t.completed && t.list !== 'Trash')
             .sort((a, b) => a.order - b.order)[0]?.order;
@@ -400,9 +407,9 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         if (typeof topTaskOrder === 'number' && isFinite(topTaskOrder)) {
             newOrder = topTaskOrder - 1000;
         } else {
-            newOrder = Date.now() - 1000; // Fallback if no tasks or no order
+            newOrder = Date.now() - 1000;
         }
-        if (!isFinite(newOrder)) { // Ensure finite number
+        if (!isFinite(newOrder)) {
             newOrder = Date.now();
             console.warn("NewTaskInput: Order calculation fallback (Date.now()).");
         }
@@ -430,7 +437,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks // Added allTasks dependency
+        setTasks, allTasks
     ]);
 
     const isRegularNewTaskModeAllowed = useMemo(() =>
@@ -438,25 +445,23 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         [currentFilterGlobal, isSearching]
     );
 
-    // --- AI Task Logic ---
     const toggleAiTaskInput = useCallback(() => {
-        if (isAiProcessing) return; // Prevent toggling while AI is processing
+        if (isAiProcessing) return;
         const nextState = !isAiTaskInputVisible;
         setIsAiTaskInputVisible(nextState);
-        if (nextState) { // If opening AI input
+        if (nextState) {
             setNewTaskTitle('');
             setNewTaskDueDate(null);
             setNewTaskPriority(null);
-            // Set default list for AI tasks
             if (currentFilterGlobal.startsWith('list-')) {
                 const listName = currentFilterGlobal.substring(5);
                 if (userLists.includes(listName) && listName !== 'Trash') {
                     setNewTaskListState(listName);
                 } else {
-                    setNewTaskListState('Inbox'); // Fallback if list from filter is invalid
+                    setNewTaskListState('Inbox');
                 }
             } else {
-                setNewTaskListState('Inbox'); // Default for 'all', 'today', etc.
+                setNewTaskListState('Inbox');
             }
             setTimeout(() => newTaskTitleInputRef.current?.focus(), 0);
         }
@@ -509,7 +514,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                     title: sub.title,
                     completed: false,
                     completedAt: null,
-                    // Ensure sub.dueDate is parsed correctly into a timestamp or null
                     dueDate: sub.dueDate ? (safeParseDate(sub.dueDate)?.getTime() ?? null) : null,
                     order: index,
                     createdAt: now,
@@ -518,25 +522,23 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             };
 
             setTasks(prev => [taskToAdd as Task, ...prev].sort((a, b) => a.order - b.order));
-            setNewTaskTitle(''); // Clear input after successful commit
+            setNewTaskTitle('');
             setNewTaskDueDate(null);
             setNewTaskPriority(null);
 
         } catch (error) {
             console.error("AI Task generation failed:", error);
-            // TODO: Show a user-friendly error notification (e.g., toast)
         } finally {
             setIsAiProcessing(false);
-            setIsAiTaskInputVisible(false); // Close AI input mode
-            if (isRegularNewTaskModeAllowed) { // If regular input is allowed, focus it
+            setIsAiTaskInputVisible(false);
+            if (isRegularNewTaskModeAllowed) {
                 setTimeout(() => newTaskTitleInputRef.current?.focus(), 0);
             }
         }
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed // Added dependencies
+        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed
     ]);
-    // --- End AI Task Logic ---
 
 
     const handleBulkRescheduleDateSelect = useCallback((date: Date | undefined) => {
@@ -603,12 +605,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         "bg-white dark:bg-neutral-800"
     ), []);
 
-    // Determine if the input section (for regular or AI task) should be shown
     const shouldShowInputSection = useMemo(() =>
             isRegularNewTaskModeAllowed || isAiTaskInputVisible,
         [isRegularNewTaskModeAllowed, isAiTaskInputVisible]
     );
-    // If the section is shown, is it in AI mode?
     const isCurrentlyAiMode = isAiTaskInputVisible;
 
     const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
@@ -621,28 +621,58 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
-    const newTaskInputWrapperClass = useMemo(() => twMerge(
-        "group relative flex items-center w-full h-[32px]",
-        "bg-grey-ultra-light dark:bg-neutral-700/60",
-        "rounded-base",
-        "transition-all duration-150 ease-in-out",
-        "border border-transparent dark:border-transparent",
-        newTaskPriority && priorityMap[newTaskPriority]?.dotColor ? `${priorityMap[newTaskPriority]?.borderColor}` : "border-transparent",
-        isCurrentlyAiMode && isAiProcessing && "opacity-70" // Visual cue for processing
-    ), [newTaskPriority, isCurrentlyAiMode, isAiProcessing]);
+    const newTaskInputWrapperClass = useMemo(() => {
+        const baseWrapperClasses = "group relative flex items-center w-full h-[32px] rounded-base transition-all duration-150 ease-in-out";
+
+        if (isCurrentlyAiMode) {
+            if (isAiProcessing) {
+                // AI Processing: subdued appearance, no glow
+                return twMerge(
+                    baseWrapperClasses,
+                    "bg-grey-ultra-light dark:bg-neutral-700/60", // Fallback background
+                    "opacity-70" // General subdued look
+                );
+            }
+            // AI Mode Active, Not Processing: Apply glow
+            return twMerge(
+                baseWrapperClasses,
+                "ai-glow-anim-border animate-border-flow", // Core glow and animation classes
+                getAiGlowThemeClass(newTaskPriority) // Theme-specific gradient
+            );
+        } else {
+            // Regular Mode: Original logic with priority border
+            return twMerge(
+                baseWrapperClasses,
+                "bg-grey-ultra-light dark:bg-neutral-700/60",
+                "border border-transparent dark:border-transparent", // Default transparent border
+                newTaskPriority && priorityMap[newTaskPriority]?.borderColor
+                    ? priorityMap[newTaskPriority].borderColor // Apply priority color border
+                    : "border-transparent" // Ensure transparent if no priority
+            );
+        }
+    }, [newTaskPriority, isCurrentlyAiMode, isAiProcessing]);
 
     const inputPaddingLeft = useMemo(() => {
-        const basePadding = 32;
-        const dateTextPadding = dateTextWidth > 0 ? dateTextWidth + 8 + 4 : 0;
+        const basePadding = 32; // Space for calendar icon
+        const dateTextPadding = dateTextWidth > 0 ? dateTextWidth + 8 + 4 : 0; // Space for date text
         return basePadding + dateTextPadding;
     }, [dateTextWidth]);
 
+    const newTaskInputClass = useMemo(() => {
+        const baseClasses = "w-full h-full pr-7 text-[13px] font-light outline-none border-none text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70";
 
-    const newTaskInputClass = useMemo(() => twMerge(
-        "w-full h-full pr-7 text-[13px] font-light",
-        "bg-transparent border-none outline-none",
-        "text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70"
-    ), []);
+        if (isCurrentlyAiMode) {
+            if (isAiProcessing) {
+                // AI Processing: Match wrapper's subdued background, inner rounding
+                return twMerge(baseClasses, "bg-grey-ultra-light dark:bg-neutral-700/60 rounded-4px");
+            }
+            // AI Mode Active, Not Processing: Solid background for contrast with glow, inner rounding
+            return twMerge(baseClasses, "bg-white dark:bg-neutral-800 rounded-4px");
+        }
+        // Regular Mode: Transparent background, wrapper provides visual shape
+        return twMerge(baseClasses, "bg-transparent");
+    }, [isCurrentlyAiMode, isAiProcessing]);
+
 
     const clearDate = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -658,33 +688,41 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     return (
         <TaskItemMenuProvider>
-            <div
-                className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden relative">
+            <div className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden relative">
                 <div className={headerClass}>
                     <h1 className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate pr-2"
                         title={pageTitle}>{pageTitle}</h1>
-                    <Button
-                        variant="ghost"
-                        size="icon" // Using size="icon" for a compact base, then customizing padding/size.
-                        onClick={toggleAiTaskInput}
-                        className={twMerge(
-                            "text-grey-medium dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light focus-visible:text-primary dark:focus-visible:text-primary-light",
-                            "ml-2 flex-shrink-0 h-7 w-auto px-2 py-1 rounded-base flex items-center", // Custom classes for size and padding
-                            (isAiProcessing) && "opacity-50 cursor-not-allowed"
-                        )}
-                        title="Add task with AI"
-                        aria-expanded={isAiTaskInputVisible}
-                        disabled={isAiProcessing}
-                    >
-                        {isAiProcessing ? (
-                            <Icon name="loader" size={14} strokeWidth={1.5} className="mr-1 animate-spin"/>
-                        ) : (
-                            <Icon name="sparkles" size={14} strokeWidth={1.5} className="mr-1"/>
-                        )}
-                        <span className="text-[11px] font-medium">
-                            {isAiProcessing ? "Processing..." : "AI Task"}
-                        </span>
-                    </Button>
+                    <div className={twMerge(
+                        "relative flex-shrink-0 ml-2 rounded-base", // Wrapper for AI Task Button, applies border-radius
+                        isCurrentlyAiMode && !isAiProcessing && "ai-glow-anim-border animate-border-flow",
+                        isCurrentlyAiMode && !isAiProcessing && getAiGlowThemeClass(newTaskPriority),
+                        isAiProcessing && "opacity-50 cursor-not-allowed" // Subdue wrapper when processing
+                    )}>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleAiTaskInput}
+                            className={twMerge(
+                                "text-grey-medium dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light focus-visible:text-primary dark:focus-visible:text-primary-light",
+                                "h-7 w-auto px-2 py-1 flex items-center", // Base button styles
+                                (isCurrentlyAiMode && !isAiProcessing) ? "rounded-4px" : "rounded-base", // Inner radius if glowing, else full
+                                "bg-white dark:bg-neutral-800", // Solid background for the button content
+                                "relative z-[1]" // Ensure button content is above wrapper's pseudo-elements
+                            )}
+                            title="Add task with AI"
+                            aria-expanded={isAiTaskInputVisible}
+                            disabled={isAiProcessing} // Standard disabled handling for the button itself
+                        >
+                            {isAiProcessing ? (
+                                <Icon name="loader" size={14} strokeWidth={1.5} className="mr-1 animate-spin"/>
+                            ) : (
+                                <Icon name="sparkles" size={14} strokeWidth={1.5} className="mr-1"/>
+                            )}
+                            <span className="text-[11px] font-medium">
+                                {isAiProcessing ? "Processing..." : "AI Task"}
+                            </span>
+                        </Button>
+                    </div>
                 </div>
 
                 {shouldShowInputSection && (
@@ -704,7 +742,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                     (isCurrentlyAiMode && isAiProcessing) && "opacity-50 cursor-not-allowed"
                                                 )}
                                                 aria-label="Set due date"
-                                                disabled={isCurrentlyAiMode && isAiProcessing}
+                                                disabled={(isCurrentlyAiMode && isAiProcessing) || isAiProcessing} // Also disable if AI processing in general
                                             >
                                                 <Icon name="calendar" size={16} strokeWidth={1.5}/>
                                             </button>
@@ -717,7 +755,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
                                                 onCloseAutoFocus={(e) => {
                                                     e.preventDefault();
-                                                    if (!(isCurrentlyAiMode && isAiProcessing)) {
+                                                    if (!((isCurrentlyAiMode && isAiProcessing) || isAiProcessing)) {
                                                         newTaskTitleInputRef.current?.focus();
                                                     }
                                                 }}
@@ -760,21 +798,21 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                             if (isCurrentlyAiMode) {
                                                 setIsAiTaskInputVisible(false);
                                             } else {
-                                                setNewTaskTitle(''); // Clear input on Escape for regular mode
+                                                setNewTaskTitle('');
                                             }
                                         }
                                     }}
                                     placeholder={isCurrentlyAiMode ? `Describe task for AI (e.g., "Plan a team building event next month")` : `Add task to "${newTaskListState}"`}
                                     className={newTaskInputClass}
                                     style={{paddingLeft: `${inputPaddingLeft}px`}}
-                                    disabled={isCurrentlyAiMode && isAiProcessing}
+                                    disabled={(isCurrentlyAiMode && isAiProcessing) || isAiProcessing}
                                 />
 
                                 <div
                                     className={twMerge(
                                         "absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-150",
                                         "opacity-0 group-focus-within:opacity-100 pointer-events-none group-focus-within:pointer-events-auto",
-                                        (isCurrentlyAiMode && isAiProcessing) && "!opacity-50 !pointer-events-none" // Force disable appearance
+                                        ((isCurrentlyAiMode && isAiProcessing) || isAiProcessing) && "!opacity-50 !pointer-events-none"
                                     )}
                                 >
                                     <DropdownMenu.Root open={isNewTaskMoreOptionsOpen}
@@ -784,7 +822,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                 type="button"
                                                 className="flex items-center justify-center w-7 h-7 rounded-r-base hover:bg-grey-light dark:hover:bg-neutral-600 text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-primary"
                                                 aria-label="More task options"
-                                                disabled={isCurrentlyAiMode && isAiProcessing}
+                                                disabled={(isCurrentlyAiMode && isAiProcessing) || isAiProcessing}
                                             >
                                                 <Icon name="chevron-down" size={16} strokeWidth={1.5}/>
                                             </button>
@@ -796,7 +834,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                 align="end"
                                                 onCloseAutoFocus={(e) => {
                                                     e.preventDefault();
-                                                    if (!(isCurrentlyAiMode && isAiProcessing)) {
+                                                    if (!((isCurrentlyAiMode && isAiProcessing) || isAiProcessing)) {
                                                         newTaskTitleInputRef.current?.focus();
                                                     }
                                                 }}
@@ -910,7 +948,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                         size={32} strokeWidth={1}
                                         className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/>
                                     <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-300">{emptyStateTitle}</p>
-                                    {(isRegularNewTaskModeAllowed && !isCurrentlyAiMode) && ( // Show prompt only if regular input is relevant
+                                    {(isRegularNewTaskModeAllowed && !isCurrentlyAiMode) && (
                                         <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">Use
                                             the input bar
                                             above to add a new task.</p>)}

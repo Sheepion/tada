@@ -1,4 +1,4 @@
-/* src/styles/index.css - 方案8: 珊瑚 (Corrected) */
+/* src/styles/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -46,6 +46,12 @@
 
         /* CORRECTED: Define transition timing function variable */
         --timing-app-ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+        /* AI Glow Gradients (Updated for richer palettes) */
+        --ai-glow-gradient-red: linear-gradient(90deg, #F25EA6, #E34C45, #F76F33, #F2881C, #F25EA6);
+        --ai-glow-gradient-yellow: linear-gradient(90deg, #F78C33, #F6AD55, #FFDB1A, #A3CC33, #F78C33);
+        --ai-glow-gradient-blue: linear-gradient(90deg, #4ADCF2, #63B3ED, #738AF2, #9C6BF7, #4ADCF2);
+        --ai-glow-gradient-neutral: linear-gradient(90deg, #ADC9F5, #CDE5EF, #D2BDEF, #F7D9E0, #ADC9F5);
     }
 
     body {
@@ -71,7 +77,6 @@
         outline: none !important;
     }
 
-    /* CORRECTED: Removed problematic Radix transform-origin rule */
     .styled-scrollbar::-webkit-scrollbar, .styled-scrollbar-thin::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -140,5 +145,51 @@
         transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
         transition-timing-function: var(--timing-app-ease-out);
         transition-duration: 150ms;
+    }
+}
+
+@layer components {
+    .ai-glow-anim-border {
+        position: relative;
+        padding: 2px; /* This padding acts as the visible border thickness */
+        border-radius: inherit; /* Inherits border-radius from the element it's applied to (e.g., rounded-base) */
+        background-clip: padding-box; /* Ensures background (gradient) is clipped to padding box */
+        background-size: 300% 100%; /* For the flowing animation, matches example */
+        z-index: 0; /* Establishes a stacking context */
+        /* The 'animate-border-flow' class from Tailwind will apply the actual animation property */
+    }
+
+    .ai-glow-anim-border::before {
+        content: "";
+        position: absolute;
+        /* Adjusted for a tighter glow */
+        top: -2px; /* Controls how far the glow source extends */
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: inherit; /* Inherits the animated gradient from the parent */
+        background-size: inherit; /* Inherits background-size for consistent animation */
+        border-radius: inherit; /* Glow shape matches the parent's border-radius */
+        z-index: -1; /* Positioned behind the parent's content */
+        /* Adjusted blur and opacity for a more subtle effect */
+        filter: blur(5px);
+        opacity: 0.75;
+        transform: translateZ(0); /* May improve rendering performance by promoting to a new layer */
+    }
+
+    .ai-glow-theme-red {
+        background-image: var(--ai-glow-gradient-red);
+    }
+
+    .ai-glow-theme-yellow {
+        background-image: var(--ai-glow-gradient-yellow);
+    }
+
+    .ai-glow-theme-blue {
+        background-image: var(--ai-glow-gradient-blue);
+    }
+
+    .ai-glow-theme-neutral {
+        background-image: var(--ai-glow-gradient-neutral);
     }
 }

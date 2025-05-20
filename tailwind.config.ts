@@ -37,6 +37,7 @@ export default {
                 'base': 'var(--border-radius-base)',
                 'lg': 'var(--border-radius-large)',
                 'full': 'var(--border-radius-full)',
+                '4px': '4px', // Added for precise inner rounding
             },
             boxShadow: {
                 'interactive': 'var(--shadow-interactive)',
@@ -82,6 +83,11 @@ export default {
                     '0%': {opacity: '1', transform: 'scale(1)'},
                     '100%': {opacity: '0', transform: 'scale(0.95)'},
                 },
+                // Added for AI Glow Border
+                borderAnimation: {
+                    '0%': {backgroundPosition: '0% 0%'},
+                    '100%': {backgroundPosition: '300% 0%'},
+                },
             },
             animation: {
                 fadeIn: 'fadeIn 0.15s ease-out',
@@ -92,6 +98,8 @@ export default {
                 popoverHide: 'scaleOut 0.1s ease-in',
                 dropdownShow: 'scaleIn 0.1s ease-out',
                 dropdownHide: 'scaleOut 0.1s ease-in',
+                // Added for AI Glow Border
+                'border-flow': 'borderAnimation 4s linear infinite',
             },
             transitionTimingFunction: { // This defines Tailwind utility classes like `ease-app-ease-out`
                 'app-ease-in-out': 'cubic-bezier(0.4, 0, 0.2, 1)',
