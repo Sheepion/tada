@@ -791,6 +791,9 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                     value={newTaskTitle}
                                     onChange={(e) => setNewTaskTitle(e.target.value)}
                                     onKeyDown={(e) => {
+                                        if (e.nativeEvent.isComposing) {
+                                            return;
+                                        }
                                         if (e.key === 'Enter' && newTaskTitle.trim()) {
                                             isCurrentlyAiMode ? handleAiTaskCommit() : commitNewTask();
                                         }

@@ -1050,7 +1050,7 @@ const TaskDetail: React.FC = () => {
                                                     <button
                                                         type="button"
                                                         className={twMerge(
-                                                            "flex items-center justify-center w-7 h-7 rounded-l-base hover:bg-grey-light focus:outline-none",
+                                                            "flex items-center justify-center w-6 h-6 rounded-l-base",
                                                             "dark:hover:bg-neutral-600",
                                                             newSubtaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
                                                         )}
@@ -1069,8 +1069,6 @@ const TaskDetail: React.FC = () => {
                                                             e.preventDefault();
                                                             newSubtaskInputRef.current?.focus();
                                                         }}
-                                                        // For this specific popover, default Radix close-on-blur is likely fine.
-                                                        // If it also needs to be sticky, add onFocusOutside={(e)=>e.preventDefault()}
                                                     >
                                                         <CustomDatePickerContent
                                                             initialDate={newSubtaskDueDate}
@@ -1099,6 +1097,9 @@ const TaskDetail: React.FC = () => {
                                             ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
                                             onChange={(e) => setNewSubtaskTitle(e.target.value)}
                                             onKeyDown={(e) => {
+                                                if (e.nativeEvent.isComposing) {
+                                                    return;
+                                                }
                                                 if (e.key === 'Enter' && newSubtaskTitle.trim()) handleAddSubtask();
                                                 if (e.key === 'Escape') {
                                                     setNewSubtaskTitle('');
