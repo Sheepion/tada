@@ -1,7 +1,7 @@
+// src/components/common/AddTagsPopoverContent.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtomValue} from 'jotai';
 import {userTagNamesAtom} from '@/store/atoms';
-import Button from './Button';
 import Icon from './Icon';
 import {twMerge} from 'tailwind-merge';
 import useDebounce from "@/hooks/useDebounce";
@@ -25,20 +25,32 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
     const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(initialTags));
     const inputRef = useRef<HTMLInputElement>(null);
     const listContainerRef = useRef<HTMLDivElement>(null);
+    const isInitialMountOrTaskChangeRef = useRef(true);
 
+    // Effect to reset state and focus when initialTags or taskId changes (popover opens/task context changes)
     useEffect(() => {
         setSelectedTags(new Set(initialTags));
         setInputValue('');
-        if (taskId) {
-            const timer = setTimeout(() => inputRef.current?.focus(), 50);
+        isInitialMountOrTaskChangeRef.current = true; // Signal that the next selectedTags change is due to initialization
+
+        if (taskId) { // taskId implies the popover should be active and focused
+            const timer = setTimeout(() => inputRef.current?.focus(), 50); // Slight delay for focus
             return () => clearTimeout(timer);
         }
     }, [initialTags, taskId]);
 
-    const handleApplyTags = useCallback(() => {
+    // Effect to auto-apply changes when selectedTags are modified by the user
+    useEffect(() => {
+        if (isInitialMountOrTaskChangeRef.current) {
+            isInitialMountOrTaskChangeRef.current = false; // Consume the flag after initial setup
+            return; // Don't apply on the initial set from props or task change
+        }
+
+        // This will run for any subsequent user-driven changes to selectedTags
         onApply(Array.from(selectedTags).sort((a, b) => a.localeCompare(b)));
-        closePopover();
-    }, [selectedTags, onApply, closePopover]);
+
+    }, [selectedTags, onApply]);
+
 
     const toggleTagInList = useCallback((tag: string) => {
         setSelectedTags(prev => {
@@ -65,9 +77,13 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
     const createNewTag = useCallback(() => {
         const newTag = inputValue.trim();
         if (newTag && !allUserTags.some(t => t.toLowerCase() === newTag.toLowerCase()) && !selectedTags.has(newTag)) {
-            setSelectedTags(prev => new Set(prev).add(newTag));
+            setSelectedTags(prev => {
+                const newSet = new Set(prev);
+                newSet.add(newTag);
+                return newSet;
+            });
             setInputValue('');
-            setTimeout(() => {
+            setTimeout(() => { // Ensure DOM update before scrolling
                 if (listContainerRef.current) {
                     listContainerRef.current.scrollTop = listContainerRef.current.scrollHeight;
                 }
@@ -82,9 +98,9 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
             .sort((a, b) => {
                 const aSelected = selectedTags.has(a);
                 const bSelected = selectedTags.has(b);
-                if (aSelected && !bSelected) return -1;
+                if (aSelected && !bSelected) return -1; // Selected tags first
                 if (!aSelected && bSelected) return 1;
-                return a.localeCompare(b);
+                return a.localeCompare(b); // Then sort alphabetically
             });
     }, [allUserTags, debouncedInputForFiltering, selectedTags]);
 
@@ -100,18 +116,18 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
             className={twMerge(
                 "flex flex-col w-[250px] select-none",
                 "bg-white dark:bg-neutral-800",
-                "border border-grey-light dark:border-neutral-700", // Main popover border
+                "border border-grey-light dark:border-neutral-700",
                 "rounded-base shadow-popover"
             )}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing parent popovers
         >
             {/* Input Section Wrapper */}
             <div className="p-2">
                 <div
                     className={twMerge(
                         "flex flex-wrap items-center gap-1.5 p-1.5 rounded-base min-h-[36px]",
-                        "bg-grey-ultra-light dark:bg-neutral-750"
-                        // No border for the input area itself
+                        "bg-grey-ultra-light dark:bg-neutral-750",
+                        "cursor-text" // Make the whole area feel like a text input
                     )}
                     onClick={() => inputRef.current?.focus()}
                 >
@@ -126,7 +142,10 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                             {tag}
                             <button
                                 type="button"
-                                onClick={() => removeTagPill(tag)}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent focusing input when removing pill
+                                    removeTagPill(tag);
+                                }}
                                 className={twMerge(
                                     "ml-1.5 -mr-0.5 p-0.5 rounded-full flex items-center justify-center",
                                     "text-primary/70 hover:text-error dark:text-primary-light/70 dark:hover:text-red-400",
@@ -155,20 +174,23 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                                 if (canCreateCurrentInput) {
                                     createNewTag();
                                 } else if (inputValue.trim()) {
+                                    // If input matches an existing tag not yet selected, select it
                                     const existingTag = allUserTags.find(t => t.toLowerCase() === inputValue.trim().toLowerCase());
                                     if (existingTag && !selectedTags.has(existingTag)) {
                                         toggleTagInList(existingTag);
-                                        setInputValue('');
+                                        setInputValue(''); // Clear input after selecting
                                     } else if (existingTag && selectedTags.has(existingTag)) {
-                                        setInputValue('');
+                                        setInputValue(''); // Clear input if already selected
                                     }
                                 }
                             }
                             if (e.key === 'Backspace' && inputValue === '' && selectedTags.size > 0) {
+                                e.preventDefault();
                                 const lastTag = Array.from(selectedTags).sort((a, b) => a.localeCompare(b)).pop();
                                 if (lastTag) removeTagPill(lastTag);
                             }
                             if (e.key === 'Escape') {
+                                e.preventDefault();
                                 closePopover();
                             }
                         }}
@@ -177,7 +199,7 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
             </div>
 
             {/* Divider between Input and List */}
-            <div className="px-2"> {/* This padding makes the divider inset */}
+            <div className="px-2">
                 <div className="h-px bg-grey-light/70 dark:bg-neutral-700/50"></div>
             </div>
 
@@ -241,35 +263,16 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                     </p>
                 ))}
                 {availableTagsToDisplay.length === 0 && !canCreateCurrentInput && !inputValue.trim() && (
-                    <p className="px-1.5 py-4 text-center text-[11px] text-grey-medium dark:text-neutral-400 italic">
-                        No tags available. Type to create a new one.
-                    </p>
+                    allUserTags.length === 0 ? (
+                        <p className="px-1.5 py-4 text-center text-[11px] text-grey-medium dark:text-neutral-400 italic">
+                            No tags created yet. Type to add a new one.
+                        </p>
+                    ) : (
+                        <p className="px-1.5 py-4 text-center text-[11px] text-grey-medium dark:text-neutral-400 italic">
+                            All tags are selected or type to create.
+                        </p>
+                    )
                 )}
-            </div>
-
-            {/* Divider between List and Footer */}
-            <div className="px-2"> {/* This padding makes the divider inset */}
-                <div className="h-px bg-grey-light/70 dark:bg-neutral-700/50"></div>
-            </div>
-
-            {/* Footer Section */}
-            <div className="p-2 flex justify-end space-x-2">
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={closePopover}
-                    className="!text-[12px] h-[32px]"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleApplyTags}
-                    className="!text-[12px] h-[32px]"
-                >
-                    Apply
-                </Button>
             </div>
         </div>
     );

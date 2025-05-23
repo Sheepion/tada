@@ -220,9 +220,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const {openItemId, setOpenItemId} = useTaskItemMenu();
 
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
-    const [isDatePickerPopoverOpen, setIsDatePickerPopoverOpen] = useState(false);
-    const [isDateClickPickerOpen, setIsDateClickPickerOpen] = useState(false);
-    const [isTagsPopoverOpen, setIsTagsPopoverOpen] = useState(false);
+    const [isDatePickerPopoverOpen, setIsDatePickerPopoverOpen] = useState(false); // For menu's date picker
+    const [isDateClickPickerOpen, setIsDateClickPickerOpen] = useState(false); // For item's direct date click
+    const [isTagsPopoverOpen, setIsTagsPopoverOpen] = useState(false); // For menu's tags popover
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const moreActionsButtonRef = useRef<HTMLButtonElement>(null);
@@ -277,9 +277,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     useEffect(() => {
         if (openItemId !== task.id) {
             setIsMoreActionsOpen(false);
-            setIsDatePickerPopoverOpen(false);
-            setIsDateClickPickerOpen(false);
-            setIsTagsPopoverOpen(false);
+            setIsDatePickerPopoverOpen(false); // Menu date picker
+            setIsDateClickPickerOpen(false);  // Item direct date picker
+            setIsTagsPopoverOpen(false);      // Menu tags popover
         }
     }, [openItemId, task.id]);
 
@@ -295,7 +295,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         if (target.closest('button, input, a, [data-radix-popper-content-wrapper], [role="dialog"], [role="menuitem"], [data-date-picker-trigger="true"], [data-tooltip-trigger]')) return;
         if (isDragging) return;
         setSelectedTaskId(id => (id === task.id ? null : task.id));
-        setOpenItemId(null);
+        setOpenItemId(null); // Close any open menus/popovers for this item
     }, [setSelectedTaskId, task.id, isDragging, setOpenItemId]);
 
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks' | 'id' | 'createdAt'>>) => {
@@ -308,7 +308,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         let nextPercentage: number | null = currentPercentage === 100 ? null : 100;
         updateTask({completionPercentage: nextPercentage});
         if (nextPercentage === 100 && isSelected) setSelectedTaskId(null);
-        setOpenItemId(null);
+        setOpenItemId(null); // Close any open menus upon action
     }, [task.completionPercentage, updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
 
     const handleProgressIndicatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -321,87 +321,96 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
         if (newPercentage === 100 && isSelected) setSelectedTaskId(null);
-        setIsMoreActionsOpen(false);
-    }, [updateTask, isSelected, setSelectedTaskId]);
+        setIsMoreActionsOpen(false); // Close main menu
+        setOpenItemId(null);
+    }, [updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
 
-    const handleDateSelect = useCallback((dateWithTime: Date | undefined) => {
+    const handleDateSelect = useCallback((dateWithTime: Date | undefined) => { // For menu's date picker
         const newDueDate = dateWithTime ? dateWithTime.getTime() : null;
         updateTask({dueDate: newDueDate});
+        // Closing logic is handled by the popover's own close function or onOpenChange
     }, [updateTask]);
 
-    const handleTagsApply = useCallback((newTags: string[]) => {
+    const handleTagsApply = useCallback((newTags: string[]) => { // For menu's tags popover
         updateTask({tags: newTags});
-        setIsTagsPopoverOpen(false);
+        // Closing logic is handled by the popover's own close function or onOpenChange
     }, [updateTask]);
 
     const handleMoreActionsOpenChange = useCallback((open: boolean) => {
         setIsMoreActionsOpen(open);
         if (open) {
             setOpenItemId(task.id);
+            // Ensure other popovers are closed if main menu opens fresh
             setIsDatePickerPopoverOpen(false);
             setIsTagsPopoverOpen(false);
-            setIsDateClickPickerOpen(false);
+            setIsDateClickPickerOpen(false); // Also item's direct date picker
         } else {
+            // If main menu closes, ensure its sub-popovers also close
             setIsDatePickerPopoverOpen(false);
             setIsTagsPopoverOpen(false);
-            if (openItemId === task.id) setOpenItemId(null);
+            if (openItemId === task.id) { // Only clear if this item was the one with open menu
+                // setOpenItemId(null); // This is handled by the useEffect for all popovers closing
+            }
         }
     }, [task.id, setOpenItemId, openItemId]);
 
 
     const handleMenuSubPopoverOpenChange = useCallback((open: boolean, type: 'date' | 'tags') => {
         if (open) {
-            setOpenItemId(task.id);
+            setOpenItemId(task.id); // Ensure this item is marked as active
             if (type === 'date') {
                 setIsDatePickerPopoverOpen(true);
-                setIsTagsPopoverOpen(false);
+                setIsTagsPopoverOpen(false); // Close other popover
             } else if (type === 'tags') {
                 setIsTagsPopoverOpen(true);
-                setIsDatePickerPopoverOpen(false);
+                setIsDatePickerPopoverOpen(false); // Close other popover
             }
+            setIsMoreActionsOpen(true); // Keep main menu open
         } else {
+            // This is called when the popover itself requests to close
             if (type === 'date') setIsDatePickerPopoverOpen(false);
             if (type === 'tags') setIsTagsPopoverOpen(false);
+            // Main menu remains open unless closed by other means or all its popovers close
         }
-        // If the sub-popover is opening, ensure the main menu stays open.
-        // If it's closing, Radix will handle the main menu unless we prevent it in onCloseAutoFocus.
-        if (open) setIsMoreActionsOpen(true);
-
     }, [task.id, setOpenItemId]);
 
 
-    const handleDateClickPickerOpenChange = useCallback((open: boolean) => {
+    const handleDateClickPickerOpenChange = useCallback((open: boolean) => { // For item's direct date click
         setIsDateClickPickerOpen(open);
         if (open) {
             setOpenItemId(task.id);
+            // Close other menu-related things if this direct picker opens
             setIsMoreActionsOpen(false);
             setIsDatePickerPopoverOpen(false);
             setIsTagsPopoverOpen(false);
         }
+        // No need to manage openItemId on close here, useEffect will handle it
     }, [task.id, setOpenItemId]);
 
-    const closeMenuDatePickerPopover = useCallback(() => {
+    const closeMenuDatePickerPopover = useCallback(() => { // For menu's date picker
         handleMenuSubPopoverOpenChange(false, 'date');
     }, [handleMenuSubPopoverOpenChange]);
 
-    const closeTagsPopover = useCallback(() => {
+    const closeTagsPopover = useCallback(() => { // For menu's tags popover
         handleMenuSubPopoverOpenChange(false, 'tags');
     }, [handleMenuSubPopoverOpenChange]);
 
-    const closeDateClickPopover = useCallback(() => {
+    const closeDateClickPopover = useCallback(() => { // For item's direct date click
         handleDateClickPickerOpenChange(false);
         dateDisplayRef.current?.focus();
     }, [handleDateClickPickerOpenChange]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => {
         updateTask({priority: newPriority});
-        setIsMoreActionsOpen(false);
-    }, [updateTask]);
+        setIsMoreActionsOpen(false); // Close main menu
+        setOpenItemId(null);
+    }, [updateTask, setOpenItemId]);
 
     const handleListChange = useCallback((newList: string) => {
         updateTask({list: newList});
-        setIsMoreActionsOpen(false);
-    }, [updateTask]);
+        setIsMoreActionsOpen(false); // Close main menu
+        setOpenItemId(null);
+    }, [updateTask, setOpenItemId]);
 
     const handleDuplicateTask = useCallback(() => {
         const now = Date.now();
@@ -442,8 +451,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             return newTasks.sort((a, b) => a.order - b.order);
         });
         setSelectedTaskId(newParentTaskId);
-        setIsMoreActionsOpen(false);
-    }, [task, setTasks, setSelectedTaskId]);
+        setIsMoreActionsOpen(false); // Close main menu
+        setOpenItemId(null);
+    }, [task, setTasks, setSelectedTaskId, setOpenItemId]);
 
     const openDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(true), []);
     const closeDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(false), []);
@@ -451,8 +461,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         updateTask({list: 'Trash', completionPercentage: null});
         if (isSelected) setSelectedTaskId(null);
         closeDeleteConfirm();
-        setIsMoreActionsOpen(false);
-    }, [updateTask, isSelected, setSelectedTaskId, closeDeleteConfirm]);
+        setIsMoreActionsOpen(false); // Close main menu
+        setOpenItemId(null);
+    }, [updateTask, isSelected, setSelectedTaskId, closeDeleteConfirm, setOpenItemId]);
 
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const isValidDueDate = useMemo(() => dueDate && isValid(dueDate), [dueDate]);
@@ -702,7 +713,11 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                                          dateDisplayRef.current?.focus();
                                                                      }}>
                                         <CustomDatePickerContent
-                                            initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
+                                            initialDate={dueDate ?? undefined}
+                                            onSelect={(date) => { // For item's direct date click
+                                                updateTask({dueDate: date ? date.getTime() : null});
+                                                closeDateClickPopover();
+                                            }}
                                             closePopover={closeDateClickPopover}/>
                                     </Popover.Content></Popover.Portal>)}
                             </Popover.Root>
@@ -777,6 +792,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     sideOffset={4}
                                     align="end"
                                     onCloseAutoFocus={(e) => {
+                                        // If a sub-popover (date/tag) is open, prevent focus shift to main trigger
                                         if (isDatePickerPopoverOpen || isTagsPopoverOpen) {
                                             e.preventDefault();
                                         } else if (moreActionsButtonRef.current) {
@@ -785,10 +801,11 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     }}
                                     onInteractOutside={(e) => {
                                         const target = e.target as HTMLElement;
-                                        // Check if the interaction target is within any of our controlled popovers
+                                        // If interaction is within a date/tag popover, prevent main dropdown from closing
                                         if (target.closest('[data-radix-popper-content-wrapper]') && (isDatePickerPopoverOpen || isTagsPopoverOpen)) {
                                             e.preventDefault();
                                         }
+                                        // If interaction is outside, main dropdown closes, and onOpenChange handles sub-popovers.
                                     }}
                                 >
                                     <div
@@ -872,7 +889,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                             <TaskItemRadixMenuItem
                                                 icon="tag"
                                                 onSelect={(event) => {
-                                                    event.preventDefault();
+                                                    event.preventDefault(); // Prevent menu closing
                                                     handleMenuSubPopoverOpenChange(true, 'tags');
                                                 }}
                                                 disabled={!isInteractive}
@@ -883,10 +900,8 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                 side="right" align="start" sideOffset={5}
                                                 className={twMerge(popoverContentWrapperClasses, "p-0")}
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                onCloseAutoFocus={(e) => {
-                                                    e.preventDefault(); /* Do not shift focus here */
-                                                }}
-                                                onInteractOutside={(e) => e.preventDefault()} // Prevent closing from scroll/clicks outside this specific popover
+                                                onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus shift when this popover closes
+                                                onFocusOutside={(e) => e.preventDefault()} // Keep popover open on outside focus if not interactive
                                             >
                                                 <AddTagsPopoverContent
                                                     taskId={task.id}
@@ -904,7 +919,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                             <TaskItemRadixMenuItem
                                                 icon="calendar-plus"
                                                 onSelect={(event) => {
-                                                    event.preventDefault();
+                                                    event.preventDefault(); // Prevent menu closing
                                                     handleMenuSubPopoverOpenChange(true, 'date');
                                                 }}
                                                 disabled={!isInteractive}
@@ -915,13 +930,15 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                 side="right" align="start" sideOffset={5}
                                                 className={twMerge(popoverContentWrapperClasses, "p-0")}
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                onCloseAutoFocus={(e) => {
-                                                    e.preventDefault(); /* Do not shift focus here */
-                                                }}
-                                                onInteractOutside={(e) => e.preventDefault()} // Prevent closing from scroll
+                                                onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus shift when this popover closes
+                                                onFocusOutside={(e) => e.preventDefault()} // Keep popover open on outside focus if not interactive
                                             >
                                                 <CustomDatePickerContent
-                                                    initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
+                                                    initialDate={dueDate ?? undefined}
+                                                    onSelect={(date) => {
+                                                        handleDateSelect(date);
+                                                        closeMenuDatePickerPopover();
+                                                    }}
                                                     closePopover={closeMenuDatePickerPopover}/>
                                             </Popover.Content>
                                         </Popover.Portal>
@@ -930,7 +947,16 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     <DropdownMenu.Sub>
                                         <DropdownMenu.SubTrigger
                                             className={getTaskItemMenuSubTriggerStyle()}
-                                            disabled={!isInteractive}>
+                                            disabled={!isInteractive}
+                                            onPointerEnter={() => {
+                                                if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
+                                                if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
+                                            }}
+                                            onFocus={() => {
+                                                if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
+                                                if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
+                                            }}
+                                        >
                                             <Icon name="folder" size={14} strokeWidth={1.5}
                                                   className="mr-2 flex-shrink-0 opacity-80"/>
                                             Move to List
