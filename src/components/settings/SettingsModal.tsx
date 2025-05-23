@@ -284,15 +284,6 @@ const AppearanceSettings: React.FC = memo(() => {
         }
     };
 
-    const handleBgBlurChange = (e: React.ChangeEvent<HTMLInputElement>) => setAppearance(s => ({
-        ...s,
-        backgroundImageBlur: parseInt(e.target.value, 10)
-    }));
-    const handleBgBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => setAppearance(s => ({
-        ...s,
-        backgroundImageBrightness: parseInt(e.target.value, 10)
-    }));
-
     useEffect(() => {
         if (!PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === appearance.backgroundImageUrl) && appearance.backgroundImageUrl !== 'none') {
             setCustomBgUrl(appearance.backgroundImageUrl);
@@ -357,40 +348,6 @@ const AppearanceSettings: React.FC = memo(() => {
                         URL</Button>
                 </div>
             </div>
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-
-            <SettingsRow label="Background Brightness" description="Adjust background image visibility."
-                         htmlFor="bgBrightnessRange">
-                <div className="flex items-center space-x-2 w-40">
-                    <input
-                        id="bgBrightnessRange"
-                        type="range"
-                        min="50" max="100" step="1"
-                        value={appearance.backgroundImageBrightness}
-                        onChange={handleBgBrightnessChange}
-                        className="range-slider-track flex-grow"
-                        disabled={appearance.backgroundImageUrl === 'none'}
-                    />
-                    <span
-                        className="text-xs text-grey-medium dark:text-neutral-400 w-8 text-right">{appearance.backgroundImageBrightness}%</span>
-                </div>
-            </SettingsRow>
-            <SettingsRow label="Background Blur" description="Apply a blur effect to the background."
-                         htmlFor="bgBlurRange">
-                <div className="flex items-center space-x-2 w-40">
-                    <input
-                        id="bgBlurRange"
-                        type="range"
-                        min="0" max="20" step="1"
-                        value={appearance.backgroundImageBlur}
-                        onChange={handleBgBlurChange}
-                        className="range-slider-track flex-grow"
-                        disabled={appearance.backgroundImageUrl === 'none'}
-                    />
-                    <span
-                        className="text-xs text-grey-medium dark:text-neutral-400 w-8 text-right">{appearance.backgroundImageBlur}px</span>
-                </div>
-            </SettingsRow>
         </div>
     );
 });
