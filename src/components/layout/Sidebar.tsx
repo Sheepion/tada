@@ -6,6 +6,7 @@ import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     currentFilterAtom,
     isAddListModalOpenAtom,
+    preferencesSettingsAtom,
     rawSearchResultsAtom,
     searchTermAtom,
     selectedTaskIdAtom,
@@ -72,14 +73,16 @@ const SidebarItem: React.FC<{
     const linkClassName = useMemo(() => twMerge(
         'flex items-center justify-between px-2 py-0 h-8 rounded-base mb-0.5 text-[13px] group transition-colors duration-200 ease-in-out cursor-pointer relative',
         isActive
-            ? 'bg-grey-ultra-light text-primary font-medium'
-            : 'text-grey-dark font-light hover:bg-grey-ultra-light hover:text-grey-dark',
-        'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white'
+            ? 'bg-grey-ultra-light text-primary dark:bg-primary-dark/20 dark:text-primary-light font-medium'
+            : 'text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-ultra-light dark:hover:bg-grey-deep hover:text-grey-dark dark:hover:text-neutral-100',
+        'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep'
     ), [isActive]);
 
     const countClassName = useMemo(() => twMerge(
         "text-[10px] font-light px-1 py-0 rounded-sm ml-1 tabular-nums flex-shrink-0",
-        isActive ? 'text-primary bg-primary/20' : 'text-grey-medium bg-grey-light group-hover:bg-grey-light'
+        isActive
+            ? 'text-primary bg-primary/20 dark:text-primary-light dark:bg-primary-light/10'
+            : 'text-grey-medium dark:text-neutral-400 bg-grey-light dark:bg-grey-deep group-hover:bg-grey-light dark:group-hover:bg-grey-deep'
     ), [isActive]);
 
     return (
@@ -100,14 +103,11 @@ SidebarItem.displayName = 'SidebarItem';
 const CollapsibleSection: React.FC<{
     title: string; children: React.ReactNode;
     initiallyOpen?: boolean; action?: React.ReactNode;
-    // Removed 'icon' prop from here as it's no longer used for leading section icons.
-    // It could be added back if a different type of icon usage is needed in the future.
 }> = memo(({title, children, initiallyOpen = true, action}) => {
     const [isOpen, setIsOpen] = useState(initiallyOpen);
     const sectionId = useMemo(() => `section-content-${title.replace(/\s+/g, '-')}`, [title]);
     const toggleOpen = useCallback(() => setIsOpen(prev => !prev), []);
 
-    // Chevron classes now don't include ml-auto, as it's positioned left.
     const chevronClasses = useMemo(() => twMerge(
         "transition-transform duration-200 ease-in-out opacity-70 group-hover:opacity-90",
         isOpen ? "rotate-0" : "-rotate-90"
@@ -115,18 +115,14 @@ const CollapsibleSection: React.FC<{
 
     return (
         <div className="pt-4 first:pt-2">
-            {/* Removed 'group' class from this div, as action button hover is no longer needed */}
             <div className="flex items-center justify-between px-2 py-0 mb-1">
                 <button onClick={toggleOpen}
-                    // 'group' class here is for the chevron's group-hover effect. Added pr-1 for spacing.
-                        className="flex items-center flex-1 min-w-0 h-6 text-[11px] font-normal text-grey-medium uppercase tracking-[0.5px] hover:text-grey-dark focus:outline-none group rounded pr-1"
+                        className="flex items-center flex-1 min-w-0 h-6 text-[11px] font-normal text-grey-medium dark:text-neutral-400 uppercase tracking-[0.5px] hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none group rounded pr-1"
                         aria-expanded={isOpen} aria-controls={sectionId}>
-                    {/* Chevron icon moved to the left of the title */}
                     <Icon name={'chevron-down'} size={14} strokeWidth={1.5}
-                          className={twMerge("mr-1.5 flex-shrink-0", chevronClasses)} // Added flex-shrink-0
+                          className={twMerge("mr-1.5 flex-shrink-0", chevronClasses)}
                           aria-hidden="true"/>
-                    {/* The leading icon (folder, tag) display logic is removed. */}
-                    <span className="truncate">{title}</span> {/* Title can truncate */}
+                    <span className="truncate">{title}</span>
                 </button>
                 {action && <div className="-mr-1 ml-1 flex-shrink-0">{action}</div>}
             </div>
@@ -156,6 +152,7 @@ const Sidebar: React.FC = () => {
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const setUserDefinedLists = useSetAtom(userDefinedListsAtom);
     const [, setIsAddListModalOpen] = useAtom(isAddListModalOpenAtom);
+    const preferences = useAtomValue(preferencesSettingsAtom);
 
     const navigate = useNavigate();
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -183,36 +180,43 @@ const Sidebar: React.FC = () => {
     }, [setSearchTerm]);
     const handleSearchResultClick = useCallback((task: Task) => {
         setSelectedTaskId(task.id);
+        // Potentially clear search on selection, or keep it for context
+        // setSearchTerm('');
     }, [setSelectedTaskId]);
     const myListsToDisplay = useMemo(() => userLists.filter(list => list !== 'Inbox'), [userLists]);
     const tagsToDisplay = useMemo(() => userTags, [userTags]);
 
     const searchInputClassName = useMemo(() => twMerge(
         "w-full h-[32px] pl-8 pr-7 text-[13px] font-light rounded-base focus:outline-none",
-        "bg-grey-ultra-light dark:bg-neutral-700/60",
+        "bg-grey-ultra-light/70 dark:bg-grey-deep/70", // Slightly more transparent
         "border border-transparent dark:border-transparent",
-        // Removed primary focus ring/border
-        "focus:border-transparent dark:focus:border-transparent", // Ensure border remains transparent on focus
-        "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+        "focus:border-transparent dark:focus:border-transparent",
+        "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
         "text-grey-dark dark:text-neutral-100",
         "transition-colors duration-200 ease-in-out"
     ), []);
 
     const highlighterProps = useMemo(() => ({
-        highlightClassName: "bg-primary-light text-primary font-normal rounded-[1px] px-0",
+        highlightClassName: "bg-primary-light text-primary font-normal rounded-[1px] px-0 dark:bg-primary-dark/30 dark:text-primary-light",
         searchWords: debouncedSearchTerm.split(' ').filter(Boolean), autoEscape: true,
     }), [debouncedSearchTerm]);
-    const searchResultButtonClassName = "flex items-start w-full px-2 py-1.5 text-left rounded-base hover:bg-grey-ultra-light text-[13px] group transition-colors duration-100 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary";
+
+    const searchResultButtonClassName = "flex items-start w-full px-2 py-1.5 text-left rounded-base hover:bg-grey-ultra-light dark:hover:bg-grey-deep text-[13px] group transition-colors duration-100 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary";
 
     return (
         <>
-            <aside className="w-full bg-white h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2">
+            <aside className={twMerge(
+                "w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2",
+                // Sidebar itself has no background; its parent in MainLayout provides it
+                "bg-transparent"
+            )}>
                 <div className="mb-3 flex-shrink-0">
                     <div className="relative flex items-center">
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
                         <Icon name="search" size={12} strokeWidth={1.5}
-                              className="absolute left-3 text-grey-medium pointer-events-none z-10"/>
-                        <input ref={searchInputRef} id="sidebar-search" type="search" placeholder="Search"
+                              className="absolute left-3 text-grey-medium dark:text-neutral-400 pointer-events-none z-10"/>
+                        <input ref={searchInputRef} id="sidebar-search" type="search"
+                               placeholder={preferences.language === 'zh-CN' ? '搜索任务...' : 'Search Tasks'}
                                value={searchTerm} onChange={handleSearchChange} className={searchInputClassName}
                                aria-label="Search tasks"/>
                         <AnimatePresence>
@@ -222,7 +226,7 @@ const Sidebar: React.FC = () => {
                                             transition={{duration: 0.1}}
                                             className="absolute right-1.5 h-full flex items-center z-10">
                                     <Button variant="ghost" size="icon" icon="x-circle" onClick={handleClearSearch}
-                                            className="w-5 h-5 text-grey-medium opacity-70 hover:opacity-100 hover:bg-grey-light"
+                                            className="w-5 h-5 text-grey-medium dark:text-neutral-400 opacity-70 hover:opacity-100 hover:bg-grey-light dark:hover:bg-grey-deep"
                                             iconProps={{size: 14, strokeWidth: 1}} aria-label="Clear search"/>
                                 </motion.div>
                             )}
@@ -238,7 +242,7 @@ const Sidebar: React.FC = () => {
                                         className="px-0.5 pb-2">
                                 {searchResults.length > 0 ? (
                                     <>
-                                        <p className="text-[11px] font-normal text-grey-medium px-1.5 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
+                                        <p className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 px-1.5 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
                                         {searchResults.map((task: Task) => (
                                             <button key={task.id} onClick={() => handleSearchResultClick(task)}
                                                     className={searchResultButtonClassName}
@@ -246,65 +250,71 @@ const Sidebar: React.FC = () => {
                                                 <Icon
                                                     name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')}
                                                     size={15} strokeWidth={1}
-                                                    className="mr-2 mt-[2px] flex-shrink-0 text-grey-medium opacity-80"
+                                                    className="mr-2 mt-[2px] flex-shrink-0 text-grey-medium dark:text-neutral-400 opacity-80"
                                                     aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
                                                     <Highlighter {...highlighterProps}
                                                                  textToHighlight={task.title || 'Untitled Task'}
-                                                                 className={twMerge("block truncate font-normal text-grey-dark", task.completed && task.list !== 'Trash' && "line-through text-grey-medium", task.list === 'Trash' && "italic text-grey-medium")}/>
+                                                                 className={twMerge("block truncate font-normal text-grey-dark dark:text-neutral-100", task.completed && task.list !== 'Trash' && "line-through text-grey-medium dark:text-neutral-400", task.list === 'Trash' && "italic text-grey-medium dark:text-neutral-400")}/>
                                                     {task.content && generateContentSnippet(task.content, debouncedSearchTerm) && (
                                                         <Highlighter {...highlighterProps}
                                                                      textToHighlight={generateContentSnippet(task.content, debouncedSearchTerm)}
-                                                                     className="block truncate text-[11px] font-light text-grey-medium mt-0.5"/>)}
+                                                                     className="block truncate text-[11px] font-light text-grey-medium dark:text-neutral-400 mt-0.5"/>)}
                                                 </div>
                                             </button>
                                         ))}
                                     </>
                                 ) : (
-                                    <p className="text-[12px] text-grey-medium text-center py-4 px-2 italic font-light">No
-                                        tasks found matching "{debouncedSearchTerm}".</p>)}
+                                    <p className="text-[12px] text-grey-medium dark:text-neutral-400 text-center py-4 px-2 italic font-light">
+                                        {preferences.language === 'zh-CN' ? `没有找到与 "${debouncedSearchTerm}" 匹配的任务。` : `No tasks found matching "${debouncedSearchTerm}".`}
+                                    </p>)}
                             </motion.div>
                         ) : (
                             <motion.div key="filters" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}}
                                         transition={{duration: 0.15, ease: 'linear'}} className="px-0.5 pb-2">
                                 <nav className="mb-1">
-                                    <SidebarItem to="/all" filter="all" icon="archive" label="All Tasks"
+                                    <SidebarItem to="/all" filter="all" icon="archive"
+                                                 label={preferences.language === 'zh-CN' ? '所有任务' : "All Tasks"}
                                                  count={counts.all}/>
-                                    <SidebarItem to="/today" filter="today" icon="sun" label="Today"
+                                    <SidebarItem to="/today" filter="today" icon="sun"
+                                                 label={preferences.language === 'zh-CN' ? '今天' : "Today"}
                                                  count={counts.today}/>
-                                    <SidebarItem to="/next7days" filter="next7days" icon="calendar" label="Next 7 Days"
+                                    <SidebarItem to="/next7days" filter="next7days" icon="calendar"
+                                                 label={preferences.language === 'zh-CN' ? '未来7天' : "Next 7 Days"}
                                                  count={counts.next7days}/>
-                                    <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox" label="Inbox"
+                                    <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox"
+                                                 label={preferences.language === 'zh-CN' ? '收件箱' : "Inbox"}
                                                  count={counts.lists['Inbox']}/>
                                 </nav>
-                                {/* Removed icon="folder" prop */}
-                                <CollapsibleSection title="My Lists"
+                                <CollapsibleSection title={preferences.language === 'zh-CN' ? '我的列表' : "My Lists"}
                                                     action={
                                                         <Button variant="ghost" size="icon" icon="plus"
-                                                            // Removed opacity classes for hover-to-show, button is now always visible
-                                                                className="w-6 h-6 text-grey-medium hover:text-primary hover:bg-grey-ultra-light"
+                                                                className="w-6 h-6 text-grey-medium dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light hover:bg-grey-ultra-light dark:hover:bg-grey-deep"
                                                                 iconProps={{size: 16, strokeWidth: 1.5}}
                                                                 onClick={handleAddNewListClick}
                                                                 aria-label="Add New List"/>
                                                     }>
                                     {myListsToDisplay.length === 0 ? (
-                                        <p className="text-[12px] text-grey-medium px-2 py-1 italic font-light">
-                                            No custom lists yet.</p>) : (myListsToDisplay.map(listName => (
+                                        <p className="text-[12px] text-grey-medium dark:text-neutral-400 px-2 py-1 italic font-light">
+                                            {preferences.language === 'zh-CN' ? '暂无自定义列表。' : 'No custom lists yet.'}
+                                        </p>) : (myListsToDisplay.map(listName => (
                                         <SidebarItem key={listName} to={`/list/${encodeURIComponent(listName)}`}
                                                      filter={`list-${listName}`} icon="list" label={listName}
                                                      count={counts.lists[listName]} isUserList={true}/>)))}
                                 </CollapsibleSection>
-                                {/* Removed icon="tag" prop */}
-                                {tagsToDisplay.length > 0 && (<CollapsibleSection title="Tags"
-                                                                                  initiallyOpen={false}> {tagsToDisplay.map(tagName => (
-                                    <SidebarItem key={tagName} to={`/tag/${encodeURIComponent(tagName)}`}
-                                                 filter={`tag-${tagName}`} icon="tag" label={`#${tagName}`}
-                                                 count={counts.tags[tagName]}/>))} </CollapsibleSection>)}
-                                {/* System section does not use a leading icon by default */}
-                                <CollapsibleSection title="System" initiallyOpen={false}>
+                                {tagsToDisplay.length > 0 && (
+                                    <CollapsibleSection title={preferences.language === 'zh-CN' ? '标签' : "Tags"}
+                                                        initiallyOpen={false}> {tagsToDisplay.map(tagName => (
+                                        <SidebarItem key={tagName} to={`/tag/${encodeURIComponent(tagName)}`}
+                                                     filter={`tag-${tagName}`} icon="tag" label={`#${tagName}`}
+                                                     count={counts.tags[tagName]}/>))} </CollapsibleSection>)}
+                                <CollapsibleSection title={preferences.language === 'zh-CN' ? '系统' : "System"}
+                                                    initiallyOpen={false}>
                                     <SidebarItem to="/completed" filter="completed" icon="check-square"
-                                                 label="Completed" count={counts.completed}/>
-                                    <SidebarItem to="/trash" filter="trash" icon="trash" label="Trash"
+                                                 label={preferences.language === 'zh-CN' ? '已完成' : "Completed"}
+                                                 count={counts.completed}/>
+                                    <SidebarItem to="/trash" filter="trash" icon="trash"
+                                                 label={preferences.language === 'zh-CN' ? '垃圾桶' : "Trash"}
                                                  count={counts.trash}/>
                                 </CollapsibleSection>
                             </motion.div>

@@ -36,17 +36,21 @@ const IconBar: React.FC = memo(() => {
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-base transition-colors duration-200 ease-in-out group relative',
             isSectionActive
-                ? 'bg-grey-ultra-light text-primary'
-                : 'text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark', // Icon color uses new grey-medium and grey-dark
-            'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white'
+                ? 'bg-grey-ultra-light text-primary dark:bg-primary-dark/20 dark:text-primary-light' // Adjusted active state for dark mode
+                : 'text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark dark:text-neutral-400 dark:hover:bg-grey-deep dark:hover:text-neutral-100',
+            'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep'
         );
     }, [location.pathname]);
 
-    const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[60] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
+    const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[60] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut dark:bg-neutral-900 dark:text-neutral-100";
 
     return (
         <div
-            className="w-16 bg-white flex flex-col items-center py-4 flex-shrink-0 z-20 border-r border-grey-light"> {/* Use updated grey-light */}
+            className={twMerge(
+                "w-16 flex flex-col items-center py-4 flex-shrink-0 z-20 border-r border-grey-light/50 dark:border-grey-deep/50",
+                "bg-white/80 dark:bg-grey-deep/80 backdrop-blur-md transition-colors duration-300" // Semi-transparent with blur
+            )}
+        >
             <div
                 className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-primary rounded-base text-white font-medium text-xl select-none"
                 aria-label="Tada App Logo" title="Tada">
@@ -64,7 +68,7 @@ const IconBar: React.FC = memo(() => {
                         <Tooltip.Portal>
                             <Tooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
                                 {item.label}
-                                <Tooltip.Arrow className="fill-grey-dark"/>
+                                <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
                             </Tooltip.Content>
                         </Tooltip.Portal>
                     </Tooltip.Root>
@@ -75,14 +79,14 @@ const IconBar: React.FC = memo(() => {
                 <Tooltip.Root delayDuration={200}>
                     <Tooltip.Trigger asChild>
                         <Button onClick={handleAvatarClick} variant="ghost" size="icon"
-                                className="w-9 h-9 rounded-full overflow-hidden p-0 hover:bg-grey-ultra-light focus-visible:ring-offset-white"
+                                className="w-9 h-9 rounded-full overflow-hidden p-0 hover:bg-grey-ultra-light dark:hover:bg-grey-deep focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep"
                                 aria-label="Account Settings">
                             {currentUser?.avatar ? (
                                 <img src={currentUser.avatar} alt={currentUser.name || 'User Avatar'}
                                      className="w-full h-full object-cover"/>
                             ) : (
                                 <div
-                                    className="w-full h-full bg-grey-light flex items-center justify-center text-grey-medium font-normal text-sm"> {/* User initials use new grey-medium */}
+                                    className="w-full h-full bg-grey-light dark:bg-neutral-600 flex items-center justify-center text-grey-medium dark:text-neutral-300 font-normal text-sm">
                                     {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() :
                                         <Icon name="user" size={16} strokeWidth={1}/>}
                                 </div>
@@ -92,7 +96,7 @@ const IconBar: React.FC = memo(() => {
                     <Tooltip.Portal>
                         <Tooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
                             Account Settings
-                            <Tooltip.Arrow className="fill-grey-dark"/>
+                            <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
                         </Tooltip.Content>
                     </Tooltip.Portal>
                 </Tooltip.Root>

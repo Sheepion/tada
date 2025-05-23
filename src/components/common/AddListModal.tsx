@@ -59,11 +59,11 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
         <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay
-                    className="fixed inset-0 bg-grey-dark/30 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-40"/>
+                    className="fixed inset-0 bg-grey-dark/30 dark:bg-black/60 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-40 backdrop-blur-sm"/>
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-white w-full max-w-md rounded-base shadow-modal flex flex-col",
+                        "bg-white dark:bg-neutral-800 w-full max-w-md rounded-base shadow-modal flex flex-col", // Dark mode background
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     style={{
@@ -76,12 +76,12 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                     aria-describedby={undefined}
                 >
                     <div className="flex justify-between items-center mb-4">
-                        <Dialog.Title className="text-[16px] font-normal text-grey-dark">
+                        <Dialog.Title className="text-[16px] font-normal text-grey-dark dark:text-neutral-100">
                             Create New List
                         </Dialog.Title>
                         <Dialog.Close asChild>
                             <Button variant="ghost" size="icon" icon="x"
-                                    className="text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark w-6 h-6 -mr-1"
+                                    className="text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-100 w-6 h-6 -mr-1"
                                     iconProps={{strokeWidth: 1.5, size: 12}}
                                     aria-label="Close modal"/>
                         </Dialog.Close>
@@ -89,7 +89,6 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            {/* Label removed as per request */}
                             <input
                                 ref={inputRef}
                                 id="listNameInput"
@@ -97,16 +96,16 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                                 value={listName}
                                 onChange={handleInputChange}
                                 placeholder="e.g., Groceries, Project X"
-                                aria-label="List Name" // Added aria-label for accessibility since visible label is removed
+                                aria-label="List Name"
                                 className={twMerge(
                                     "w-full h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
-                                    "bg-grey-ultra-light dark:bg-neutral-700/60",
-                                    "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+                                    "bg-grey-ultra-light dark:bg-neutral-700", // Dark mode input background
+                                    "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
                                     "text-grey-dark dark:text-neutral-100",
                                     "transition-colors duration-200 ease-in-out",
                                     error
-                                        ? "border border-error focus:ring-1 focus:ring-error dark:border-error dark:focus:ring-error" // Error state
-                                        : "border border-transparent dark:border-transparent focus:border-transparent dark:focus:border-transparent" // Normal state
+                                        ? "border border-error focus:ring-1 focus:ring-error dark:border-error dark:focus:ring-error"
+                                        : "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light" // Subtle border in normal state
                                 )}
                                 required
                                 aria-required="true"
@@ -114,7 +113,8 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                                 aria-describedby={error ? "listNameError" : undefined}
                             />
                             {error && (
-                                <p id="listNameError" className="text-[11px] text-error mt-1.5 font-light">{error}</p> // Adjusted margin-top slightly for better spacing
+                                <p id="listNameError"
+                                   className="text-[11px] text-error dark:text-red-400 mt-1.5 font-light">{error}</p>
                             )}
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">

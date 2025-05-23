@@ -20,6 +20,7 @@ import {
     subMonths,
     subWeeks
 } from '@/utils/dateUtils';
+import {APP_THEMES, PREDEFINED_BACKGROUND_IMAGES} from "@/config/themes";
 
 // --- Base Atoms ---
 
@@ -160,7 +161,7 @@ const initialTasksDataRaw: Omit<Task, 'groupCategory' | 'completed' | 'completed
         createdAt: subDays(new Date(), 1).getTime(),
         updatedAt: new Date().getTime(),
         priority: 2,
-        tags: ['development', 'presentation', 'tada', 'tjweather', 'atmos'] // Added more tags for testing
+        tags: ['development', 'presentation', 'tada', 'tjweather', 'atmos']
     },
     {
         id: '10',
@@ -220,7 +221,7 @@ const initialTasks: Task[] = initialTasksDataRaw
     })
     .sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
 
-const baseTasksAtom = atomWithStorage<Task[]>('tasks_v11_ux_final_final_tags_popover', initialTasks, undefined, {getOnInit: true});
+const baseTasksAtom = atomWithStorage<Task[]>('tasks_v12_settings_final_darkmodefix', initialTasks, undefined, {getOnInit: true}); // Incremented version for storage key
 
 export const tasksAtom = atom(
     (get) => get(baseTasksAtom),
@@ -367,6 +368,69 @@ export const isAddListModalOpenAtom = atom<boolean>(false);
 export const currentFilterAtom = atom<TaskFilter>('all');
 export const searchTermAtom = atom<string>('');
 
+// --- Settings Atoms ---
+export type DarkModeOption = 'light' | 'dark' | 'system';
+
+export interface AppearanceSettings {
+    themeId: string;
+    darkMode: DarkModeOption;
+    backgroundImageUrl: string;
+    backgroundImageBlur: number;
+    backgroundImageBrightness: number;
+    interfaceDensity: 'compact' | 'default' | 'comfortable';
+};
+const defaultAppearanceSettings: AppearanceSettings = {
+    themeId: APP_THEMES[0].id,
+    darkMode: 'system',
+    backgroundImageUrl: PREDEFINED_BACKGROUND_IMAGES[0].url,
+    backgroundImageBlur: 0,
+    backgroundImageBrightness: 100,
+    interfaceDensity: 'default',
+};
+export const appearanceSettingsAtom = atomWithStorage<AppearanceSettings>(
+    'tada_appearanceSettings_v4', // Incremented version for new darkMode options
+    defaultAppearanceSettings,
+    undefined,
+    {getOnInit: true}
+);
+
+export type DefaultNewTaskDueDate = null | 'today' | 'tomorrow';
+export type PreferencesSettings = {
+    language: 'en' | 'zh-CN';
+    defaultNewTaskDueDate: DefaultNewTaskDueDate;
+    defaultNewTaskPriority: number | null;
+    defaultNewTaskList: string;
+    confirmDeletions: boolean;
+};
+const defaultPreferencesSettings: PreferencesSettings = {
+    language: 'en',
+    defaultNewTaskDueDate: null,
+    defaultNewTaskPriority: null,
+    defaultNewTaskList: 'Inbox',
+    confirmDeletions: true,
+};
+export const preferencesSettingsAtom = atomWithStorage<PreferencesSettings>(
+    'tada_preferencesSettings_v1',
+    defaultPreferencesSettings,
+    undefined,
+    {getOnInit: true}
+);
+
+export type PremiumSettings = {
+    tier: 'free' | 'pro';
+    subscribedUntil: number | null;
+};
+export const premiumSettingsAtom = atom(
+    (get): PremiumSettings => {
+        const user = get(currentUserAtom);
+        if (user?.isPremium) {
+            return {tier: 'pro', subscribedUntil: addDays(new Date(), 365).getTime()};
+        }
+        return {tier: 'free', subscribedUntil: null};
+    }
+);
+
+
 // --- Summary View Atoms ---
 export interface StoredSummary {
     id: string;
@@ -396,10 +460,7 @@ export const SUMMARY_FIELD_OPTIONS: { id: string; label: string }[] = [
     {id: 'learnings', label: '学习与成长收获'},
     {id: 'blockers', label: '当前主要瓶颈'},
 ];
-
-// Default selected fields - selecting the first two for a common use case
 const defaultSelectedSummaryFields = [SUMMARY_FIELD_OPTIONS[0].id, SUMMARY_FIELD_OPTIONS[1].id];
-
 export const summarySelectedFieldsAtom = atomWithStorage<string[]>(
     'tada_summarySelectedFields_v1',
     defaultSelectedSummaryFields,

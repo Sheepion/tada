@@ -51,9 +51,10 @@ export type TaskFilter =
 export type SettingsTab =
     | 'account'
     | 'appearance'
+    | 'preferences' // Added
     | 'premium'
-    | 'notifications'
-    | 'integrations'
+    // | 'notifications' // Removed for now, can be re-added
+    // | 'integrations' // Removed for now, can be re-added
     | 'about';
 
 // Defines the categories used for grouping tasks in the 'All Tasks' view

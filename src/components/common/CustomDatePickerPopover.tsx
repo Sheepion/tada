@@ -145,12 +145,14 @@ const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.me
     const timeDropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const dropdownContentClasses = twMerge(
         "min-w-[100px] max-h-60 styled-scrollbar-thin overflow-y-auto z-[75] bg-white rounded-base shadow-modal p-1",
+        "dark:bg-neutral-750 dark:border dark:border-neutral-600", // Dark mode for dropdown content
         timeDropdownAnimationClasses
     );
-    const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[80] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
+    const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[80] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut dark:bg-neutral-900 dark:text-neutral-100";
 
     return (
-        <div ref={contentRef} className="date-picker-content p-4 w-[300px]"
+        <div ref={contentRef}
+             className="date-picker-content p-4 w-[300px] bg-white dark:bg-neutral-800 rounded-base" // Dark mode for main popover
              onClick={e => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
              onTouchStart={(e) => e.stopPropagation()}>
             <div className="flex justify-between mb-4 px-2">
@@ -166,62 +168,73 @@ const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.me
                 }, {handler: selectNextMonth, icon: "moon" as const, label: "Next Month"}].map(item => (
                     <Tooltip.Provider key={item.label}><Tooltip.Root delayDuration={200}> <Tooltip.Trigger asChild>
                         <button onClick={item.handler}
-                                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-grey-ultra-light transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-grey-ultra-light dark:hover:bg-neutral-700 transition-colors"
                                 aria-label={`Select ${item.label}`}> {item.badge ? (
                             <div className="relative"><Icon name={item.icon} size={18} strokeWidth={1}
-                                                            className="text-grey-medium"/>
+                                                            className="text-grey-medium dark:text-neutral-400"/>
                                 <div
-                                    className="absolute top-0 right-0 -mt-1 -mr-1 bg-grey-medium text-white text-[8px] font-normal rounded-full w-3.5 h-3.5 flex items-center justify-center">{item.badge}</div>
+                                    className="absolute top-0 right-0 -mt-1 -mr-1 bg-grey-medium dark:bg-neutral-500 text-white dark:text-neutral-100 text-[8px] font-normal rounded-full w-3.5 h-3.5 flex items-center justify-center">{item.badge}</div>
                             </div>) : (
-                            <Icon name={item.icon} size={18} strokeWidth={1} className="text-grey-medium"/>)} </button>
+                            <Icon name={item.icon} size={18} strokeWidth={1}
+                                  className="text-grey-medium dark:text-neutral-400"/>)} </button>
                     </Tooltip.Trigger> <Tooltip.Portal><Tooltip.Content className={tooltipContentClass}
                                                                         sideOffset={4}>{item.label}<Tooltip.Arrow
-                        className="fill-grey-dark"/></Tooltip.Content></Tooltip.Portal>
+                        className="fill-grey-dark dark:fill-neutral-900"/></Tooltip.Content></Tooltip.Portal>
                     </Tooltip.Root></Tooltip.Provider>))}
             </div>
             <div className="flex items-center justify-between mb-3">
-                <div className="text-[14px] font-normal text-grey-dark">{format(viewDate, 'MMMM yyyy')}</div>
+                <div
+                    className="text-[14px] font-normal text-grey-dark dark:text-neutral-100">{format(viewDate, 'MMMM yyyy')}</div>
                 <div className="flex items-center space-x-0.5">
                     <Button onClick={prevMonth} variant="ghost" size="icon" icon="chevron-left"
-                            className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                            className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700"
                             iconProps={{size: 16, strokeWidth: 1}} aria-label="Previous month"/>
                     <Button onClick={goToTodayCalendarView} variant="ghost" size="icon" className="w-7 h-7"
                             aria-label="Go to current month">
                         <div
-                            className={twMerge("w-1.5 h-1.5 rounded-full", isSameMonth(viewDate, today) ? "bg-primary" : "bg-grey-light")}></div>
+                            className={twMerge("w-1.5 h-1.5 rounded-full", isSameMonth(viewDate, today) ? "bg-primary dark:bg-primary-light" : "bg-grey-light dark:bg-neutral-600")}></div>
                     </Button>
                     <Button onClick={nextMonth} variant="ghost" size="icon" icon="chevron-right"
-                            className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                            className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700"
                             iconProps={{size: 16, strokeWidth: 1}} aria-label="Next month"/>
                 </div>
             </div>
             <div className="mb-3">
                 <div className="grid grid-cols-7 mb-1"> {weekDays.map((day, i) => (<div key={i}
-                                                                                        className="text-center text-[11px] text-grey-medium h-8 flex items-center justify-center font-normal">{day}</div>))} </div>
+                                                                                        className="text-center text-[11px] text-grey-medium dark:text-neutral-400 h-8 flex items-center justify-center font-normal">{day}</div>))} </div>
                 <div className="grid grid-cols-7 gap-0">
                     {calendarDays.map((day, i) => {
                         const isCurrentMonth = isSameMonth(day, viewDate);
                         const isDaySelected = selectedDate && isSameDay(day, selectedDate);
                         const isDayToday = isToday(day);
                         return (<button key={i} onClick={() => handleSelectDate(day)}
-                                        className={twMerge("h-8 w-8 flex items-center justify-center rounded-full text-[13px] font-light transition-colors mx-auto", "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:z-10", !isCurrentMonth && "text-grey-light", isCurrentMonth && "hover:bg-grey-ultra-light", isDayToday && !isDaySelected && "font-normal text-primary border border-primary/50", !isDayToday && isCurrentMonth && !isDaySelected && "text-grey-dark", isDaySelected && "bg-primary text-white font-normal hover:bg-primary-dark", !isCurrentMonth && "pointer-events-none opacity-50")}
+                                        className={twMerge(
+                                            "h-8 w-8 flex items-center justify-center rounded-full text-[13px] font-light transition-colors mx-auto",
+                                            "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:z-10",
+                                            !isCurrentMonth && "text-grey-light dark:text-neutral-600",
+                                            isCurrentMonth && "hover:bg-grey-ultra-light dark:hover:bg-neutral-700",
+                                            isDayToday && !isDaySelected && "font-normal text-primary dark:text-primary-light border border-primary/50 dark:border-primary-light/50",
+                                            !isDayToday && isCurrentMonth && !isDaySelected && "text-grey-dark dark:text-neutral-100",
+                                            isDaySelected && "bg-primary text-white dark:bg-primary-light dark:text-grey-deep font-normal hover:bg-primary-dark dark:hover:bg-primary",
+                                            !isCurrentMonth && "pointer-events-none opacity-50")}
                                         aria-label={format(day, 'MMMM d, yyyy')} aria-pressed={!!isDaySelected}
                                         disabled={!isCurrentMonth}> {format(day, 'd')} </button>);
                     })}
                 </div>
             </div>
-            <div className="flex items-center justify-between mb-3 pt-3 border-t border-grey-light">
+            <div
+                className="flex items-center justify-between mb-3 pt-3 border-t border-grey-light dark:border-neutral-700">
                 <label htmlFor="time-picker-trigger-single-date"
-                       className="text-[13px] font-light text-grey-dark">Time</label>
+                       className="text-[13px] font-light text-grey-dark dark:text-neutral-100">Time</label>
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
                         <Button id="time-picker-trigger-single-date" variant="secondary" size="sm"
-                                className="min-w-[90px] !h-7 !px-2.5 !font-light justify-between items-center text-grey-dark hover:bg-grey-ultra-light hover:text-grey-dark" // Button text color
+                                className="min-w-[90px] !h-7 !px-2.5 !font-light justify-between items-center text-grey-dark dark:text-neutral-100 hover:bg-grey-ultra-light dark:hover:bg-neutral-700 dark:bg-neutral-700"
                                 disabled={!selectedDate}>
                             <span className="tabular-nums">{displaySelectedTimeLabel}</span> <Icon name="chevron-down"
                                                                                                    size={12}
                                                                                                    strokeWidth={1.5}
-                                                                                                   className="ml-1 opacity-80"/> {/* Icon opacity */}
+                                                                                                   className="ml-1 opacity-80 text-grey-medium dark:text-neutral-400"/>
                         </Button>
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Portal>
@@ -234,7 +247,13 @@ const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.me
                             <DropdownMenu.RadioGroup value={selectedTimeValue} onValueChange={setSelectedTimeValue}>
                                 {timeOptions.map(option => (
                                     <DropdownMenu.RadioItem key={option.value} value={option.value}
-                                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-[3px] px-2.5 py-1 text-[13px] font-light outline-none transition-colors data-[disabled]:pointer-events-none h-7 tabular-nums", "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light", "data-[state=checked]:bg-primary-light data-[state=checked]:text-primary data-[state=checked]:font-normal data-[highlighted]:data-[state=checked]:bg-primary-light", "data-[state=unchecked]:text-grey-dark data-[highlighted]:data-[state=unchecked]:text-grey-dark",)}>{option.label}</DropdownMenu.RadioItem>))}
+                                                            className={twMerge(
+                                                                "relative flex cursor-pointer select-none items-center rounded-[3px] px-2.5 py-1 text-[13px] font-light outline-none transition-colors data-[disabled]:pointer-events-none h-7 tabular-nums",
+                                                                "focus:bg-grey-ultra-light dark:focus:bg-neutral-600 data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-neutral-600",
+                                                                "data-[state=checked]:bg-primary-light data-[state=checked]:text-primary dark:data-[state=checked]:bg-primary-dark/30 dark:data-[state=checked]:text-primary-light data-[state=checked]:font-normal",
+                                                                "data-[highlighted]:data-[state=checked]:bg-primary-light dark:data-[highlighted]:data-[state=checked]:bg-primary-dark/40",
+                                                                "data-[state=unchecked]:text-grey-dark dark:data-[state=unchecked]:text-neutral-100 data-[highlighted]:data-[state=unchecked]:text-grey-dark dark:data-[highlighted]:data-[state=unchecked]:text-neutral-50"
+                                                            )}>{option.label}</DropdownMenu.RadioItem>))}
                             </DropdownMenu.RadioGroup>
                         </DropdownMenu.Content>
                     </DropdownMenu.Portal>

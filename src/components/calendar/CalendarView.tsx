@@ -57,30 +57,45 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({task, o
     });
     const parsedDueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const overdue = useMemo(() => parsedDueDate != null && isValid(parsedDueDate) && isBefore(startOfDay(parsedDueDate), startOfDay(new Date())) && !task.completed, [parsedDueDate, task.completed]);
+
     const style: React.CSSProperties = useMemo(() => {
         const base: React.CSSProperties = {
             transform: CSS.Translate.toString(transform),
             transition: isOverlay ? undefined : 'opacity 150ms ease-out, visibility 150ms ease-out',
             zIndex: isDragging ? 1000 : 1,
             cursor: isDragging ? 'grabbing' : (task.completed ? 'default' : 'grab'),
-            position: 'relative',
+            position: 'relative', // Ensure it's relative for proper stacking if not dragging overlay
             opacity: 1,
             visibility: 'visible',
         };
-        if (isDragging && !isOverlay) {
-            base.position = 'absolute';
+        if (isDragging && !isOverlay) { // This is the original item being dragged (ghost)
             base.opacity = 0;
             base.visibility = 'hidden';
             base.pointerEvents = 'none';
         }
+        if (isOverlay) { // This is the DragOverlay item
+            // No specific transform override needed here, CSS.Translate.toString handles it.
+        }
         return base;
     }, [transform, isDragging, isOverlay, task.completed]);
+
     const taskBlockClasses = useMemo(() => {
-        let bgColor = 'bg-primary-light/30';
-        if (task.completed) bgColor = 'bg-grey-light/50';
-        if (overdue) bgColor = 'bg-error/30';
-        return twMerge("flex items-center w-full text-left px-1.5 py-0.5 rounded-base space-x-1.5 group h-[22px]", "transition-colors duration-150 ease-out", bgColor, task.completed ? "text-grey-medium line-through italic opacity-75" : "text-grey-dark hover:opacity-80", 'text-[11px] font-light leading-snug truncate', isOverlay && "bg-white shadow-subtle !text-grey-dark !opacity-100 !visibility-visible !relative",);
+        let bgColor = 'bg-primary-light/30 dark:bg-primary-dark/20';
+        if (task.completed) bgColor = 'bg-grey-light/50 dark:bg-neutral-700/50';
+        if (overdue) bgColor = 'bg-error/30 dark:bg-error/20';
+
+        return twMerge(
+            "flex items-center w-full text-left px-1.5 py-0.5 rounded-base space-x-1.5 group h-[22px]",
+            "transition-colors duration-150 ease-out",
+            bgColor,
+            task.completed
+                ? "text-grey-medium dark:text-neutral-500 line-through italic opacity-75"
+                : "text-grey-dark dark:text-neutral-200 hover:opacity-80 dark:hover:opacity-90",
+            'text-[11px] font-light leading-snug truncate',
+            isOverlay && "bg-white dark:bg-neutral-750 shadow-subtle !text-grey-dark dark:!text-neutral-100 !opacity-100 !visibility-visible !relative",
+        );
     }, [task.completed, overdue, isOverlay]);
+
     return (<div ref={setNodeRef} style={style} {...listeners} {...attributes} onClick={onClick}
                  className={taskBlockClasses} title={task.title} role="button" tabIndex={0} onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -91,6 +106,7 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({task, o
         <span className="italic">Untitled</span>} </span></div>);
 });
 DraggableCalendarTask.displayName = 'DraggableCalendarTask';
+
 
 interface MonthYearSelectorProps {
     currentDate: Date;
@@ -113,24 +129,28 @@ const MonthYearSelectorContent: React.FC<MonthYearSelectorProps> = React.memo(({
     useEffect(() => {
         setDisplayYear(getYear(currentDate));
     }, [currentDate]);
-    return (<div className="p-3 w-56 bg-white rounded-base shadow-modal">
-        <div className="flex items-center justify-between mb-3"><Button variant="ghost" size="icon" icon="chevron-left"
-                                                                        onClick={() => changeDisplayYear(-1)}
-                                                                        className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
-                                                                        iconProps={{size: 16, strokeWidth: 1}}
-                                                                        aria-label="Previous year"/> <span
-            className="text-[14px] font-normal text-grey-dark">{displayYear}</span> <Button variant="ghost" size="icon"
-                                                                                            icon="chevron-right"
-                                                                                            onClick={() => changeDisplayYear(1)}
-                                                                                            className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
-                                                                                            iconProps={{
-                                                                                                size: 16,
-                                                                                                strokeWidth: 1
-                                                                                            }} aria-label="Next year"/>
+    return (<div className="p-3 w-56 bg-white dark:bg-neutral-750 rounded-base shadow-modal">
+        <div className="flex items-center justify-between mb-3">
+            <Button variant="ghost" size="icon" icon="chevron-left"
+                    onClick={() => changeDisplayYear(-1)}
+                    className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-600"
+                    iconProps={{size: 16, strokeWidth: 1}}
+                    aria-label="Previous year"/>
+            <span className="text-[14px] font-normal text-grey-dark dark:text-neutral-100">{displayYear}</span>
+            <Button variant="ghost" size="icon" icon="chevron-right"
+                    onClick={() => changeDisplayYear(1)}
+                    className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-600"
+                    iconProps={{size: 16, strokeWidth: 1}} aria-label="Next year"/>
         </div>
         <div className="grid grid-cols-3 gap-1"> {months.map((month, index) => (
             <DropdownMenu.Item key={month} onSelect={() => handleMonthChange(index)}
-                               className={twMerge("text-[13px] h-8 justify-center flex items-center cursor-pointer select-none rounded-base outline-none transition-colors data-[disabled]:pointer-events-none font-light", "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light", (index === currentMonth && displayYear === currentYear) ? 'bg-primary-light text-primary font-normal data-[highlighted]:bg-primary-light' : 'text-grey-dark data-[highlighted]:text-grey-dark', "data-[disabled]:opacity-50")}
+                               className={twMerge(
+                                   "text-[13px] h-8 justify-center flex items-center cursor-pointer select-none rounded-base outline-none transition-colors data-[disabled]:pointer-events-none font-light",
+                                   "focus:bg-grey-ultra-light dark:focus:bg-neutral-600 data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-neutral-600",
+                                   (index === currentMonth && displayYear === currentYear)
+                                       ? 'bg-primary-light text-primary dark:bg-primary-dark/30 dark:text-primary-light font-normal data-[highlighted]:bg-primary-light dark:data-[highlighted]:bg-primary-dark/40'
+                                       : 'text-grey-dark dark:text-neutral-100 data-[highlighted]:text-grey-dark dark:data-[highlighted]:text-neutral-50',
+                                   "data-[disabled]:opacity-50")}
                                aria-pressed={index === currentMonth && displayYear === currentYear}> {month} </DropdownMenu.Item>))} </div>
     </div>);
 });
@@ -143,10 +163,15 @@ interface DroppableDayCellContentProps {
 }
 
 const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.memo(({children, className, isOver}) => {
-    const cellClasses = useMemo(() => twMerge('h-full w-full transition-colors duration-150 ease-out flex flex-col relative', className, isOver && 'bg-primary-light/50'), [className, isOver]);
+    const cellClasses = useMemo(() => twMerge(
+        'h-full w-full transition-colors duration-150 ease-out flex flex-col relative',
+        className,
+        isOver && 'bg-primary-light/50 dark:bg-primary-dark/30'
+    ), [className, isOver]);
     return <div className={cellClasses}>{children}</div>;
 });
 DroppableDayCellContent.displayName = 'DroppableDayCellContent';
+
 const DroppableDayCell: React.FC<{ day: Date; children: React.ReactNode; className?: string }> = React.memo(({
                                                                                                                  day,
                                                                                                                  children,
@@ -194,8 +219,8 @@ const CalendarView: React.FC = () => {
         });
         Object.values(grouped).forEach(dayTasks => {
             dayTasks.sort((a, b) => {
-                const priorityA = a.completed ? 99 : (a.priority ?? 4); // Changed from ?? 5 to ?? 4
-                const priorityB = b.completed ? 99 : (b.priority ?? 4); // Changed from ?? 5 to ?? 4
+                const priorityA = a.completed ? 99 : (a.priority ?? 4);
+                const priorityB = b.completed ? 99 : (b.priority ?? 4);
                 if (priorityA !== priorityB) return priorityA - priorityB;
                 const orderA = a.order ?? a.createdAt ?? 0;
                 const orderB = b.order ?? b.createdAt ?? 0;
@@ -255,25 +280,35 @@ const CalendarView: React.FC = () => {
         const isCurrentMonthDay = isSameMonth(day, currentMonthDate);
         const isToday = isTodayFn(day);
         const isExpanded = expandedDays.has(dateKey);
-        const MAX_VISIBLE_TASKS = 3;
+        const MAX_VISIBLE_TASKS = 3; // This can be dynamic based on row height if needed
         const tasksToShow = isExpanded ? dayTasks : dayTasks.slice(0, MAX_VISIBLE_TASKS);
         const hasMoreTasks = dayTasks.length > MAX_VISIBLE_TASKS && !isExpanded;
 
         return (
             <DroppableDayCell key={dateKey} day={day}
-                              className={twMerge('border-r border-b border-grey-light', !isCurrentMonthDay && 'bg-grey-ultra-light/30 opacity-70', index % 7 === 6 && 'border-r-0', index >= daysInGrid.length - 7 && 'border-b-0', 'overflow-hidden p-1')}>
+                              className={twMerge(
+                                  'border-r border-b border-grey-light dark:border-neutral-700',
+                                  !isCurrentMonthDay && 'bg-grey-ultra-light/30 dark:bg-neutral-750/30 opacity-70',
+                                  index % 7 === 6 && 'border-r-0',
+                                  index >= daysInGrid.length - 7 && 'border-b-0',
+                                  'overflow-hidden p-1'
+                              )}>
                 <div className="flex justify-end items-center h-5 flex-shrink-0 mb-1">
                     <span
-                        className={clsx('text-[12px] font-light w-5 h-5 flex items-center justify-center rounded-full transition-colors', isToday ? 'bg-primary text-white' : (isCurrentMonthDay ? 'text-grey-dark' : 'text-grey-medium'))}>{format(day, 'd')}</span>
+                        className={clsx(
+                            'text-[12px] font-light w-5 h-5 flex items-center justify-center rounded-full transition-colors',
+                            isToday ? 'bg-primary text-white dark:bg-primary-light dark:text-grey-deep' : (isCurrentMonthDay ? 'text-grey-dark dark:text-neutral-100' : 'text-grey-medium dark:text-neutral-500')
+                        )}>{format(day, 'd')}</span>
                 </div>
                 <div
                     className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]">
                     {isCurrentMonthDay && tasksToShow.map((task) => (
                         <DraggableCalendarTask key={task.id} task={task} onClick={() => handleTaskClick(task.id)}/>))}
-                    {isCurrentMonthDay && hasMoreTasks && (<Button onClick={() => toggleExpandDay(dateKey)}
-                                                                   variant="link" size="sm"
-                                                                   className="w-full text-[11px] !h-5 px-1 text-center py-0.5 text-primary hover:text-primary-dark font-light"
-                                                                   aria-expanded={isExpanded}> + {dayTasks.length - MAX_VISIBLE_TASKS} more </Button>)}
+                    {isCurrentMonthDay && hasMoreTasks && (
+                        <Button onClick={() => toggleExpandDay(dateKey)}
+                                variant="link" size="sm"
+                                className="w-full text-[11px] !h-5 px-1 text-center py-0.5 text-primary dark:text-primary-light hover:text-primary-dark dark:hover:text-primary font-light"
+                                aria-expanded={isExpanded}> + {dayTasks.length - MAX_VISIBLE_TASKS} more </Button>)}
                 </div>
             </DroppableDayCell>
         );
@@ -287,24 +322,26 @@ const CalendarView: React.FC = () => {
     return (
         <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart} collisionDetection={pointerWithin}
                     measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
-            <div className="h-full flex flex-col bg-white overflow-hidden">
+            <div
+                className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden"> {/* Main page background */}
                 <div
-                    className="px-6 py-0 h-[56px] border-b border-grey-light flex justify-between items-center flex-shrink-0 bg-white z-10">
-                    <div className="w-1/3"><h1 className="text-[18px] font-light text-grey-dark truncate">Calendar</h1>
+                    className="px-6 py-0 h-[56px] border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-neutral-800 z-10"> {/* Header background */}
+                    <div className="w-1/3"><h1
+                        className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">Calendar</h1>
                     </div>
                     <div className="flex-1 flex justify-center items-center space-x-1">
                         <Button onClick={goToToday} variant="link" size="sm"
-                                className="!h-8 px-3 !text-primary !font-normal"
+                                className="!h-8 px-3 !text-primary dark:!text-primary-light !font-normal"
                                 disabled={isTodayButtonDisabled}>Today</Button>
                         <div className="flex items-center">
                             <Button onClick={() => changeMonth(-1)} variant="ghost" size="icon" icon="chevron-left"
                                     aria-label="Previous month"
-                                    className="w-8 h-8 text-grey-medium hover:bg-grey-ultra-light"
+                                    className="w-8 h-8 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700"
                                     iconProps={{size: 16, strokeWidth: 1}}/>
                             <DropdownMenu.Root>
                                 <DropdownMenu.Trigger asChild>
                                     <Button variant="ghost" size="sm"
-                                            className="!h-8 px-3 text-[14px] font-normal w-36 text-center tabular-nums text-grey-dark hover:bg-grey-ultra-light">
+                                            className="!h-8 px-3 text-[14px] font-normal w-36 text-center tabular-nums text-grey-dark dark:text-neutral-100 hover:bg-grey-ultra-light dark:hover:bg-neutral-700">
                                         {format(currentMonthDate, 'MMMM yyyy', {locale: enUS})}
                                         <Icon name="chevron-down" size={14} strokeWidth={1}
                                               className="ml-1.5 opacity-70"/>
@@ -312,7 +349,7 @@ const CalendarView: React.FC = () => {
                                 </DropdownMenu.Trigger>
                                 <DropdownMenu.Portal>
                                     <DropdownMenu.Content
-                                        className={twMerge("z-[55] bg-white rounded-base shadow-modal p-0", dropdownAnimationClasses)}
+                                        className={twMerge("z-[55] bg-white dark:bg-neutral-750 rounded-base shadow-modal p-0", dropdownAnimationClasses)}
                                         sideOffset={5} align="center">
                                         <MonthYearSelectorContent currentDate={currentMonthDate}
                                                                   onChange={handleDateChange}/>
@@ -321,20 +358,25 @@ const CalendarView: React.FC = () => {
                             </DropdownMenu.Root>
                             <Button onClick={() => changeMonth(1)} variant="ghost" size="icon" icon="chevron-right"
                                     aria-label="Next month"
-                                    className="w-8 h-8 text-grey-medium hover:bg-grey-ultra-light"
+                                    className="w-8 h-8 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700"
                                     iconProps={{size: 16, strokeWidth: 1}}/>
                         </div>
                     </div>
                     <div className="w-1/3"></div>
                 </div>
-                <div className="flex-1 overflow-hidden flex flex-col p-4">
+                <div
+                    className="flex-1 overflow-hidden flex flex-col p-4 bg-white dark:bg-neutral-800"> {/* Content area background */}
                     <div className="grid grid-cols-7 flex-shrink-0 mb-1 px-0.5">
                         {weekDays.map((day, index) => (<div key={`${day}-${index}`}
-                                                            className="text-center py-1 text-[11px] font-normal text-grey-medium tracking-wide uppercase"> {day} </div>))}
+                                                            className="text-center py-1 text-[11px] font-normal text-grey-medium dark:text-neutral-400 tracking-wide uppercase"> {day} </div>))}
                     </div>
                     <div className="flex-1 min-h-0">
                         <div
-                            className={twMerge("grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-light", numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6")}>
+                            className={twMerge(
+                                "grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-light dark:border-neutral-700",
+                                "bg-white dark:bg-neutral-800", // Grid background
+                                numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6"
+                            )}>
                             {daysInGrid.map(renderCalendarDay)}
                         </div>
                     </div>

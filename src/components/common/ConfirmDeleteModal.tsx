@@ -35,21 +35,21 @@ const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
         <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay
-                    className="fixed inset-0 bg-grey-dark/30 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-50"/>
+                    className="fixed inset-0 bg-grey-dark/30 dark:bg-black/60 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-50 backdrop-blur-sm"/>
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60]",
-                        "bg-white w-full max-w-sm rounded-base shadow-modal flex flex-col p-6",
+                        "bg-white dark:bg-neutral-800 w-full max-w-sm rounded-base shadow-modal flex flex-col p-6", // Dark mode background
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     onEscapeKeyDown={onClose}
                 >
                     <Dialog.Title
-                        className="text-[16px] font-normal text-grey-dark mb-2 text-center">
+                        className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 mb-2 text-center">
                         {title}
                     </Dialog.Title>
                     <Dialog.Description
-                        className="text-[13px] font-light text-grey-medium text-center mb-6"> {/* Description uses new grey-medium */}
+                        className="text-[13px] font-light text-grey-medium dark:text-neutral-300 text-center mb-6">
                         {finalDescription}
                     </Dialog.Description>
                     <div className="flex justify-center space-x-3 mt-auto">

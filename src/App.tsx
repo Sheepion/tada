@@ -6,13 +6,80 @@ import MainPage from './pages/MainPage';
 import SummaryPage from './pages/SummaryPage';
 import CalendarPage from './pages/CalendarPage';
 import {TaskFilter} from './types';
-import {useAtom, useSetAtom} from 'jotai';
-import {currentFilterAtom, selectedTaskIdAtom, tasksAtom} from './store/atoms';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {
+    appearanceSettingsAtom,
+    currentFilterAtom,
+    preferencesSettingsAtom,
+    selectedTaskIdAtom,
+    tasksAtom
+} from './store/atoms';
 import {startOfDay} from "@/utils/dateUtils";
+import {APP_THEMES} from "@/config/themes";
+
+// Component to apply global settings (theme, dark mode, background)
+const SettingsApplicator: React.FC = () => {
+    const appearance = useAtomValue(appearanceSettingsAtom);
+
+    useEffect(() => {
+        const applyDarkMode = (mode: 'light' | 'dark' | 'system') => {
+            if (mode === 'system') {
+                const systemPrefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.toggle('dark', systemPrefersDark);
+            } else {
+                document.documentElement.classList.toggle('dark', mode === 'dark');
+            }
+        };
+
+        applyDarkMode(appearance.darkMode);
+
+        // Listener for system preference changes if 'system' mode is selected
+        let mediaQueryListener: ((this: MediaQueryList, ev: MediaQueryListEvent) => any) | undefined;
+        if (appearance.darkMode === 'system') {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            mediaQueryListener = () => applyDarkMode('system');
+            mediaQuery.addEventListener('change', mediaQueryListener);
+        }
+
+        // Theme Color
+        const selectedTheme = APP_THEMES.find(theme => theme.id === appearance.themeId) || APP_THEMES[0];
+        document.documentElement.style.setProperty('--color-primary-hsl', selectedTheme.colors.primary);
+        document.documentElement.style.setProperty('--color-primary-light-hsl', selectedTheme.colors.light);
+        document.documentElement.style.setProperty('--color-primary-dark-hsl', selectedTheme.colors.dark);
+
+        // Background Image
+        if (appearance.backgroundImageUrl && appearance.backgroundImageUrl !== 'none') {
+            document.body.style.backgroundImage = `url('${appearance.backgroundImageUrl}')`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
+            document.body.style.backgroundAttachment = 'fixed';
+        } else {
+            document.body.style.backgroundImage = 'none';
+        }
+        // Background Image Filters
+        // A dedicated overlay div for blur would be more robust, but for simplicity:
+        const filterValue = `brightness(${appearance.backgroundImageBrightness}%) ${appearance.backgroundImageBlur > 0 ? `blur(${appearance.backgroundImageBlur}px)` : ''}`;
+        document.body.style.filter = filterValue.trim() || 'none';
+
+
+        return () => {
+            if (mediaQueryListener && appearance.darkMode === 'system') {
+                window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', mediaQueryListener);
+            }
+        };
+    }, [appearance]);
+
+    const preferences = useAtomValue(preferencesSettingsAtom);
+    useEffect(() => {
+        document.documentElement.lang = preferences.language;
+    }, [preferences.language]);
+
+    return null;
+};
+SettingsApplicator.displayName = 'SettingsApplicator';
 
 // Route Change Handler Component
-// Updates filter state based on URL, resets selection.
-// No UI changes needed here, logic remains the same.
 const RouteChangeHandler: React.FC = () => {
     const [currentFilterInternal, setCurrentFilter] = useAtom(currentFilterAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
@@ -24,32 +91,29 @@ const RouteChangeHandler: React.FC = () => {
         const listName = params.listName ? decodeURIComponent(params.listName) : '';
         const tagName = params.tagName ? decodeURIComponent(params.tagName) : '';
 
-        let newFilter: TaskFilter = 'all'; // Default filter
+        let newFilter: TaskFilter = 'all';
 
-        // Determine filter based on path (logic unchanged)
         if (pathname === '/today') newFilter = 'today';
         else if (pathname === '/next7days') newFilter = 'next7days';
         else if (pathname === '/completed') newFilter = 'completed';
         else if (pathname === '/trash') newFilter = 'trash';
         else if (pathname.startsWith('/list/') && listName) newFilter = `list-${listName}`;
         else if (pathname.startsWith('/tag/') && tagName) newFilter = `tag-${tagName}`;
-        else if (pathname === '/summary') newFilter = 'all'; // Use 'all' context for summary
-        else if (pathname === '/calendar') newFilter = 'all'; // Use 'all' context for calendar
+        else if (pathname === '/summary') newFilter = 'all';
+        else if (pathname === '/calendar') newFilter = 'all';
         else if (pathname === '/all' || pathname === '/') newFilter = 'all';
 
-        // Update filter only if it has actually changed
         if (currentFilterInternal !== newFilter) {
             setCurrentFilter(newFilter);
-            // Reset selection when the main filter context changes
             setSelectedTaskId(null);
         }
     }, [location.pathname, params.listName, params.tagName, currentFilterInternal, setCurrentFilter, setSelectedTaskId]);
 
-    return <Outlet/>; // Renders the matched child route component
+    return <Outlet/>;
 };
+RouteChangeHandler.displayName = 'RouteChangeHandler';
 
 // List Page Wrapper Component
-// Logic remains the same.
 const ListPageWrapper: React.FC = () => {
     const {listName} = useParams<{ listName: string }>();
     const decodedListName = listName ? decodeURIComponent(listName) : 'Inbox';
@@ -60,7 +124,6 @@ const ListPageWrapper: React.FC = () => {
 ListPageWrapper.displayName = 'ListPageWrapper';
 
 // Tag Page Wrapper Component
-// Logic remains the same.
 const TagPageWrapper: React.FC = () => {
     const {tagName} = useParams<{ tagName: string }>();
     const decodedTagName = tagName ? decodeURIComponent(tagName) : '';
@@ -70,8 +133,6 @@ const TagPageWrapper: React.FC = () => {
 };
 TagPageWrapper.displayName = 'TagPageWrapper';
 
-// Component to trigger task category refresh when the date changes
-// Logic remains the same.
 const DailyTaskRefresh: React.FC = () => {
     const setTasks = useSetAtom(tasksAtom);
     const lastCheckDateRef = useRef<string>(startOfDay(new Date()).toISOString().split('T')[0]);
@@ -81,28 +142,27 @@ const DailyTaskRefresh: React.FC = () => {
             const todayDate = startOfDay(new Date()).toISOString().split('T')[0];
             if (todayDate !== lastCheckDateRef.current) {
                 console.log(`Date changed from ${lastCheckDateRef.current} to ${todayDate}. Triggering task category refresh.`);
-                setTasks(currentTasks => [...currentTasks]); // Trigger update
+                setTasks(currentTasks => [...currentTasks]);
                 lastCheckDateRef.current = todayDate;
             }
         };
-        checkDate(); // Check on mount
-        const intervalId = setInterval(checkDate, 60 * 1000); // Check every minute
-        window.addEventListener('focus', checkDate); // Check on focus
+        checkDate();
+        const intervalId = setInterval(checkDate, 60 * 1000);
+        window.addEventListener('focus', checkDate);
         return () => {
             clearInterval(intervalId);
             window.removeEventListener('focus', checkDate);
         };
     }, [setTasks]);
 
-    return null; // No visual output
+    return null;
 };
 DailyTaskRefresh.displayName = 'DailyTaskRefresh';
 
-// Main Application Component
-// Structure remains the same.
 const App: React.FC = () => {
     return (
         <>
+            <SettingsApplicator/>
             <DailyTaskRefresh/>
             <Routes>
                 <Route path="/" element={<MainLayout/>}>
