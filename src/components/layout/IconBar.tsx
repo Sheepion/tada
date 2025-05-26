@@ -7,7 +7,7 @@ import {currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom} from '@/st
 import {twMerge} from 'tailwind-merge';
 import Button from "@/components/common/Button";
 import {IconName} from "@/components/common/IconMap";
-import * as Tooltip from '@radix-ui/react-tooltip';
+import * as SortTooltip from '@radix-ui/react-tooltip';
 
 const IconBar: React.FC = memo(() => {
     const currentUser = useAtomValue(currentUserAtom);
@@ -52,32 +52,58 @@ const IconBar: React.FC = memo(() => {
             )}
         >
             <div
-                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-primary rounded-base text-white font-medium text-xl select-none"
+                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 select-none" // Removed bg-primary, text-white, font-medium, text-xl, rounded-base (SVG is complex shape)
                 aria-label="Tada App Logo" title="Tada">
-                <span className="-mt-0.5">T</span>
+                <svg
+                    viewBox="0 0 509 811"
+                    className="w-7 h-7 transition-colors duration-300" // Control size and theme color here
+                    xmlns="http://www.w3.org/2000/svg"
+                    fillRule="evenodd"
+                >
+                    <g id="tada" stroke="none" strokeWidth="1">
+                        <path
+                            d="M 194.5,660 C 194.5,743.118855 261.881145,810.5 345,810.5 C 392.548231,810.5 431.872984,771.391829 431.872984,723.149455 C 431.872984,680.808999 401.581557,645.504519 361.37491,637.5 C 290.715561,621.431263 229.356785,574.033996 194.5,509.5 L 194.5,660.5 Z"
+                            id="rb"
+                            className="text-primary/70 dark:text-primary-light/70"
+                            fill="currentColor"/>
+                        <path
+                            d="M 194.5,132.5 L 419,132.5 C 322.114337,132.5 237.823932,186.426708 194.5,265.901836 L 194.5,132.5 Z"
+                            className="text-primary-light dark:text-primary-light"
+                            fill="currentColor"/>
+                        <path
+                            d="M 194.5,265.901836 L 194.5,320.5 L 414.5,320.5 C 466.414766,320.5 508.5,278.414766 508.5,226.5 C 508.5,174.585234 466.414766,132.5 414.5,132.5 L 419,132.5 C 322.114337,132.5 237.823932,186.426708 194.5,265.901836 Z"
+                            className="text-primary/70 dark:text-primary-light/70"
+                            fill="currentColor"/>
+                        <path
+                            d="M 0.5,90.5 C 0.5,40.7943725 40.7943725,0.5 90.5,0.5 C 140.205627,0.5 180.5,40.7943725 180.5,90.5 L 180.5,492.5 L 180.5,646.5 C 180.5,652.5 180.2,658.5 180.5,665 C 180.5,726.086765 215.894314,778.673183 268.182754,802.259064 C 116.79566,780.539233 0.5,650.35077 0.5,493 L 0.5,90.5 Z"
+                            id="l"
+                            className="text-primary-light dark:text-primary-light"
+                            fill="currentColor"/>
+                    </g>
+                </svg>
             </div>
 
             <nav className="flex flex-col items-center space-y-2 flex-1">
                 {navigationItems.map((item) => (
-                    <Tooltip.Root key={item.path} delayDuration={200}>
-                        <Tooltip.Trigger asChild>
+                    <SortTooltip.Root key={item.path} delayDuration={200}>
+                        <SortTooltip.Trigger asChild>
                             <NavLink to={item.path} className={getNavLinkClass(item.path)} aria-label={item.label}>
                                 <Icon name={item.icon} size={20} strokeWidth={1}/>
                             </NavLink>
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                            <Tooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
+                        </SortTooltip.Trigger>
+                        <SortTooltip.Portal>
+                            <SortTooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
                                 {item.label}
-                                <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
-                            </Tooltip.Content>
-                        </Tooltip.Portal>
-                    </Tooltip.Root>
+                                <SortTooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
+                            </SortTooltip.Content>
+                        </SortTooltip.Portal>
+                    </SortTooltip.Root>
                 ))}
             </nav>
 
             <div className="mt-auto mb-1">
-                <Tooltip.Root delayDuration={200}>
-                    <Tooltip.Trigger asChild>
+                <SortTooltip.Root delayDuration={200}>
+                    <SortTooltip.Trigger asChild>
                         <Button onClick={handleAvatarClick} variant="ghost" size="icon"
                                 className="w-9 h-9 rounded-full overflow-hidden p-0 hover:bg-grey-ultra-light dark:hover:bg-grey-deep focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep"
                                 aria-label="Account Settings">
@@ -92,14 +118,14 @@ const IconBar: React.FC = memo(() => {
                                 </div>
                             )}
                         </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Portal>
-                        <Tooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
+                    </SortTooltip.Trigger>
+                    <SortTooltip.Portal>
+                        <SortTooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
                             Account Settings
-                            <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
-                        </Tooltip.Content>
-                    </Tooltip.Portal>
-                </Tooltip.Root>
+                            <SortTooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
+                        </SortTooltip.Content>
+                    </SortTooltip.Portal>
+                </SortTooltip.Root>
             </div>
         </div>
     );
