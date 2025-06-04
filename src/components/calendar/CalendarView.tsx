@@ -1,7 +1,7 @@
 // src/components/calendar/CalendarView.tsx
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {useAtom, useSetAtom} from 'jotai';
-import {selectedTaskIdAtom, tasksAtom} from '@/store/atoms';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai'; // Changed useAtomValue to useAtom for tasks
+import {selectedTaskIdAtom, tasksAtom, tasksLoadingAtom} from '@/store/atoms'; // Added tasksLoadingAtom
 import Button from '../common/Button';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {Task} from '@/types';
@@ -64,17 +64,14 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({task, o
             transition: isOverlay ? undefined : 'opacity 150ms ease-out, visibility 150ms ease-out',
             zIndex: isDragging ? 1000 : 1,
             cursor: isDragging ? 'grabbing' : (task.completed ? 'default' : 'grab'),
-            position: 'relative', // Ensure it's relative for proper stacking if not dragging overlay
+            position: 'relative',
             opacity: 1,
             visibility: 'visible',
         };
-        if (isDragging && !isOverlay) { // This is the original item being dragged (ghost)
+        if (isDragging && !isOverlay) {
             base.opacity = 0;
             base.visibility = 'hidden';
             base.pointerEvents = 'none';
-        }
-        if (isOverlay) { // This is the DragOverlay item
-            // No specific transform override needed here, CSS.Translate.toString handles it.
         }
         return base;
     }, [transform, isDragging, isOverlay, task.completed]);
@@ -189,22 +186,28 @@ DroppableDayCell.displayName = 'DroppableDayCell';
 
 
 const CalendarView: React.FC = () => {
-    const [tasks, setTasks] = useAtom(tasksAtom);
+    const [tasksData, setTasks] = useAtom(tasksAtom); // Use useAtom to get tasks and setter
+    const tasks = useMemo(() => tasksData ?? [], [tasksData]); // Handle null case
+    const isLoadingTasks = useAtomValue(tasksLoadingAtom); // Get loading state
+
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const [currentMonthDate, setCurrentMonthDate] = useState(startOfDay(new Date()));
     const [draggingTaskId, setDraggingTaskId] = useState<UniqueIdentifier | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
     const draggingTask = useMemo(() => {
         if (!draggingTaskId) return null;
         const id = draggingTaskId.toString().replace('caltask-', '');
         return tasks.find(t => t.id === id) ?? null;
     }, [draggingTaskId, tasks]);
+
     const firstDayCurrentMonth = useMemo(() => startOfMonth(currentMonthDate), [currentMonthDate]);
     const lastDayCurrentMonth = useMemo(() => endOfMonth(currentMonthDate), [currentMonthDate]);
     const startDate = useMemo(() => startOfWeek(firstDayCurrentMonth, {locale: enUS}), [firstDayCurrentMonth]);
     const endDate = useMemo(() => endOfWeek(lastDayCurrentMonth, {locale: enUS}), [lastDayCurrentMonth]);
     const daysInGrid = useMemo(() => eachDayOfInterval({start: startDate, end: endDate}), [startDate, endDate]);
     const numberOfRows = useMemo(() => daysInGrid.length / 7, [daysInGrid]);
+
     const tasksByDueDate = useMemo(() => {
         const grouped: Record<string, Task[]> = {};
         tasks.forEach(task => {
@@ -229,6 +232,7 @@ const CalendarView: React.FC = () => {
         });
         return grouped;
     }, [tasks]);
+
     const handleTaskClick = useCallback((taskId: string) => setSelectedTaskId(taskId), [setSelectedTaskId]);
     const changeMonth = useCallback((direction: -1 | 1) => {
         setCurrentMonthDate(current => direction === 1 ? addMonths(current, 1) : subMonths(current, 1));
@@ -242,12 +246,14 @@ const CalendarView: React.FC = () => {
         setCurrentMonthDate(startOfDay(newDate));
         setExpandedDays(new Set());
     }, []);
+
     const handleDragStart = useCallback((event: DragStartEvent) => {
         if (event.active.data.current?.type === 'calendar-task') {
             setDraggingTaskId(event.active.id);
             setSelectedTaskId(event.active.data.current.task.id);
         }
     }, [setSelectedTaskId]);
+
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         setDraggingTaskId(null);
         const {active, over} = event;
@@ -255,19 +261,35 @@ const CalendarView: React.FC = () => {
             const taskId = active.data.current.task.id as string;
             const targetDay = over.data.current?.date as Date | undefined;
             const originalTask = active.data.current?.task as Task | undefined;
+
             if (taskId && targetDay && originalTask && !originalTask.completed) {
                 const originalDateTime = safeParseDate(originalTask.dueDate);
+                let newDueDate = startOfDay(targetDay);
+
+                // Preserve original time if it was set (not midnight)
+                if (originalDateTime && isValid(originalDateTime)) {
+                    const hours = originalDateTime.getHours();
+                    const minutes = originalDateTime.getMinutes();
+                    if (hours !== 0 || minutes !== 0) {
+                        newDueDate.setHours(hours, minutes, 0, 0);
+                    }
+                }
+
                 const currentDueDateStart = originalDateTime ? startOfDay(originalDateTime) : null;
-                const newDueDateStart = startOfDay(targetDay);
-                if (!currentDueDateStart || !isSameDay(currentDueDateStart, newDueDateStart)) {
-                    setTasks(prevTasks => prevTasks.map(task => (task.id === taskId ? {
-                        ...task,
-                        dueDate: newDueDateStart.getTime()
-                    } : task)));
+                // Compare only the date part to avoid unnecessary updates if only time changes within the same day
+                if (!currentDueDateStart || !isSameDay(currentDueDateStart, startOfDay(targetDay))) {
+                    setTasks(prevTasksValue => {
+                        const prevTasks = prevTasksValue ?? [];
+                        return prevTasks.map(task => (task.id === taskId ? {
+                            ...task,
+                            dueDate: newDueDate.getTime()
+                        } : task))
+                    });
                 }
             }
         }
     }, [setTasks]);
+
     const toggleExpandDay = useCallback((dateKey: string) => setExpandedDays(prev => {
         const newSet = new Set(prev);
         if (newSet.has(dateKey)) newSet.delete(dateKey); else newSet.add(dateKey);
@@ -280,7 +302,7 @@ const CalendarView: React.FC = () => {
         const isCurrentMonthDay = isSameMonth(day, currentMonthDate);
         const isToday = isTodayFn(day);
         const isExpanded = expandedDays.has(dateKey);
-        const MAX_VISIBLE_TASKS = 3; // This can be dynamic based on row height if needed
+        const MAX_VISIBLE_TASKS = 3;
         const tasksToShow = isExpanded ? dayTasks : dayTasks.slice(0, MAX_VISIBLE_TASKS);
         const hasMoreTasks = dayTasks.length > MAX_VISIBLE_TASKS && !isExpanded;
 
@@ -289,8 +311,8 @@ const CalendarView: React.FC = () => {
                               className={twMerge(
                                   'border-r border-b border-grey-light dark:border-neutral-700',
                                   !isCurrentMonthDay && 'bg-grey-ultra-light/30 dark:bg-neutral-750/30 opacity-70',
-                                  index % 7 === 6 && 'border-r-0',
-                                  index >= daysInGrid.length - 7 && 'border-b-0',
+                                  index % 7 === 6 && 'border-r-0', // Last column
+                                  index >= daysInGrid.length - 7 && 'border-b-0', // Last row
                                   'overflow-hidden p-1'
                               )}>
                 <div className="flex justify-end items-center h-5 flex-shrink-0 mb-1">
@@ -301,7 +323,7 @@ const CalendarView: React.FC = () => {
                         )}>{format(day, 'd')}</span>
                 </div>
                 <div
-                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]">
+                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]"> {/* Ensure min height for drop target */}
                     {isCurrentMonthDay && tasksToShow.map((task) => (
                         <DraggableCalendarTask key={task.id} task={task} onClick={() => handleTaskClick(task.id)}/>))}
                     {isCurrentMonthDay && hasMoreTasks && (
@@ -316,16 +338,24 @@ const CalendarView: React.FC = () => {
 
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
     const isTodayButtonDisabled = useMemo(() => isSameDay(currentMonthDate, new Date()) && isSameMonth(currentMonthDate, new Date()), [currentMonthDate]);
-
     const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
+
+    if (isLoadingTasks) {
+        return (
+            <div
+                className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden items-center justify-center">
+                <Icon name="loader" size={24} className="text-primary animate-spin"/>
+            </div>
+        );
+    }
 
     return (
         <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart} collisionDetection={pointerWithin}
                     measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
             <div
-                className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden"> {/* Main page background */}
+                className="h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden">
                 <div
-                    className="px-6 py-0 h-[56px] border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-neutral-800 z-10"> {/* Header background */}
+                    className="px-6 py-0 h-[56px] border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-neutral-800 z-10">
                     <div className="w-1/3"><h1
                         className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">Calendar</h1>
                     </div>
@@ -363,19 +393,21 @@ const CalendarView: React.FC = () => {
                         </div>
                     </div>
                     <div className="w-1/3"></div>
+                    {/* Spacer */}
                 </div>
                 <div
-                    className="flex-1 overflow-hidden flex flex-col p-4 bg-white dark:bg-neutral-800"> {/* Content area background */}
+                    className="flex-1 overflow-hidden flex flex-col p-4 bg-white dark:bg-neutral-800">
                     <div className="grid grid-cols-7 flex-shrink-0 mb-1 px-0.5">
                         {weekDays.map((day, index) => (<div key={`${day}-${index}`}
                                                             className="text-center py-1 text-[11px] font-normal text-grey-medium dark:text-neutral-400 tracking-wide uppercase"> {day} </div>))}
                     </div>
-                    <div className="flex-1 min-h-0">
+                    <div
+                        className="flex-1 min-h-0"> {/* This div will take remaining space and allow grid to be scrollable if it overflows */}
                         <div
                             className={twMerge(
                                 "grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-light dark:border-neutral-700",
-                                "bg-white dark:bg-neutral-800", // Grid background
-                                numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6"
+                                "bg-white dark:bg-neutral-800",
+                                numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6" // Adjust rows based on month layout
                             )}>
                             {daysInGrid.map(renderCalendarDay)}
                         </div>

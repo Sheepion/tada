@@ -5,8 +5,10 @@ import Icon from '../common/Icon';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     currentFilterAtom,
+    defaultPreferencesSettingsForApi,
     isAddListModalOpenAtom,
     preferencesSettingsAtom,
+    preferencesSettingsLoadingAtom,
     rawSearchResultsAtom,
     searchTermAtom,
     selectedTaskIdAtom,
@@ -23,6 +25,7 @@ import {IconName} from "@/components/common/IconMap";
 import Highlighter from "react-highlight-words";
 import {AnimatePresence, motion} from 'framer-motion';
 
+// useDebounce and generateContentSnippet remain the same
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -152,7 +155,12 @@ const Sidebar: React.FC = () => {
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const setUserDefinedLists = useSetAtom(userDefinedListsAtom);
     const [, setIsAddListModalOpen] = useAtom(isAddListModalOpenAtom);
-    const preferences = useAtomValue(preferencesSettingsAtom);
+
+    const preferencesData = useAtomValue(preferencesSettingsAtom);
+    const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
+    // Provide a default if preferences are null (during loading or error)
+    const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
+
 
     const navigate = useNavigate();
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -164,7 +172,8 @@ const Sidebar: React.FC = () => {
     const handleListAdded = useCallback((newListName: string) => {
         const trimmedName = newListName.trim();
         if (!trimmedName) return;
-        setUserDefinedLists((prevLists = []) => {
+        setUserDefinedLists((prevListsValue = []) => { // Handle prevListsValue being null
+            const prevLists = prevListsValue ?? [];
             const newListSet = new Set(prevLists);
             newListSet.add(trimmedName);
             return Array.from(newListSet).sort((a, b) => a.localeCompare(b));
@@ -180,15 +189,13 @@ const Sidebar: React.FC = () => {
     }, [setSearchTerm]);
     const handleSearchResultClick = useCallback((task: Task) => {
         setSelectedTaskId(task.id);
-        // Potentially clear search on selection, or keep it for context
-        // setSearchTerm('');
     }, [setSelectedTaskId]);
     const myListsToDisplay = useMemo(() => userLists.filter(list => list !== 'Inbox'), [userLists]);
     const tagsToDisplay = useMemo(() => userTags, [userTags]);
 
     const searchInputClassName = useMemo(() => twMerge(
         "w-full h-[32px] pl-8 pr-7 text-[13px] font-light rounded-base focus:outline-none",
-        "bg-grey-ultra-light/70 dark:bg-grey-deep/70", // Slightly more transparent
+        "bg-grey-ultra-light/70 dark:bg-grey-deep/70",
         "border border-transparent dark:border-transparent",
         "focus:border-transparent dark:focus:border-transparent",
         "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
@@ -203,11 +210,21 @@ const Sidebar: React.FC = () => {
 
     const searchResultButtonClassName = "flex items-start w-full px-2 py-1.5 text-left rounded-base hover:bg-grey-ultra-light dark:hover:bg-grey-deep text-[13px] group transition-colors duration-100 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary";
 
+    if (isLoadingPreferences) { // Or a combined loading state for all necessary sidebar data
+        return (
+            <aside className={twMerge(
+                "w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2",
+                "bg-transparent items-center justify-center"
+            )}>
+                <Icon name="loader" size={20} className="text-primary animate-spin"/>
+            </aside>
+        );
+    }
+
     return (
         <>
             <aside className={twMerge(
                 "w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2",
-                // Sidebar itself has no background; its parent in MainLayout provides it
                 "bg-transparent"
             )}>
                 <div className="mb-3 flex-shrink-0">

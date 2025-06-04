@@ -1,18 +1,19 @@
 // src/components/settings/SettingsModal.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useAtom, useAtomValue} from 'jotai';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     appearanceSettingsAtom,
     currentUserAtom,
-    DarkModeOption,
-    DefaultNewTaskDueDate,
+    DarkModeOption, defaultAppearanceSettingsForApi,
+    DefaultNewTaskDueDate, defaultPreferencesSettingsForApi,
     isSettingsOpenAtom,
     preferencesSettingsAtom,
     premiumSettingsAtom,
     settingsSelectedTabAtom,
+    userDefinedListsAtom,
     userListNamesAtom,
 } from '@/store/atoms';
-import {SettingsTab} from '@/types';
+import {SettingsTab, User} from '@/types';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import {twMerge} from 'tailwind-merge';
@@ -20,7 +21,7 @@ import {IconName} from "@/components/common/IconMap";
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Select from '@radix-ui/react-select';
 import * as RadioGroup from '@radix-ui/react-radio-group';
-import * as RadixSwitch from '@radix-ui/react-switch'; // <-- ADDED THIS IMPORT
+import * as RadixSwitch from '@radix-ui/react-switch';
 import {
     APP_THEMES,
     APP_VERSION,
@@ -29,6 +30,7 @@ import {
     PRIVACY_POLICY_HTML,
     TERMS_OF_USE_HTML
 } from '@/config/themes';
+import * as apiService from '@/services/apiService';
 
 interface SettingsItem {
     id: SettingsTab;
@@ -70,7 +72,6 @@ const SettingsRow: React.FC<{
 ));
 SettingsRow.displayName = 'SettingsRow';
 
-// Dark Mode Selector Component
 const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: DarkModeOption) => void; }> = memo(({
                                                                                                                     value,
                                                                                                                     onChange
@@ -110,7 +111,6 @@ const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: Dark
 DarkModeSelector.displayName = 'DarkModeSelector';
 
 
-// Color Swatch Component for Theme Picker
 const ColorSwatch: React.FC<{
     colorValue: string;
     selected: boolean;
@@ -132,7 +132,6 @@ const ColorSwatch: React.FC<{
 ));
 ColorSwatch.displayName = 'ColorSwatch';
 
-// Background Image Preview Component
 const BackgroundImagePreview: React.FC<{
     imageUrl: string;
     name: string;
@@ -172,30 +171,166 @@ BackgroundImagePreview.displayName = 'BackgroundImagePreview';
 
 // Account Settings
 const AccountSettings: React.FC = memo(() => {
-    const [currentUser] = useAtom(currentUserAtom);
-    const handleEdit = useCallback(() => console.log("Edit action triggered"), []);
-    const handleChangePassword = useCallback(() => console.log("Change password action triggered"), []);
-    const handleUnlink = useCallback(() => console.log("Unlink Google action triggered"), []);
-    const handleLinkApple = useCallback(() => console.log("Link Apple ID action triggered"), []);
-    const handleBackup = useCallback(() => console.log("Backup action triggered"), []);
-    const handleImport = useCallback(() => console.log("Import action triggered"), []);
-    const handleDeleteAccount = useCallback(() => console.log("Delete account action triggered"), []);
-    const handleLogout = useCallback(() => console.log("Logout action triggered"), []);
-    const userName = useMemo(() => currentUser?.name ?? 'Guest User', [currentUser?.name]);
-    const userEmail = useMemo(() => currentUser?.email ?? 'No email provided', [currentUser?.email]);
-    const isPremium = useMemo(() => currentUser?.isPremium ?? false, [currentUser?.isPremium]);
-    const avatarSrc = useMemo(() => currentUser?.avatar, [currentUser?.avatar]);
-    const avatarInitial = useMemo(() => currentUser?.name?.charAt(0).toUpperCase(), [currentUser?.name]);
+    const [currentUser, setCurrentUserGlobally] = useAtom(currentUserAtom);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [newName, setNewName] = useState(currentUser?.name || '');
+    const [isLoading, setIsLoading] = useState(false); // Local loading state for operations
+
+    useEffect(() => {
+        if (currentUser) {
+            setNewName(currentUser.name || '');
+        }
+    }, [currentUser]);
+
+    const handleEditName = () => setIsEditingName(true);
+    const handleCancelEditName = () => {
+        setIsEditingName(false);
+        setNewName(currentUser?.name || '');
+    };
+    const handleSaveName = async () => {
+        if (!currentUser || newName.trim() === currentUser.name || !newName.trim()) {
+            setIsEditingName(false);
+            if (!newName.trim()) setNewName(currentUser?.name || ''); // Revert if empty
+            return;
+        }
+        setIsLoading(true);
+        const response = await apiService.apiUpdateUserProfile(currentUser.id, { name: newName.trim() });
+        setIsLoading(false);
+        if (response.success && response.user) {
+            setCurrentUserGlobally(response.user);
+            setIsEditingName(false);
+        } else {
+            alert(`Error updating name: ${response.error || 'Unknown error'}`);
+        }
+    };
+
+    const handleChangePassword = async () => {
+        const oldPassword = prompt("Enter current password:");
+        if (!oldPassword) return;
+        const newPassword = prompt("Enter new password:");
+        if (!newPassword) return;
+        const confirmNewPassword = prompt("Confirm new password:");
+        if (newPassword !== confirmNewPassword) {
+            alert("New passwords do not match.");
+            return;
+        }
+        if (!currentUser) return;
+
+        setIsLoading(true);
+        const response = await apiService.apiChangePassword(currentUser.id, oldPassword, newPassword);
+        setIsLoading(false);
+        if (response.success) {
+            alert("Password changed successfully.");
+        } else {
+            alert(`Error changing password: ${response.error || 'Unknown error'}`);
+        }
+    };
+
+    const handleSocialLink = async (provider: 'google' | 'apple') => {
+        setIsLoading(true);
+        const response = await apiService.apiLinkSocialAccount(provider);
+        setIsLoading(false);
+        if (response.success) {
+            alert(`${provider} account linking process would start here (simulated).`);
+            if (response.user) setCurrentUserGlobally(response.user); // Update if backend returns updated user
+            else setCurrentUserGlobally(undefined); // Trigger re-fetch if user object not returned
+        } else {
+            alert(`Error linking ${provider} account: ${response.error || 'Unknown error'}`);
+        }
+    };
+    const handleSocialUnlink = async (provider: 'google' | 'apple') => {
+        setIsLoading(true);
+        const response = await apiService.apiUnlinkSocialAccount(provider);
+        setIsLoading(false);
+        if (response.success) {
+            alert(`${provider} account unlinked (simulated).`);
+            if (response.user) setCurrentUserGlobally(response.user);
+            else setCurrentUserGlobally(undefined);
+        } else {
+            alert(`Error unlinking ${provider} account: ${response.error || 'Unknown error'}`);
+        }
+    };
+
+    const handleBackup = async () => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        const response = await apiService.apiBackupData(currentUser.id);
+        setIsLoading(false);
+        if (response.success && response.data) {
+            const jsonData = JSON.stringify(response.data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tada-backup-${currentUser.id}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } else {
+            alert(`Backup failed: ${response.error || 'Unknown error'}`);
+        }
+    };
+
+    const importInputRef = useRef<HTMLInputElement>(null);
+    const handleImportClick = () => importInputRef.current?.click();
+    const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!currentUser || !event.target.files || event.target.files.length === 0) return;
+        const file = event.target.files[0];
+        setIsLoading(true);
+        const response = await apiService.apiImportData(currentUser.id, file);
+        setIsLoading(false);
+        if (response.success) {
+            alert("Data import successful. Application data will refresh.");
+            // Trigger full app data refresh by resetting key atoms
+            setCurrentUserGlobally(undefined); // Re-fetch user
+            // Example: setTasks(RESET); setAppearanceSettings(RESET); etc. based on what import affects
+        } else {
+            alert(`Import failed: ${response.error || 'Unknown error'}`);
+        }
+        if(event.target) event.target.value = ''; // Reset file input
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!currentUser) return;
+        if (confirm(`Are you sure you want to request deletion for account: ${currentUser.email}? This is irreversible.`)) {
+            setIsLoading(true);
+            const response = await apiService.apiRequestAccountDeletion(currentUser.id);
+            setIsLoading(false);
+            if (response.success) {
+                alert("Account deletion requested. You will be logged out.");
+                setCurrentUserGlobally('logout');
+            } else {
+                alert(`Account deletion request failed: ${response.error || 'Unknown error'}`);
+            }
+        }
+    };
+
+    const handleLogout = async () => {
+        setIsLoading(true);
+        await setCurrentUserGlobally('logout'); // Atom setter handles API call
+        // No need to manually set isLoading to false if component unmounts or view changes due to logout.
+    };
+
+    const userName = useMemo(() => currentUser?.name ?? 'Guest User', [currentUser]);
+    const userEmail = useMemo(() => currentUser?.email ?? 'No email provided', [currentUser]);
+    const isPremium = useMemo(() => currentUser?.isPremium ?? false, [currentUser]);
+    const avatarSrc = useMemo(() => currentUser?.avatar, [currentUser]);
+    const avatarInitial = useMemo(() => currentUser?.name?.charAt(0).toUpperCase() || '', [currentUser]);
+
+    // Simulated: check if specific keys exist on user object, if backend modifies it.
+    const isGoogleLinked = !!(currentUser && (currentUser as any).googleLinked);
+    const isAppleLinked = !!(currentUser && (currentUser as any).appleLinked);
+
 
     return (<div className="space-y-6">
+        {isLoading && <div className="absolute inset-0 bg-white/50 dark:bg-neutral-800/50 flex items-center justify-center z-10"><Icon name="loader" className="animate-spin text-primary" size={24}/></div>}
         <div className="flex items-center space-x-4 mb-4">
-            <div
-                className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 bg-grey-ultra-light dark:bg-neutral-700">
+            <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 bg-grey-ultra-light dark:bg-neutral-700">
                 {avatarSrc ? (
                     <img src={avatarSrc} alt={userName} className="w-full h-full object-cover"/>
                 ) : (
-                    <div
-                        className="w-full h-full bg-grey-light dark:bg-neutral-600 flex items-center justify-center text-grey-medium dark:text-neutral-400 text-2xl font-normal">
+                    <div className="w-full h-full bg-grey-light dark:bg-neutral-600 flex items-center justify-center text-grey-medium dark:text-neutral-400 text-2xl font-normal">
                         {avatarInitial || <Icon name="user" size={24} strokeWidth={1}/>}
                     </div>
                 )}
@@ -204,69 +339,97 @@ const AccountSettings: React.FC = memo(() => {
                 <h3 className="text-[18px] font-normal text-grey-dark dark:text-neutral-100">{userName}</h3>
                 <p className="text-[13px] text-grey-medium dark:text-neutral-300 font-light">{userEmail}</p>
                 {isPremium && (
-                    <div
-                        className="text-[11px] text-primary dark:text-primary-light flex items-center mt-1.5 font-normal bg-primary-light dark:bg-primary-dark/30 px-2 py-0.5 rounded-full w-fit">
-                        <Icon name="crown" size={12} className="mr-1 text-primary dark:text-primary-light"
-                              strokeWidth={1.5}/>
+                    <div className="text-[11px] text-primary dark:text-primary-light flex items-center mt-1.5 font-normal bg-primary-light dark:bg-primary-dark/30 px-2 py-0.5 rounded-full w-fit">
+                        <Icon name="crown" size={12} className="mr-1 text-primary dark:text-primary-light" strokeWidth={1.5}/>
                         <span>Premium Member</span>
                     </div>
                 )}
             </div>
         </div>
         <div className="space-y-0">
-            <SettingsRow label="Name" value={userName}
-                         action={<Button variant="link" size="sm" onClick={handleEdit}>Edit</Button>}/>
+            {isEditingName ? (
+                <SettingsRow label="Name">
+                    <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="flex-grow h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light mr-2 w-full sm:w-auto"
+                        disabled={isLoading}
+                    />
+                    <Button variant="primary" size="sm" onClick={handleSaveName} disabled={isLoading}>Save</Button>
+                    <Button variant="ghost" size="sm" onClick={handleCancelEditName} className="ml-1" disabled={isLoading}>Cancel</Button>
+                </SettingsRow>
+            ) : (
+                <SettingsRow label="Name" value={userName}
+                             action={<Button variant="link" size="sm" onClick={handleEditName} disabled={isLoading}>Edit</Button>}/>
+            )}
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label="Email Address" value={userEmail} description="Used for login and notifications."/>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Password" action={<Button variant="link" size="sm" onClick={handleChangePassword}>Change
-                Password</Button>}/>
+            <SettingsRow label="Password" action={<Button variant="link" size="sm" onClick={handleChangePassword} disabled={isLoading}>Change Password</Button>}/>
         </div>
         <div className="space-y-0">
             <h4 className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 uppercase tracking-[0.5px] mb-2 mt-4">Connected
                 Accounts</h4>
-            <SettingsRow label="Google Account" value={currentUser?.email ? "Linked" : "Not Linked"}
-                         action={currentUser?.email ? <Button variant="link" size="sm"
-                                                              className="text-grey-medium dark:text-neutral-400 hover:text-error dark:hover:text-red-400"
-                                                              onClick={handleUnlink}>Unlink</Button> : undefined}/>
+            <SettingsRow label="Google Account" value={isGoogleLinked ? "Linked" : "Not Linked"}
+                         action={
+                             isGoogleLinked ?
+                                 <Button variant="link" size="sm" className="text-grey-medium dark:text-neutral-400 hover:text-error dark:hover:text-red-400" onClick={() => handleSocialUnlink('google')} disabled={isLoading}>Unlink</Button> :
+                                 <Button variant="link" size="sm" onClick={() => handleSocialLink('google')} disabled={isLoading}>Link Google</Button>
+                         }/>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Apple ID"
-                         action={<Button variant="link" size="sm" onClick={handleLinkApple}>Link Apple ID</Button>}/>
+            <SettingsRow label="Apple ID" value={isAppleLinked ? "Linked" : "Not Linked"}
+                         action={
+                             isAppleLinked ?
+                                 <Button variant="link" size="sm" className="text-grey-medium dark:text-neutral-400 hover:text-error dark:hover:text-red-400" onClick={() => handleSocialUnlink('apple')} disabled={isLoading}>Unlink</Button> :
+                                 <Button variant="link" size="sm" onClick={() => handleSocialLink('apple')} disabled={isLoading}>Link Apple ID</Button>
+                         }/>
         </div>
         <div className="space-y-0">
             <h4 className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 uppercase tracking-[0.5px] mb-2 mt-4">Data
                 Management</h4>
             <SettingsRow label="Backup & Restore" description="Save or load your task data.">
-                <Button variant="secondary" size="sm" icon="download" onClick={handleBackup}>Backup</Button>
-                <Button variant="secondary" size="sm" icon="upload" onClick={handleImport}>Import</Button>
+                <Button variant="secondary" size="sm" icon="download" onClick={handleBackup} disabled={isLoading}>Backup</Button>
+                <input type="file" ref={importInputRef} onChange={handleImportFile} accept=".json" style={{ display: 'none' }} />
+                <Button variant="secondary" size="sm" icon="upload" onClick={handleImportClick} disabled={isLoading}>Import</Button>
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label="Delete Account" description="Permanently delete your account and data."
-                         action={<Button variant="danger" size="sm" onClick={handleDeleteAccount}>Request
-                             Deletion</Button>}/>
+                         action={<Button variant="danger" size="sm" onClick={handleDeleteAccount} disabled={isLoading}>Request Deletion</Button>}/>
         </div>
         <div className="mt-8">
             <Button variant="secondary" size="md" icon="logout" onClick={handleLogout}
-                    className="w-full sm:w-auto">Logout</Button>
+                    className="w-full sm:w-auto" disabled={isLoading}>Logout</Button>
         </div>
     </div>);
 });
 AccountSettings.displayName = 'AccountSettings';
 
-// Appearance Settings Component
+const defaultAppearanceSettingsFromAtoms = defaultAppearanceSettingsForApi(); // Get default from atoms.ts
+
 const AppearanceSettings: React.FC = memo(() => {
     const [appearance, setAppearance] = useAtom(appearanceSettingsAtom);
-    const [customBgUrl, setCustomBgUrl] = useState(
-        PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === appearance.backgroundImageUrl) || appearance.backgroundImageUrl === 'none'
-            ? ''
-            : appearance.backgroundImageUrl
-    );
+    const [customBgUrl, setCustomBgUrl] = useState('');
     const customBgUrlInputRef = useRef<HTMLInputElement>(null);
 
-    const handleThemeChange = (themeId: string) => setAppearance(s => ({...s, themeId}));
-    const handleDarkModeChange = (mode: DarkModeOption) => setAppearance(s => ({...s, darkMode: mode}));
+    useEffect(() => {
+        if (appearance && !PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === appearance.backgroundImageUrl) && appearance.backgroundImageUrl !== 'none') {
+            setCustomBgUrl(appearance.backgroundImageUrl);
+        } else {
+            setCustomBgUrl('');
+        }
+    }, [appearance]);
+
+    if (!appearance) {
+        return <div className="p-4 text-center text-grey-medium">Loading appearance settings...</div>;
+    }
+
+    const currentAppearance = appearance ?? defaultAppearanceSettingsFromAtoms;
+
+    const handleThemeChange = (themeId: string) => setAppearance(s => ({...(s ?? defaultAppearanceSettingsFromAtoms), themeId}));
+    const handleDarkModeChange = (mode: DarkModeOption) => setAppearance(s => ({...(s ?? defaultAppearanceSettingsFromAtoms), darkMode: mode}));
     const handleBgImageChange = (url: string) => {
-        setAppearance(s => ({...s, backgroundImageUrl: url}));
+        setAppearance(s => ({...(s ?? defaultAppearanceSettingsFromAtoms), backgroundImageUrl: url}));
         if (!PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === url) && url !== 'none') {
             setCustomBgUrl(url);
         } else {
@@ -278,25 +441,25 @@ const AppearanceSettings: React.FC = memo(() => {
             if (customBgUrl.startsWith('http://') || customBgUrl.startsWith('https://') || customBgUrl.startsWith('data:image')) {
                 handleBgImageChange(customBgUrl.trim());
             } else {
-                alert("Please enter a valid image URL (starting with http, https, or data:image).");
+                alert("Please enter a valid image URL (starting with http://, https://, or data:image).");
                 customBgUrlInputRef.current?.focus();
             }
         }
     };
-
-    useEffect(() => {
-        if (!PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === appearance.backgroundImageUrl) && appearance.backgroundImageUrl !== 'none') {
-            setCustomBgUrl(appearance.backgroundImageUrl);
-        } else {
-            setCustomBgUrl('');
-        }
-    }, [appearance.backgroundImageUrl]);
+    const handleBlurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        setAppearance(s => ({...(s ?? defaultAppearanceSettingsFromAtoms), backgroundImageBlur: Math.max(0, Math.min(20, value)) }));
+    };
+    const handleBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        setAppearance(s => ({...(s ?? defaultAppearanceSettingsFromAtoms), backgroundImageBrightness: Math.max(0, Math.min(200, value)) }));
+    };
 
 
     return (
         <div className="space-y-6">
             <SettingsRow label="Appearance Mode" description="Choose your preferred interface look.">
-                <DarkModeSelector value={appearance.darkMode} onChange={handleDarkModeChange}/>
+                <DarkModeSelector value={currentAppearance.darkMode} onChange={handleDarkModeChange}/>
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
 
@@ -306,7 +469,7 @@ const AppearanceSettings: React.FC = memo(() => {
                         <ColorSwatch
                             key={theme.id}
                             colorValue={theme.colors.primary}
-                            selected={appearance.themeId === theme.id}
+                            selected={currentAppearance.themeId === theme.id}
                             onClick={() => handleThemeChange(theme.id)}
                             themeName={theme.name}
                         />
@@ -324,7 +487,7 @@ const AppearanceSettings: React.FC = memo(() => {
                             key={img.id}
                             imageUrl={img.url}
                             name={img.name}
-                            selected={appearance.backgroundImageUrl === img.url}
+                            selected={currentAppearance.backgroundImageUrl === img.url}
                             onClick={() => handleBgImageChange(img.url)}
                         />
                     ))}
@@ -344,31 +507,61 @@ const AppearanceSettings: React.FC = memo(() => {
                             "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
                         )}
                     />
-                    <Button variant="secondary" size="md" onClick={handleCustomBgUrlApply} className="flex-shrink-0">Apply
-                        URL</Button>
+                    <Button variant="secondary" size="md" onClick={handleCustomBgUrlApply} className="flex-shrink-0">Apply URL</Button>
                 </div>
             </div>
+
+            {currentAppearance.backgroundImageUrl && currentAppearance.backgroundImageUrl !== 'none' && (
+                <>
+                    <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+                    <SettingsRow label="Background Blur" htmlFor="bgBlurSlider"
+                                 description="Adjust background image blurriness.">
+                        <div className="flex items-center space-x-2 w-[180px]">
+                            <input id="bgBlurSlider" type="range" min="0" max="20" step="1" value={currentAppearance.backgroundImageBlur}
+                                   onChange={handleBlurChange}
+                                   className="range-slider-track flex-grow" aria-label="Background blur amount"/>
+                            <span className="text-xs text-grey-medium dark:text-neutral-300 w-8 text-right tabular-nums">{currentAppearance.backgroundImageBlur}px</span>
+                        </div>
+                    </SettingsRow>
+                    <SettingsRow label="Background Brightness" htmlFor="bgBrightnessSlider"
+                                 description="Adjust background image brightness.">
+                        <div className="flex items-center space-x-2 w-[180px]">
+                            <input id="bgBrightnessSlider" type="range" min="0" max="200" step="5" value={currentAppearance.backgroundImageBrightness}
+                                   onChange={handleBrightnessChange}
+                                   className="range-slider-track flex-grow" aria-label="Background brightness percentage"/>
+                            <span className="text-xs text-grey-medium dark:text-neutral-300 w-8 text-right tabular-nums">{currentAppearance.backgroundImageBrightness}%</span>
+                        </div>
+                    </SettingsRow>
+                </>
+            )}
         </div>
     );
 });
 AppearanceSettings.displayName = 'AppearanceSettings';
 
-// Preferences Settings Component
+const defaultPreferencesFromAtoms = defaultPreferencesSettingsForApi(); // Get default from atoms.ts
+
 const PreferencesSettings: React.FC = memo(() => {
     const [preferences, setPreferences] = useAtom(preferencesSettingsAtom);
-    const userLists = useAtomValue(userListNamesAtom);
+    const userLists = useAtomValue(userListNamesAtom) ?? []; // Handle null during loading
 
-    const handleLanguageChange = (value: string) => setPreferences(p => ({...p, language: value as 'en' | 'zh-CN'}));
+    if (!preferences) {
+        return <div className="p-4 text-center text-grey-medium">Loading preferences...</div>;
+    }
+    const currentPreferences = preferences ?? defaultPreferencesFromAtoms;
+
+
+    const handleLanguageChange = (value: string) => setPreferences(p => ({...(p ?? defaultPreferencesFromAtoms), language: value as 'en' | 'zh-CN'}));
     const handleDefaultDueDateChange = (value: string) => setPreferences(p => ({
-        ...p,
+        ...(p ?? defaultPreferencesFromAtoms),
         defaultNewTaskDueDate: value === 'none' ? null : value as DefaultNewTaskDueDate
     }));
     const handleDefaultPriorityChange = (value: string) => setPreferences(p => ({
-        ...p,
+        ...(p ?? defaultPreferencesFromAtoms),
         defaultNewTaskPriority: value === 'none' ? null : parseInt(value, 10)
     }));
-    const handleDefaultListChange = (value: string) => setPreferences(p => ({...p, defaultNewTaskList: value}));
-    const handleConfirmDeletionsChange = (checked: boolean) => setPreferences(p => ({...p, confirmDeletions: checked}));
+    const handleDefaultListChange = (value: string) => setPreferences(p => ({...(p ?? defaultPreferencesFromAtoms), defaultNewTaskList: value}));
+    const handleConfirmDeletionsChange = (checked: boolean) => setPreferences(p => ({...(p ?? defaultPreferencesFromAtoms), confirmDeletions: checked}));
 
 
     const dueDateOptions = [
@@ -382,10 +575,13 @@ const PreferencesSettings: React.FC = memo(() => {
         {value: '2', label: 'Medium (P2)'},
         {value: '3', label: 'Low (P3)'},
     ];
-    const listOptions = useMemo(() => ['Inbox', ...userLists.filter(l => l !== 'Inbox')].map(l => ({
-        value: l,
-        label: l
-    })), [userLists]);
+    const listOptions = useMemo(() => {
+        const validUserLists = userLists.filter(l => l !== 'Trash');
+        return ['Inbox', ...validUserLists.filter(l => l !== 'Inbox')].map(l => ({
+            value: l,
+            label: l
+        }));
+    }, [userLists]);
 
     const renderSelect = (id: string, value: string | null, onChange: (value: string) => void, options: {
         value: string,
@@ -430,7 +626,7 @@ const PreferencesSettings: React.FC = memo(() => {
         <div className="space-y-0">
             <SettingsRow label="Language" description="Change the application display language."
                          htmlFor="languageSelect">
-                {renderSelect('languageSelect', preferences.language, handleLanguageChange, [{
+                {renderSelect('languageSelect', currentPreferences.language, handleLanguageChange, [{
                     value: 'en',
                     label: 'English'
                 }, {value: 'zh-CN', label: '简体中文'}], "Select Language")}
@@ -438,17 +634,17 @@ const PreferencesSettings: React.FC = memo(() => {
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label="Default Due Date" description="Set the default due date for newly created tasks."
                          htmlFor="defaultDueDateSelect">
-                {renderSelect('defaultDueDateSelect', preferences.defaultNewTaskDueDate, handleDefaultDueDateChange, dueDateOptions, "Select Due Date")}
+                {renderSelect('defaultDueDateSelect', currentPreferences.defaultNewTaskDueDate, handleDefaultDueDateChange, dueDateOptions, "Select Due Date")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label="Default Priority" description="Set the default priority for newly created tasks."
                          htmlFor="defaultPrioritySelect">
-                {renderSelect('defaultPrioritySelect', preferences.defaultNewTaskPriority?.toString() ?? 'none', handleDefaultPriorityChange, priorityOptions, "Select Priority")}
+                {renderSelect('defaultPrioritySelect', currentPreferences.defaultNewTaskPriority?.toString() ?? 'none', handleDefaultPriorityChange, priorityOptions, "Select Priority")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label="Default List" description="Set the default list for newly created tasks."
                          htmlFor="defaultListSelect">
-                {renderSelect('defaultListSelect', preferences.defaultNewTaskList, handleDefaultListChange, listOptions, "Select List")}
+                {renderSelect('defaultListSelect', currentPreferences.defaultNewTaskList, handleDefaultListChange, listOptions, "Select List")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label="Confirm Deletions"
@@ -456,16 +652,16 @@ const PreferencesSettings: React.FC = memo(() => {
                          htmlFor="confirmDeletionsToggle">
                 <RadixSwitch.Root
                     id="confirmDeletionsToggle"
-                    checked={preferences.confirmDeletions}
+                    checked={currentPreferences.confirmDeletions}
                     onCheckedChange={handleConfirmDeletionsChange}
                     aria-label="Toggle confirm deletions"
                     className={twMerge(
                         "custom-switch-track",
-                        preferences.confirmDeletions ? "custom-switch-track-on" : "custom-switch-track-off"
+                        currentPreferences.confirmDeletions ? "custom-switch-track-on" : "custom-switch-track-off"
                     )}
                 >
                     <RadixSwitch.Thumb
-                        className={twMerge("custom-switch-thumb", preferences.confirmDeletions ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
+                        className={twMerge("custom-switch-thumb", currentPreferences.confirmDeletions ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
                 </RadixSwitch.Root>
             </SettingsRow>
         </div>
@@ -473,31 +669,64 @@ const PreferencesSettings: React.FC = memo(() => {
 });
 PreferencesSettings.displayName = 'PreferencesSettings';
 
-// Premium Settings Component
 const PremiumSettings: React.FC = memo(() => {
     const premiumInfo = useAtomValue(premiumSettingsAtom);
+    const currentUser = useAtomValue(currentUserAtom);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleUpgrade = () => {
-        alert("Upgrade flow not implemented in this demo. Imagine redirecting to a payment provider!");
+    const handleUpgrade = async (tierId: string) => {
+        if (!currentUser) {
+            alert("Please log in to upgrade.");
+            return;
+        }
+        setIsLoading(true);
+        const response = await apiService.apiUpgradeToPro(currentUser.id, tierId);
+        setIsLoading(false);
+        if (response.success && response.checkoutUrl) {
+            alert(`Redirecting to upgrade page (simulated): ${response.checkoutUrl}`);
+            window.open(response.checkoutUrl, '_blank');
+        } else {
+            alert(`Upgrade failed: ${response.error || 'Could not initiate upgrade process.'}`);
+        }
     };
+
+    const handleManageSubscription = async () => {
+        if (!currentUser) {
+            alert("Please log in to manage your subscription.");
+            return;
+        }
+        setIsLoading(true);
+        const response = await apiService.apiManageSubscription(currentUser.id);
+        setIsLoading(false);
+        if (response.success && response.portalUrl) {
+            alert(`Redirecting to subscription management (simulated): ${response.portalUrl}`);
+            window.open(response.portalUrl, '_blank');
+        } else {
+            alert(`Could not open subscription portal: ${response.error || 'Unknown error.'}`);
+        }
+    };
+
 
     const premiumTiers = [
         {
+            id: "free",
             name: "Free Tier",
             price: "Free",
             features: ["Basic Task Management", "Up to 3 Lists", "Standard AI Summary"],
             current: premiumInfo.tier === 'free'
         },
         {
+            id: "pro",
             name: "Pro Tier",
             price: "$5/month",
-            features: ["Unlimited Lists & Tasks", "Advanced AI Summary Options", "Priority Support", "Cloud Backup & Sync (mock)"],
+            features: ["Unlimited Lists & Tasks", "Advanced AI Summary Options", "Priority Support", "Cloud Backup & Sync"],
             current: premiumInfo.tier === 'pro'
         },
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {isLoading && <div className="absolute inset-0 bg-white/50 dark:bg-neutral-800/50 flex items-center justify-center z-10"><Icon name="loader" className="animate-spin text-primary" size={24}/></div>}
             <div
                 className="p-4 rounded-base bg-primary-light/50 dark:bg-primary-dark/20 border border-primary/30 dark:border-primary-dark/40">
                 <div className="flex items-center">
@@ -538,29 +767,20 @@ const PremiumSettings: React.FC = memo(() => {
                                 </li>
                             ))}
                         </ul>
-                        {premiumInfo.tier === 'free' && tier.name === "Pro Tier" && (
-                            <Button variant="primary" fullWidth onClick={handleUpgrade}>Upgrade to Pro</Button>
+                        {premiumInfo.tier === 'free' && tier.id === "pro" && (
+                            <Button variant="primary" fullWidth onClick={() => handleUpgrade(tier.id)} disabled={isLoading}>Upgrade to Pro</Button>
                         )}
-                        {premiumInfo.tier === 'pro' && tier.name === "Pro Tier" && (
-                            <Button variant="secondary" fullWidth disabled>Currently Active</Button>
+                        {premiumInfo.tier === 'pro' && tier.id === "pro" && (
+                            <Button variant="secondary" fullWidth onClick={handleManageSubscription} disabled={isLoading}>Manage Subscription</Button>
                         )}
                     </div>
                 ))}
             </div>
-            {premiumInfo.tier === 'pro' && (
-                <div className="text-center mt-4">
-                    <Button variant="link" size="sm"
-                            onClick={() => alert("Manage subscription action (not implemented).")}>
-                        Manage Subscription or View Billing
-                    </Button>
-                </div>
-            )}
         </div>
     );
 });
 PremiumSettings.displayName = 'PremiumSettings';
 
-// About Settings Component
 const AboutSettings: React.FC = memo(() => {
     const [activeContent, setActiveContent] = useState<'changelog' | 'privacy' | 'terms' | null>(null);
 

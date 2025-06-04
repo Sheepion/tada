@@ -1,8 +1,11 @@
 // src/types/index.ts
+import {DarkModeOption, DefaultNewTaskDueDate} from "@/store/atoms.ts";
+
 export interface User {
     id: string;
     name: string;
     email: string;
+    phone?: string; // Optional phone number
     avatar?: string; // Optional avatar URL
     isPremium: boolean; // Premium status flag
 }
@@ -64,3 +67,30 @@ export type TaskGroupCategory =
     | 'next7days'
     | 'later' // Due date is beyond 7 days
     | 'nodate'; // No due date assigned or task is completed/trashed
+
+export interface StoredSummary {
+    id: string;
+    createdAt: number;
+    periodKey: string;
+    listKey: string;
+    taskIds: string[];
+    summaryText: string;
+    updatedAt?: number;
+}
+
+export interface AppearanceSettings {
+    themeId: string;
+    darkMode: DarkModeOption;
+    backgroundImageUrl: string;
+    backgroundImageBlur: number;
+    backgroundImageBrightness: number;
+    interfaceDensity: 'compact' | 'default' | 'comfortable';
+}
+
+export interface PreferencesSettings {
+    language: 'en' | 'zh-CN';
+    defaultNewTaskDueDate: DefaultNewTaskDueDate;
+    defaultNewTaskPriority: number | null;
+    defaultNewTaskList: string;
+    confirmDeletions: boolean;
+}

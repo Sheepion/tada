@@ -4,12 +4,15 @@ import TaskItem from './TaskItem';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {
     currentFilterAtom,
+    defaultPreferencesSettingsForApi,
     groupedAllTasksAtom,
     preferencesSettingsAtom,
+    preferencesSettingsLoadingAtom,
     rawSearchResultsAtom,
     searchTermAtom,
     selectedTaskIdAtom,
     tasksAtom,
+    tasksLoadingAtom,
     userListNamesAtom,
 } from '@/store/atoms';
 import Icon from '../common/Icon';
@@ -37,7 +40,6 @@ import {
     addDays,
     formatRelativeDate,
     isBefore,
-    isOverdue,
     isToday,
     isValid,
     isWithinNext7Days,
@@ -48,7 +50,7 @@ import {
 import {twMerge} from 'tailwind-merge';
 import {TaskItemMenuProvider} from '@/context/TaskItemMenuContext';
 import {IconName} from '../common/IconMap';
-import {analyzeTaskWithAI} from '@/services/aiService';
+import {analyzeTaskInputWithAI} from '@/services/aiService'; // Corrected import for single task analysis
 
 const priorityMap: Record<number, {
     label: string;
@@ -57,7 +59,7 @@ const priorityMap: Record<number, {
     shortLabel: string;
     borderColor?: string;
     dotColor?: string;
-    darkBorderColor?: string; // Added for dark mode priority borders
+    darkBorderColor?: string;
 }> = {
     1: {
         label: 'High Priority',
@@ -65,7 +67,7 @@ const priorityMap: Record<number, {
         bgColor: 'bg-error',
         shortLabel: 'P1',
         borderColor: 'border-error',
-        darkBorderColor: 'dark:border-error/70', // Example dark mode border
+        darkBorderColor: 'dark:border-error/70',
         dotColor: 'bg-error'
     },
     2: {
@@ -153,7 +155,9 @@ const getAiGlowThemeClass = (priority: number | null): string => {
 
 
 const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
-    const allTasks = useAtomValue(tasksAtom);
+    const allTasksData = useAtomValue(tasksAtom);
+    const allTasks = useMemo(() => allTasksData ?? [], [allTasksData]);
+    const isLoadingTasks = useAtomValue(tasksLoadingAtom);
     const setTasks = useSetAtom(tasksAtom);
     const currentFilterGlobal = useAtomValue(currentFilterAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
@@ -161,7 +165,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const rawSearchResults = useAtomValue(rawSearchResultsAtom);
     const searchTerm = useAtomValue(searchTermAtom);
     const userLists = useAtomValue(userListNamesAtom);
-    const preferences = useAtomValue(preferencesSettingsAtom);
+    const preferencesData = useAtomValue(preferencesSettingsAtom);
+    const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
+    const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
+
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [draggingTask, setDraggingTask] = useState<Task | null>(null);
@@ -180,10 +187,13 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     const [isAiTaskInputVisible, setIsAiTaskInputVisible] = useState(false);
     const [isAiProcessing, setIsAiProcessing] = useState(false);
+    // Removed aiGeneratedContent and aiEventSourceRef as they are for SSE in SummaryView
+
 
     const availableListsForNewTask = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
     useEffect(() => {
+        if (isLoadingPreferences) return;
         let defaultDate: Date | null = null;
         if (preferences.defaultNewTaskDueDate === 'today') {
             defaultDate = startOfDay(new Date());
@@ -202,7 +212,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             setNewTaskListState('Inbox');
         }
 
-    }, [preferences.defaultNewTaskDueDate, preferences.defaultNewTaskPriority, preferences.defaultNewTaskList, availableListsForNewTask]);
+    }, [preferences, availableListsForNewTask, isLoadingPreferences]);
 
 
     useEffect(() => {
@@ -238,7 +248,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                     filtered = activeTasks.filter((task: Task) => {
                         if (task.completed || task.dueDate == null) return false;
                         const date = safeParseDate(task.dueDate);
-                        return date && isValid(date) && !isOverdue(date) && isWithinNext7Days(date);
+                        return date && isValid(date) && !isBefore(startOfDay(date), startOfDay(new Date())) && isWithinNext7Days(date);
                     });
                     break;
                 case 'completed':
@@ -276,10 +286,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const sortableItems: UniqueIdentifier[] = useMemo(() => {
         if (isGroupedView) {
             return groupOrder.flatMap(groupKey =>
-                (tasksToDisplay as Record<TaskGroupCategory, Task[]>)[groupKey]?.map(task => task.id) ?? []
+                ((tasksToDisplay as Record<TaskGroupCategory, Task[]>)[groupKey] ?? []).map(task => task.id)
             );
         } else {
-            return (tasksToDisplay as Task[]).map(task => task.id);
+            return ((tasksToDisplay as Task[]) ?? []).map(task => task.id);
         }
     }, [tasksToDisplay, isGroupedView]);
 
@@ -321,7 +331,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         }
         const categoryChanged = targetGroupCategory && targetGroupCategory !== originalTask.groupCategory;
 
-        setTasks((currentTasks) => {
+        setTasks((currentTasksValue) => {
+            const currentTasks = currentTasksValue ?? [];
             const oldIndex = currentTasks.findIndex(t => t.id === activeId);
             const newIndex = currentTasks.findIndex(t => t.id === overId);
 
@@ -387,7 +398,18 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                         newDueDateValue = null;
                         break;
                 }
-
+                if (newDueDateValue !== null && originalTask.dueDate) {
+                    const originalDateObj = safeParseDate(originalTask.dueDate);
+                    if (originalDateObj && isValid(originalDateObj)) {
+                        const hours = originalDateObj.getHours();
+                        const minutes = originalDateObj.getMinutes();
+                        if (hours !== 0 || minutes !== 0) {
+                            const newDateWithTime = new Date(newDueDateValue);
+                            newDateWithTime.setHours(hours, minutes, 0, 0);
+                            newDueDateValue = newDateWithTime.getTime();
+                        }
+                    }
+                }
                 const currentDueDateObj = safeParseDate(originalTask.dueDate);
                 const currentDueDayStart = currentDueDateObj && isValid(currentDueDateObj) ? startOfDay(currentDueDateObj).getTime() : null;
                 const newDueDayStart = newDueDateValue !== null && newDueDateValue !== undefined ? startOfDay(new Date(newDueDateValue)).getTime() : null;
@@ -398,9 +420,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             }
             return currentTasks.map((task: Task) => {
                 if (task.id === activeId) {
-                    const updates: Partial<Task> = {
-                        order: newOrderValue,
-                    };
+                    const updates: Partial<Task> = {order: newOrderValue,};
                     if (newDueDateValue !== undefined) {
                         updates.dueDate = newDueDateValue;
                     }
@@ -409,7 +429,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 return task;
             });
         });
-
     }, [setTasks, currentFilterGlobal, sortableItems]);
 
     const commitNewTask = useCallback(() => {
@@ -418,8 +437,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
         const now = Date.now();
         let newOrder: number;
-        const allCurrentTasks = allTasks;
-        const topTaskOrder = allCurrentTasks
+        const currentAllTasks = allTasks ?? [];
+        const topTaskOrder = currentAllTasks
             .filter(t => !t.completed && t.list !== 'Trash')
             .sort((a, b) => a.order - b.order)[0]?.order;
 
@@ -447,7 +466,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             tags: [],
         };
 
-        setTasks(prev => [taskToAdd as Task, ...prev].sort((a, b) => a.order - b.order));
+        setTasks(prev => [(taskToAdd as Task), ...(prev ?? [])].sort((a, b) => a.order - b.order));
         setNewTaskTitle('');
         let defaultDate: Date | null = null;
         if (preferences.defaultNewTaskDueDate === 'today') {
@@ -464,9 +483,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         } else {
             setNewTaskListState('Inbox');
         }
-
         newTaskTitleInputRef.current?.focus();
-
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
         setTasks, allTasks, preferences, availableListsForNewTask
@@ -514,12 +531,13 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         setIsAiProcessing(true);
 
         try {
-            const aiSuggestions = await analyzeTaskWithAI(sentence, newTaskDueDate);
+            // Call the restored analyzeTaskInputWithAI from aiService
+            const aiAnalysis = await analyzeTaskInputWithAI(sentence, newTaskDueDate);
 
             const now = Date.now();
             let newOrder: number;
-            const allCurrentTasks = allTasks;
-            const topTaskOrder = allCurrentTasks
+            const currentAllTasks = allTasks ?? [];
+            const topTaskOrder = currentAllTasks
                 .filter(t => !t.completed && t.list !== 'Trash')
                 .sort((a, b) => a.order - b.order)[0]?.order;
 
@@ -536,49 +554,48 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
             const taskToAdd: Omit<Task, 'groupCategory' | 'completed'> = {
                 id: taskId,
-                title: sentence,
+                title: aiAnalysis.title || sentence, // Use AI title if provided
                 completedAt: null,
-                list: newTaskListState,
+                list: newTaskListState, // Keep list from current UI state
                 completionPercentage: null,
-                dueDate: newTaskDueDate ? newTaskDueDate.getTime() : null,
-                priority: newTaskPriority,
+                dueDate: aiAnalysis.dueDate !== undefined ? aiAnalysis.dueDate : (newTaskDueDate ? newTaskDueDate.getTime() : null),
+                priority: aiAnalysis.priority !== undefined ? aiAnalysis.priority : newTaskPriority,
                 order: newOrder,
                 createdAt: now,
                 updatedAt: now,
-                content: aiSuggestions.content,
-                tags: aiSuggestions.tags,
-                subtasks: aiSuggestions.subtasks.map((sub, index) => ({
+                content: aiAnalysis.content,
+                tags: aiAnalysis.tags,
+                subtasks: aiAnalysis.subtasks.map((sub, index) => ({
                     id: `subtask-${taskId}-${index}-${Math.random().toString(16).slice(2)}`,
                     parentId: taskId,
                     title: sub.title,
                     completed: false,
                     completedAt: null,
                     dueDate: sub.dueDate ? (safeParseDate(sub.dueDate)?.getTime() ?? null) : null,
-                    order: index,
+                    order: index * 100, // Simple ordering for AI subtasks
                     createdAt: now,
                     updatedAt: now,
                 })),
             };
 
-            setTasks(prev => [taskToAdd as Task, ...prev].sort((a, b) => a.order - b.order));
+            setTasks(prev => [(taskToAdd as Task), ...(prev ?? [])].sort((a, b) => a.order - b.order));
+            // Reset inputs
             setNewTaskTitle('');
             let defaultDate: Date | null = null;
-            if (preferences.defaultNewTaskDueDate === 'today') {
-                defaultDate = startOfDay(new Date());
-            } else if (preferences.defaultNewTaskDueDate === 'tomorrow') {
-                defaultDate = startOfDay(addDays(new Date(), 1));
-            }
+            if (preferences.defaultNewTaskDueDate === 'today') defaultDate = startOfDay(new Date());
+            else if (preferences.defaultNewTaskDueDate === 'tomorrow') defaultDate = startOfDay(addDays(new Date(), 1));
             setNewTaskDueDate(defaultDate);
             setNewTaskPriority(preferences.defaultNewTaskPriority);
             setNewTaskListState(preferences.defaultNewTaskList);
 
-
         } catch (error) {
-            console.error("AI Task generation failed:", error);
+            console.error("AI Task creation analysis failed:", error);
+            // Handle error, e.g., show a notification to the user
+            alert(`AI Task creation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
         } finally {
             setIsAiProcessing(false);
-            setIsAiTaskInputVisible(false);
-            if (isRegularNewTaskModeAllowed) {
+            setIsAiTaskInputVisible(false); // Close AI input mode after attempt
+            if (isRegularNewTaskModeAllowed) { // If regular mode is now active
                 setTimeout(() => newTaskTitleInputRef.current?.focus(), 0);
             }
         }
@@ -595,8 +612,9 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         }
         const newDueDateTimestamp = date.getTime();
 
-        setTasks(currentTasks =>
-            currentTasks.map((task: Task) => {
+        setTasks(currentTasksValue => {
+            const currentTasks = currentTasksValue ?? [];
+            return currentTasks.map((task: Task) => {
                 const isTaskOverdue = !task.completed &&
                     task.list !== 'Trash' &&
                     task.dueDate != null &&
@@ -608,7 +626,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 }
                 return task;
             })
-        );
+        });
         setIsBulkRescheduleOpen(false);
     }, [setTasks]);
 
@@ -628,12 +646,13 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     ), [isGroupedView, scrollContainerRef]);
 
     const isEmpty = useMemo(() => {
+        if (isLoadingTasks) return false;
         if (isGroupedView) {
             return Object.values(tasksToDisplay as Record<TaskGroupCategory, Task[]>).every((group: Task[]) => group.length === 0);
         } else {
             return (tasksToDisplay as Task[]).length === 0;
         }
-    }, [tasksToDisplay, isGroupedView]);
+    }, [tasksToDisplay, isGroupedView, isLoadingTasks]);
 
     const emptyStateTitle = useMemo(() => {
         if (isSearching) return `No results for "${searchTerm}"`;
@@ -669,7 +688,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     ), []);
 
     const newTaskInputWrapperClass = useMemo(() => {
-        const baseWrapperClasses = "group relative flex items-center w-full h-[32px] rounded-base transition-all duration-150 ease-in-out border"; // Always apply border
+        const baseWrapperClasses = "group relative flex items-center w-full h-[32px] rounded-base transition-all duration-150 ease-in-out border";
 
         if (isCurrentlyAiMode) {
             if (isAiProcessing) {
@@ -677,18 +696,16 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                     baseWrapperClasses,
                     "bg-grey-ultra-light dark:bg-neutral-700/60",
                     "opacity-70",
-                    "border-grey-light dark:border-neutral-600" // Default border in AI processing
+                    "border-grey-light dark:border-neutral-600"
                 );
             }
-            // AI Mode Active, Not Processing: Apply glow (padding based) and keep base border for structure
             return twMerge(
                 baseWrapperClasses,
                 "ai-glow-anim-border animate-border-flow",
                 getAiGlowThemeClass(newTaskPriority),
-                "border-transparent" // Glow provides the visual border
+                "border-transparent"
             );
         } else {
-            // Regular Mode:
             const prioritySpecificBorder = newTaskPriority && priorityMap[newTaskPriority]?.borderColor;
             const darkPrioritySpecificBorder = newTaskPriority && priorityMap[newTaskPriority]?.darkBorderColor;
 
@@ -697,7 +714,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 "bg-grey-ultra-light dark:bg-neutral-700/60",
                 prioritySpecificBorder
                     ? `${prioritySpecificBorder} ${darkPrioritySpecificBorder || 'dark:border-transparent'}`
-                    : "border-grey-light dark:border-neutral-600" // Default border if no priority
+                    : "border-grey-light dark:border-neutral-600"
             );
         }
     }, [newTaskPriority, isCurrentlyAiMode, isAiProcessing]);
@@ -736,6 +753,14 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             ? `添加任务到 "${newTaskListState}"`
             : `Add task to "${newTaskListState}"`;
     }, [isCurrentlyAiMode, newTaskListState, preferences.language]);
+
+    if (isLoadingTasks || isLoadingPreferences) {
+        return (
+            <div className="h-full flex items-center justify-center bg-white dark:bg-neutral-800">
+                <Icon name="loader" size={24} className="text-primary animate-spin"/>
+            </div>
+        );
+    }
 
 
     return (
@@ -868,6 +893,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                     className={twMerge(
                                         "absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-150",
                                         "opacity-0 group-focus-within:opacity-100 pointer-events-none group-focus-within:pointer-events-auto",
+                                        isNewTaskMoreOptionsOpen && "!opacity-100 !pointer-events-auto",
                                         ((isCurrentlyAiMode && isAiProcessing) || isAiProcessing) && "!opacity-50 !pointer-events-none"
                                     )}
                                 >

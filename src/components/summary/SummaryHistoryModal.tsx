@@ -1,12 +1,11 @@
 // src/components/summary/SummaryHistoryModal.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {twMerge} from 'tailwind-merge';
-import {StoredSummary} from '@/store/atoms';
 import Button from '../common/Button';
 import Icon from '../common/Icon';
 import {format, formatDistanceToNowStrict, isSameDay, isValid, parseISO, startOfDay, subDays} from 'date-fns';
 import CodeMirrorEditor, {CodeMirrorEditorRef} from '../common/CodeMirrorEditor';
-import {Task} from '@/types';
+import {StoredSummary, Task} from '@/types';
 import useDebounce from '@/hooks/useDebounce';
 import Highlighter from 'react-highlight-words';
 import {IconName} from "@/components/common/IconMap";

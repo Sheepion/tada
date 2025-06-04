@@ -1,8 +1,17 @@
+// src/components/tasks/TaskItem.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Task, TaskGroupCategory} from '@/types';
 import {formatDate, formatRelativeDate, isOverdue, isValid, safeParseDate} from '@/utils/dateUtils';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai'; // Changed from jotai/index to just jotai
-import {preferencesSettingsAtom, searchTermAtom, selectedTaskIdAtom, tasksAtom, userListNamesAtom} from '@/store/atoms'; // Added preferencesSettingsAtom
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {
+    defaultPreferencesSettingsForApi,
+    preferencesSettingsAtom,
+    preferencesSettingsLoadingAtom,
+    searchTermAtom,
+    selectedTaskIdAtom,
+    tasksAtom,
+    userListNamesAtom
+} from '@/store/atoms';
 import Icon from '../common/Icon';
 import {twMerge} from 'tailwind-merge';
 import {clsx} from 'clsx';
@@ -81,6 +90,7 @@ export const ProgressIndicator: React.FC<{
 });
 ProgressIndicator.displayName = 'ProgressIndicator';
 
+// generateContentSnippet remains the same
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
@@ -103,6 +113,7 @@ function generateContentSnippet(content: string, term: string, length: number = 
     if (end < content.length) snippet = snippet + '...';
     return snippet;
 }
+
 
 const taskListPriorityMap: Record<number, {
     label: string;
@@ -215,13 +226,17 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
     const userLists = useAtomValue(userListNamesAtom);
-    const preferences = useAtomValue(preferencesSettingsAtom); // Added for confirmDeletions
+
+    const preferencesData = useAtomValue(preferencesSettingsAtom);
+    const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
+    const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
+
     const {openItemId, setOpenItemId} = useTaskItemMenu();
 
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
-    const [isDatePickerPopoverOpen, setIsDatePickerPopoverOpen] = useState(false); // For menu's date picker
-    const [isDateClickPickerOpen, setIsDateClickPickerOpen] = useState(false); // For item's direct date click
-    const [isTagsPopoverOpen, setIsTagsPopoverOpen] = useState(false); // For menu's tags popover
+    const [isDatePickerPopoverOpen, setIsDatePickerPopoverOpen] = useState(false);
+    const [isDateClickPickerOpen, setIsDateClickPickerOpen] = useState(false);
+    const [isTagsPopoverOpen, setIsTagsPopoverOpen] = useState(false);
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const moreActionsButtonRef = useRef<HTMLButtonElement>(null);
@@ -276,9 +291,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     useEffect(() => {
         if (openItemId !== task.id) {
             setIsMoreActionsOpen(false);
-            setIsDatePickerPopoverOpen(false); // Menu date picker
-            setIsDateClickPickerOpen(false);  // Item direct date picker
-            setIsTagsPopoverOpen(false);      // Menu tags popover
+            setIsDatePickerPopoverOpen(false);
+            setIsDateClickPickerOpen(false);
+            setIsTagsPopoverOpen(false);
         }
     }, [openItemId, task.id]);
 
@@ -294,11 +309,14 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         if (target.closest('button, input, a, [data-radix-popper-content-wrapper], [role="dialog"], [role="menuitem"], [data-date-picker-trigger="true"], [data-tooltip-trigger]')) return;
         if (isDragging) return;
         setSelectedTaskId(id => (id === task.id ? null : task.id));
-        setOpenItemId(null); // Close any open menus/popovers for this item
+        setOpenItemId(null);
     }, [setSelectedTaskId, task.id, isDragging, setOpenItemId]);
 
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks' | 'id' | 'createdAt'>>) => {
-        setTasks(prevTasks => prevTasks.map(t => (t.id === task.id ? {...t, ...updates, updatedAt: Date.now()} : t)));
+        setTasks(prevTasksValue => {
+            const prevTasks = prevTasksValue ?? [];
+            return prevTasks.map(t => (t.id === task.id ? {...t, ...updates, updatedAt: Date.now()} : t))
+        });
     }, [setTasks, task.id]);
 
     const cycleCompletionPercentage = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
@@ -307,7 +325,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         let nextPercentage: number | null = currentPercentage === 100 ? null : 100;
         updateTask({completionPercentage: nextPercentage});
         if (nextPercentage === 100 && isSelected) setSelectedTaskId(null);
-        setOpenItemId(null); // Close any open menus upon action
+        setOpenItemId(null);
     }, [task.completionPercentage, updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
 
     const handleProgressIndicatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -320,99 +338,94 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
         if (newPercentage === 100 && isSelected) setSelectedTaskId(null);
-        setIsMoreActionsOpen(false); // Close main menu
+        setIsMoreActionsOpen(false);
         setOpenItemId(null);
     }, [updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
 
-    const handleDateSelect = useCallback((dateWithTime: Date | undefined) => { // For menu's date picker
+    const handleDateSelect = useCallback((dateWithTime: Date | undefined) => {
         const newDueDate = dateWithTime ? dateWithTime.getTime() : null;
         updateTask({dueDate: newDueDate});
-        // Closing logic is handled by the popover's own close function or onOpenChange
     }, [updateTask]);
 
-    const handleTagsApply = useCallback((newTags: string[]) => { // For menu's tags popover
+    const handleTagsApply = useCallback((newTags: string[]) => {
         updateTask({tags: newTags});
-        // Closing logic is handled by the popover's own close function or onOpenChange
     }, [updateTask]);
 
     const handleMoreActionsOpenChange = useCallback((open: boolean) => {
         setIsMoreActionsOpen(open);
         if (open) {
             setOpenItemId(task.id);
-            // Ensure other popovers are closed if main menu opens fresh
             setIsDatePickerPopoverOpen(false);
             setIsTagsPopoverOpen(false);
-            setIsDateClickPickerOpen(false); // Also item's direct date picker
+            setIsDateClickPickerOpen(false);
         } else {
-            // If main menu closes, ensure its sub-popovers also close
-            setIsDatePickerPopoverOpen(false);
-            setIsTagsPopoverOpen(false);
-            // No need to call setOpenItemId(null) here, useEffect will handle it if all popovers are closed
+            // Only set openItemId to null if ALL popovers controlled by this menu are closed
+            if (!isDatePickerPopoverOpen && !isTagsPopoverOpen && !isDateClickPickerOpen) {
+                setOpenItemId(null);
+            }
         }
-    }, [task.id, setOpenItemId]);
+    }, [task.id, setOpenItemId, isDatePickerPopoverOpen, isTagsPopoverOpen, isDateClickPickerOpen]);
 
 
     const handleMenuSubPopoverOpenChange = useCallback((open: boolean, type: 'date' | 'tags') => {
         if (open) {
-            setOpenItemId(task.id); // Ensure this item is marked as active
+            setOpenItemId(task.id);
             if (type === 'date') {
                 setIsDatePickerPopoverOpen(true);
-                setIsTagsPopoverOpen(false); // Close other popover
+                setIsTagsPopoverOpen(false);
             } else if (type === 'tags') {
                 setIsTagsPopoverOpen(true);
-                setIsDatePickerPopoverOpen(false); // Close other popover
+                setIsDatePickerPopoverOpen(false);
             }
-            setIsMoreActionsOpen(true); // Keep main menu open
+            setIsMoreActionsOpen(true);
         } else {
-            // This is called when the popover itself requests to close
             if (type === 'date') setIsDatePickerPopoverOpen(false);
             if (type === 'tags') setIsTagsPopoverOpen(false);
-            // Main menu remains open unless closed by other means or all its popovers close
+            // If the main menu is not being kept open by another sub-popover, and this was the last one, then it can close.
+            // The useEffect for openItemId will handle setting it to null if all are closed.
         }
     }, [task.id, setOpenItemId]);
 
 
-    const handleDateClickPickerOpenChange = useCallback((open: boolean) => { // For item's direct date click
+    const handleDateClickPickerOpenChange = useCallback((open: boolean) => {
         setIsDateClickPickerOpen(open);
         if (open) {
             setOpenItemId(task.id);
-            // Close other menu-related things if this direct picker opens
             setIsMoreActionsOpen(false);
             setIsDatePickerPopoverOpen(false);
             setIsTagsPopoverOpen(false);
         }
-        // No need to manage openItemId on close here, useEffect will handle it
+        // useEffect will handle setOpenItemId(null)
     }, [task.id, setOpenItemId]);
 
-    const closeMenuDatePickerPopover = useCallback(() => { // For menu's date picker
+    const closeMenuDatePickerPopover = useCallback(() => {
         handleMenuSubPopoverOpenChange(false, 'date');
     }, [handleMenuSubPopoverOpenChange]);
 
-    const closeTagsPopover = useCallback(() => { // For menu's tags popover
+    const closeTagsPopover = useCallback(() => {
         handleMenuSubPopoverOpenChange(false, 'tags');
     }, [handleMenuSubPopoverOpenChange]);
 
-    const closeDateClickPopover = useCallback(() => { // For item's direct date click
+    const closeDateClickPopover = useCallback(() => {
         handleDateClickPickerOpenChange(false);
         dateDisplayRef.current?.focus();
     }, [handleDateClickPickerOpenChange]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => {
         updateTask({priority: newPriority});
-        setIsMoreActionsOpen(false); // Close main menu
+        setIsMoreActionsOpen(false);
         setOpenItemId(null);
     }, [updateTask, setOpenItemId]);
 
     const handleListChange = useCallback((newList: string) => {
         updateTask({list: newList});
-        setIsMoreActionsOpen(false); // Close main menu
+        setIsMoreActionsOpen(false);
         setOpenItemId(null);
     }, [updateTask, setOpenItemId]);
 
     const handleDuplicateTask = useCallback(() => {
         const now = Date.now();
         const newParentTaskId = `task-${now}-${Math.random().toString(16).slice(2)}`;
-
         const duplicatedSubtasks = (task.subtasks || []).map(sub => ({
             ...sub,
             id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
@@ -421,12 +434,11 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             updatedAt: now,
             completedAt: sub.completed ? now : null,
         }));
-
         const newTaskData: Omit<Task, 'groupCategory' | 'completed'> = {
             id: newParentTaskId,
             title: `${task.title} (Copy)`,
-            dueDate: task.dueDate, // <-- FIXED: Inherit dueDate
-            order: task.order + 0.01, // A small increment to place it after the original
+            dueDate: task.dueDate,
+            order: task.order + 0.01,
             createdAt: now,
             updatedAt: now,
             completionPercentage: task.completionPercentage === 100 ? null : task.completionPercentage,
@@ -437,18 +449,15 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             tags: [...(task.tags || [])],
             subtasks: duplicatedSubtasks,
         };
-
-        setTasks(prev => {
+        setTasks(prevValue => {
+            const prev = prevValue ?? [];
             const index = prev.findIndex(t => t.id === task.id);
             const newTasks = [...prev];
-            // Insert after the original task, or at the end if original not found (shouldn't happen)
             newTasks.splice(index !== -1 ? index + 1 : prev.length, 0, newTaskData as Task);
-            // Re-sort or re-evaluate order if your list relies on strict ordering for display
-            // For now, simple insertion and relying on existing sort logic elsewhere.
-            return newTasks.sort((a, b) => a.order - b.order); // Ensure list remains sorted by order
+            return newTasks.sort((a, b) => a.order - b.order);
         });
-        setSelectedTaskId(newParentTaskId); // Optionally select the new task
-        setIsMoreActionsOpen(false); // Close main menu
+        setSelectedTaskId(newParentTaskId);
+        setIsMoreActionsOpen(false);
         setOpenItemId(null);
     }, [task, setTasks, setSelectedTaskId, setOpenItemId]);
 
@@ -457,17 +466,18 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         updateTask({list: 'Trash', completionPercentage: null});
         if (isSelected) setSelectedTaskId(null);
         closeDeleteConfirm();
-        setIsMoreActionsOpen(false); // Close main menu
+        setIsMoreActionsOpen(false);
         setOpenItemId(null);
     }, [updateTask, isSelected, setSelectedTaskId, closeDeleteConfirm, setOpenItemId]);
 
     const handleDeleteTask = useCallback(() => {
+        if (isLoadingPreferences) return; // Guard against preferences not loaded
         if (preferences.confirmDeletions) {
             setIsDeleteDialogOpen(true);
         } else {
             confirmDeleteTask();
         }
-    }, [preferences.confirmDeletions, confirmDeleteTask, setIsDeleteDialogOpen]);
+    }, [preferences.confirmDeletions, confirmDeleteTask, isLoadingPreferences]);
 
 
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
@@ -484,10 +494,8 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
 
     const subtaskSearchMatch = useMemo(() => {
         if (searchWords.length === 0 || !task.subtasks || task.subtasks.length === 0) return null;
-
         const parentTitleIncludesAllSearchWords = searchWords.every(w => task.title.toLowerCase().includes(w));
         const parentContentMatchesSomeWord = task.content && searchWords.some(w => task.content!.toLowerCase().includes(w));
-
         for (const subtask of task.subtasks) {
             const subtaskTitleIncludesSomeSearchWord = searchWords.some(w => subtask.title.toLowerCase().includes(w));
             if (subtaskTitleIncludesSomeSearchWord && (!parentTitleIncludesAllSearchWords || parentContentMatchesSomeWord)) {
@@ -538,7 +546,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     ), [isCompleted, isTrashItem]);
 
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
-    const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
+    const availableLists = useMemo(() => (userLists ?? []).filter(l => l !== 'Trash'), [userLists]);
 
     const actionsMenuContentClasses = useMemo(() => twMerge(
         'z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700',
@@ -586,6 +594,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         return 'No Priority';
     }, [task.priority]);
 
+    if (isLoadingPreferences) { // Simple loading guard
+        return (
+            <div className={twMerge(baseClasses, "opacity-50 items-center justify-center")}>
+                <Icon name="loader" size={16} className="animate-spin text-primary"/>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -719,7 +734,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                                      }}>
                                         <CustomDatePickerContent
                                             initialDate={dueDate ?? undefined}
-                                            onSelect={(date) => { // For item's direct date click
+                                            onSelect={(date) => {
                                                 updateTask({dueDate: date ? date.getTime() : null});
                                                 closeDateClickPopover();
                                             }}
@@ -797,7 +812,6 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     sideOffset={4}
                                     align="end"
                                     onCloseAutoFocus={(e) => {
-                                        // If a sub-popover (date/tag) is open, prevent focus shift to main trigger
                                         if (isDatePickerPopoverOpen || isTagsPopoverOpen) {
                                             e.preventDefault();
                                         } else if (moreActionsButtonRef.current) {
@@ -806,11 +820,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     }}
                                     onInteractOutside={(e) => {
                                         const target = e.target as HTMLElement;
-                                        // If interaction is within a date/tag popover, prevent main dropdown from closing
                                         if (target.closest('[data-radix-popper-content-wrapper]') && (isDatePickerPopoverOpen || isTagsPopoverOpen)) {
                                             e.preventDefault();
                                         }
-                                        // If interaction is outside, main dropdown closes, and onOpenChange handles sub-popovers.
                                     }}
                                 >
                                     <div
@@ -894,7 +906,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                             <TaskItemRadixMenuItem
                                                 icon="tag"
                                                 onSelect={(event) => {
-                                                    event.preventDefault(); // Prevent menu closing
+                                                    event.preventDefault();
                                                     handleMenuSubPopoverOpenChange(true, 'tags');
                                                 }}
                                                 disabled={!isInteractive}
@@ -905,8 +917,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                 side="right" align="start" sideOffset={5}
                                                 className={twMerge(popoverContentWrapperClasses, "p-0")}
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus shift when this popover closes
-                                                onFocusOutside={(e) => e.preventDefault()} // Keep popover open on outside focus if not interactive
+                                                onCloseAutoFocus={(e) => {
+                                                    e.preventDefault();
+                                                    moreActionsButtonRef.current?.focus();
+                                                }}
+                                                onFocusOutside={(event) => event.preventDefault()}
+                                                onPointerDownOutside={(e) => {
+                                                    const target = e.target as HTMLElement;
+                                                    if (!target.closest('[data-radix-dropdown-menu-trigger]') && !target.closest('[data-radix-popper-content-wrapper]')) {
+                                                        handleMenuSubPopoverOpenChange(false, 'tags');
+                                                    } else {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             >
                                                 <AddTagsPopoverContent
                                                     taskId={task.id}
@@ -924,7 +947,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                             <TaskItemRadixMenuItem
                                                 icon="calendar-plus"
                                                 onSelect={(event) => {
-                                                    event.preventDefault(); // Prevent menu closing
+                                                    event.preventDefault();
                                                     handleMenuSubPopoverOpenChange(true, 'date');
                                                 }}
                                                 disabled={!isInteractive}
@@ -935,8 +958,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                 side="right" align="start" sideOffset={5}
                                                 className={twMerge(popoverContentWrapperClasses, "p-0")}
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus shift when this popover closes
-                                                onFocusOutside={(e) => e.preventDefault()} // Keep popover open on outside focus if not interactive
+                                                onCloseAutoFocus={(e) => {
+                                                    e.preventDefault();
+                                                    moreActionsButtonRef.current?.focus();
+                                                }}
+                                                onFocusOutside={(event) => event.preventDefault()}
+                                                onPointerDownOutside={(e) => {
+                                                    const target = e.target as HTMLElement;
+                                                    if (!target.closest('[data-radix-dropdown-menu-trigger]') && !target.closest('[data-radix-popper-content-wrapper]')) {
+                                                        handleMenuSubPopoverOpenChange(false, 'date');
+                                                    } else {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             >
                                                 <CustomDatePickerContent
                                                     initialDate={dueDate ?? undefined}
@@ -952,7 +986,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     <DropdownMenu.Sub>
                                         <DropdownMenu.SubTrigger
                                             className={getTaskItemMenuSubTriggerStyle()}
-                                            disabled={!isInteractive}
+                                            disabled={!isInteractive || isTrashItem}
                                             onPointerEnter={() => {
                                                 if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
                                                 if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
@@ -979,7 +1013,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     {availableLists.map(list => (
                                                         <DropdownMenu.RadioItem key={list} value={list}
                                                                                 className={getTaskItemMenuRadioItemStyle(task.list === list)}
-                                                                                disabled={!isInteractive}>
+                                                                                disabled={!isInteractive || isTrashItem}>
                                                             <Icon name={list === 'Inbox' ? 'inbox' : 'list'}
                                                                   size={14} strokeWidth={1.5}
                                                                   className="mr-2 flex-shrink-0 opacity-80"/>
@@ -999,12 +1033,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                         className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
                                     <TaskItemRadixMenuItem icon="copy-plus" onSelect={handleDuplicateTask}
-                                                           disabled={!isInteractive}>
+                                                           disabled={!isInteractive || isTrashItem}>
                                         Duplicate Task
                                     </TaskItemRadixMenuItem>
 
                                     {!isTrashItem && (
-                                        <TaskItemRadixMenuItem icon="trash" onSelect={handleDeleteTask} isDanger>
+                                        <TaskItemRadixMenuItem icon="trash" onSelect={handleDeleteTask} isDanger
+                                                               disabled={isLoadingPreferences}>
                                             Move to Trash
                                         </TaskItemRadixMenuItem>
                                     )}
