@@ -297,29 +297,62 @@ export const apiDeleteList = (listId: string): Promise<{ message: string }> => a
 }>(`/lists/${listId}`, {method: 'DELETE'});
 
 
+const transformTaskFromApi = (apiTask: any): Task => {
+    // Helper to convert seconds-based timestamp from API to JS milliseconds
+    const toMs = (seconds: number | null | undefined): number | null => {
+        if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) {
+            return null;
+        }
+        return Math.round(seconds * 1000);
+    };
+
+    const {list, subtasks, ...rest} = apiTask;
+
+    const transformedSubtasks = (subtasks || []).map((sub: any) => ({
+        ...sub,
+        dueDate: toMs(sub.dueDate),
+        completedAt: toMs(sub.completedAt),
+        createdAt: toMs(sub.createdAt),
+        updatedAt: toMs(sub.updatedAt),
+    }));
+
+    return {
+        ...rest,
+        listName: list,
+        dueDate: toMs(apiTask.dueDate),
+        completedAt: toMs(apiTask.completedAt),
+        createdAt: toMs(apiTask.createdAt),
+        updatedAt: toMs(apiTask.updatedAt),
+        subtasks: transformedSubtasks,
+    } as Task;
+};
+
+
 // --- Tasks, Subtasks, Tags ---
-export const apiFetchTasks = (params: { [key: string]: any } = {}): Promise<Task[]> => {
+export const apiFetchTasks = async (params: { [key: string]: any } = {}): Promise<Task[]> => {
     const query = new URLSearchParams(params).toString();
     let url = '/tasks/'
     if (query) {
         url += `?${query}`
     }
-
-    return apiFetch<Task[]>(url);
+    const apiTasks = await apiFetch<any[]>(url);
+    return apiTasks.map(transformTaskFromApi);
 };
 
-export const apiCreateTask = (taskData: TaskCreate): Promise<Task> => {
-    return apiFetch<Task>('/tasks/', {
+export const apiCreateTask = async (taskData: TaskCreate): Promise<Task> => {
+    const apiTask = await apiFetch<any>('/tasks/', {
         method: 'POST',
         body: taskData,
     });
+    return transformTaskFromApi(apiTask);
 };
 
-export const apiUpdateTask = (taskId: string, taskData: TaskUpdate): Promise<Task> => {
-    return apiFetch<Task>(`/tasks/${taskId}`, {
+export const apiUpdateTask = async (taskId: string, taskData: TaskUpdate): Promise<Task> => {
+    const apiTask = await apiFetch<any>(`/tasks/${taskId}`, {
         method: 'PUT',
         body: taskData,
     });
+    return transformTaskFromApi(apiTask);
 };
 
 export const apiDeleteTask = (taskId: string): Promise<void> => {
@@ -415,8 +448,25 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
     return customEventSource;
 };
 
-export const apiFetchSummaries = (): Promise<StoredSummary[]> => {
-    return apiFetch<StoredSummary[]>('/ai/summaries');
+const transformSummaryFromApi = (apiSummary: any): StoredSummary => {
+    const toMs = (seconds: number | null | undefined): number => {
+        if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) {
+            return 0;
+        }
+        return Math.round(seconds * 1000);
+    };
+
+    return {
+        ...apiSummary,
+        createdAt: toMs(apiSummary.createdAt),
+        updatedAt: toMs(apiSummary.updatedAt),
+    } as StoredSummary;
+};
+
+
+export const apiFetchSummaries = async (): Promise<StoredSummary[]> => {
+    const apiSummaries = await apiFetch<any[]>('/ai/summaries');
+    return apiSummaries.map(transformSummaryFromApi);
 };
 
 export const apiDeleteSummary = (summaryId: string): Promise<void> => {

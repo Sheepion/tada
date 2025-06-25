@@ -128,6 +128,11 @@ export const currentUserAtom: AsyncDataAtom<User, User | null | typeof RESET | '
 
         if (update !== null && typeof update === 'object' && 'id' in update) {
             set(baseCurrentUserAtom, update as User);
+            set(tasksAtom, RESET);
+            set(userListsAtom, RESET);
+            set(appearanceSettingsAtom, RESET);
+            set(preferencesSettingsAtom, RESET);
+            set(storedSummariesAtom, RESET);
         } else if (update === null) {
             set(baseCurrentUserAtom, null);
         }
@@ -242,8 +247,9 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
 
             await Promise.all([...updatePromises, ...deletePromises]);
 
-            // Re-fetch to ensure consistency after all operations
-            set(tasksAtom, RESET);
+            const fetchedTasks = await service.apiFetchTasks();
+            const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
+            set(baseTasksDataAtom, tasksWithCategory.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
 
         } catch (e: any) {
             console.error('[TasksAtom] Backend update failed, reverting:', e);
