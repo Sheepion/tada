@@ -27,6 +27,7 @@ import {AnimatePresence, motion} from 'framer-motion';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as service from "@/services/apiService";
 import {RESET} from "jotai/utils";
+import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -75,7 +76,7 @@ const SidebarItem: React.FC<{
     }, [navigate, to]);
 
     const linkClassName = useMemo(() => twMerge(
-        'flex items-center justify-between px-2 py-0 h-8 rounded-base mb-0.5 text-[13px] group transition-colors duration-200 ease-in-out cursor-pointer relative',
+        'flex items-center justify-between px-2 py-0 h-8 rounded-base mb-0.5 text-[13px] group transition-colors duration-200 ease-in-out cursor-pointer relative w-full',
         isActive
             ? 'bg-grey-ultra-light text-primary dark:bg-primary-dark/20 dark:text-primary-light font-medium'
             : 'text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-ultra-light dark:hover:bg-grey-deep hover:text-grey-dark dark:hover:text-neutral-100',
@@ -165,8 +166,23 @@ const Sidebar: React.FC = () => {
 
     const navigate = useNavigate();
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const listEditInputRef = useRef<HTMLInputElement>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 250);
     const isSearching = useMemo(() => debouncedSearchTerm.trim().length > 0, [debouncedSearchTerm]);
+
+    // --- State for Inline Editing and Delete Confirmation ---
+    const [editingListId, setEditingListId] = useState<string | null>(null);
+    const [editingListName, setEditingListName] = useState('');
+    const [listToDelete, setListToDelete] = useState<List | null>(null);
+
+    useEffect(() => {
+        // Auto-focus and select text when editing starts
+        if (editingListId && listEditInputRef.current) {
+            listEditInputRef.current.focus();
+            listEditInputRef.current.select();
+        }
+    }, [editingListId]);
+
 
     const handleAddNewListClick = useCallback(() => {
         setIsAddListModalOpen(true);
@@ -190,41 +206,72 @@ const Sidebar: React.FC = () => {
         setSelectedTaskId(task.id);
     }, [setSelectedTaskId]);
 
-    const handleDeleteList = useCallback(async (list: List) => {
-        if (list.name === 'Inbox') {
-            alert("The 'Inbox' list cannot be deleted.");
+    const handleStartRename = useCallback((list: List) => {
+        setEditingListId(list.id);
+        setEditingListName(list.name);
+    }, []);
+
+    const handleCancelRename = useCallback(() => {
+        setEditingListId(null);
+        setEditingListName('');
+    }, []);
+
+    const handleSaveRename = useCallback(async () => {
+        if (!editingListId) return;
+        const originalList = userLists?.find(l => l.id === editingListId);
+        const trimmedName = editingListName.trim();
+
+        if (!originalList || !trimmedName || trimmedName === originalList.name) {
+            handleCancelRename();
             return;
         }
-        if (!confirm(`Are you sure you want to delete "${list.name}"? Tasks in this list will be moved to your Inbox.`)) {
-            return;
-        }
+
         try {
-            await service.apiDeleteList(list.id);
-            if (currentFilter === `list-${list.name}`) {
+            await service.apiUpdateList(editingListId, {name: trimmedName});
+            if (currentFilter === `list-${originalList.name}`) {
+                navigate(`/list/${encodeURIComponent(trimmedName)}`);
+            }
+            setListsAtom(RESET);
+            setTasksAtom(RESET);
+        } catch (e: any) {
+            alert(`Error renaming list: ${e.message}`);
+        } finally {
+            handleCancelRename();
+        }
+    }, [editingListId, editingListName, userLists, currentFilter, navigate, setListsAtom, setTasksAtom, handleCancelRename]);
+
+    const handleRenameInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSaveRename();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleCancelRename();
+        }
+    };
+
+    const handleConfirmDelete = useCallback(async () => {
+        if (!listToDelete) return;
+        if (listToDelete.name === 'Inbox') {
+            alert("The 'Inbox' list cannot be deleted.");
+            setListToDelete(null);
+            return;
+        }
+
+        try {
+            await service.apiDeleteList(listToDelete.id);
+            if (currentFilter === `list-${listToDelete.name}`) {
                 navigate('/all');
             }
             setListsAtom(RESET);
-            setTasksAtom(RESET); // Tasks must be refetched
+            setTasksAtom(RESET);
         } catch (e: any) {
             alert(`Error deleting list: ${e.message}`);
+        } finally {
+            setListToDelete(null); // Close the modal
         }
-    }, [currentFilter, navigate, setListsAtom, setTasksAtom]);
+    }, [listToDelete, currentFilter, navigate, setListsAtom, setTasksAtom]);
 
-    const handleRenameList = useCallback(async (list: List) => {
-        const newName = prompt('Enter the new list name:', list.name);
-        if (newName && newName.trim() && newName.trim() !== list.name) {
-            try {
-                await service.apiUpdateList(list.id, {name: newName.trim()});
-                if (currentFilter === `list-${list.name}`) {
-                    navigate(`/list/${encodeURIComponent(newName.trim())}`);
-                }
-                setListsAtom(RESET);
-                setTasksAtom(RESET); // Tasks must be refetched for updated listName
-            } catch (e: any) {
-                alert(`Error renaming list: ${e.message}`);
-            }
-        }
-    }, [currentFilter, navigate, setListsAtom, setTasksAtom]);
 
     const myListsToDisplay = useMemo(() => userLists?.filter(list => list.name !== 'Inbox') ?? [], [userLists]);
     const inboxList = useMemo(() => userLists?.find(list => list.name === 'Inbox'), [userLists]);
@@ -354,41 +401,75 @@ const Sidebar: React.FC = () => {
                                     {myListsToDisplay.length === 0 ? (
                                         <p className="text-[12px] text-grey-medium dark:text-neutral-400 px-2 py-1 italic font-light">
                                             {preferences.language === 'zh-CN' ? '暂无自定义列表。' : 'No custom lists yet.'}
-                                        </p>) : (myListsToDisplay.map(list => (
-                                        <div key={list.id} className="group/listitem relative pr-7">
-                                            <SidebarItem to={`/list/${encodeURIComponent(list.name)}`}
-                                                         filter={`list-${list.name}`}
-                                                         icon={(list.icon as IconName) || 'list'} label={list.name}
-                                                         count={counts.lists[list.name]} isUserList={true}/>
-                                            <div
-                                                className="absolute top-0 right-0 h-full flex items-center opacity-0 group-hover/listitem:opacity-100 transition-opacity">
-                                                <DropdownMenu.Root>
-                                                    <DropdownMenu.Trigger asChild>
-                                                        <Button variant="ghost" size="icon" icon="more-horizontal"
-                                                                className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                                                aria-label={`Actions for ${list.name}`}/>
-                                                    </DropdownMenu.Trigger>
-                                                    <DropdownMenu.Portal>
-                                                        <DropdownMenu.Content className={dropdownContentClasses}
-                                                                              side="right" align="start"
-                                                                              sideOffset={-24}>
-                                                            <DropdownMenu.Item className={dropdownItemClasses}
-                                                                               onSelect={() => handleRenameList(list)}>
-                                                                <Icon name="edit" size={14} className="mr-2 opacity-80"
-                                                                      strokeWidth={1.5}/> Rename
-                                                            </DropdownMenu.Item>
-                                                            <DropdownMenu.Item
-                                                                className={twMerge(dropdownItemClasses, "text-error dark:text-red-400 data-[highlighted]:bg-red-500/10 dark:data-[highlighted]:bg-red-500/20")}
-                                                                onSelect={() => handleDeleteList(list)}>
-                                                                <Icon name="trash" size={14} className="mr-2 opacity-80"
-                                                                      strokeWidth={1.5}/> Delete
-                                                            </DropdownMenu.Item>
-                                                        </DropdownMenu.Content>
-                                                    </DropdownMenu.Portal>
-                                                </DropdownMenu.Root>
+                                        </p>) : (myListsToDisplay.map(list => {
+                                        const isEditing = editingListId === list.id;
+                                        return (
+                                            <div key={list.id}
+                                                 className="group/listitem relative pr-7 flex items-center h-8 mb-0.5">
+                                                {isEditing ? (
+                                                    // FIX 1: Add background color and rounding during edit state
+                                                    <div
+                                                        className="flex items-center w-full px-2 py-0 h-full rounded-base bg-grey-ultra-light dark:bg-neutral-700">
+                                                        <Icon name={(list.icon as IconName) || 'list'} size={16}
+                                                              strokeWidth={1}
+                                                              className="mr-2 flex-shrink-0 opacity-90 text-primary dark:text-primary-light"/>
+                                                        <input
+                                                            ref={listEditInputRef}
+                                                            type="text"
+                                                            value={editingListName}
+                                                            onChange={(e) => setEditingListName(e.target.value)}
+                                                            onBlur={handleSaveRename}
+                                                            onKeyDown={handleRenameInputKeyDown}
+                                                            className="flex-1 min-w-0 bg-transparent text-[13px] font-medium text-primary dark:text-primary-light focus:outline-none p-0 h-full"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <SidebarItem to={`/list/${encodeURIComponent(list.name)}`}
+                                                                 filter={`list-${list.name}`}
+                                                                 icon={(list.icon as IconName) || 'list'}
+                                                                 label={list.name}
+                                                                 count={counts.lists[list.name]} isUserList={true}/>
+                                                )}
+                                                <div
+                                                    className={twMerge(
+                                                        "absolute top-0 right-0 h-full flex items-center transition-opacity",
+                                                        isEditing ? "opacity-0" : "opacity-0 group-hover/listitem:opacity-100"
+                                                    )}>
+                                                    <DropdownMenu.Root>
+                                                        <DropdownMenu.Trigger asChild>
+                                                            <Button variant="ghost" size="icon"
+                                                                    icon="more-horizontal"
+                                                                    className="w-6 h-6 text-grey-medium dark:text-neutral-400 focus-visible:ring-0"
+                                                                    aria-label={`Actions for ${list.name}`}/>
+                                                        </DropdownMenu.Trigger>
+                                                        <DropdownMenu.Portal>
+                                                            <DropdownMenu.Content
+                                                                className={dropdownContentClasses}
+                                                                side="right" align="start"
+                                                                sideOffset={8}
+                                                                onCloseAutoFocus={(e) => e.preventDefault()}
+                                                            >
+                                                                <DropdownMenu.Item className={dropdownItemClasses}
+                                                                                   onSelect={() => handleStartRename(list)}>
+                                                                    <Icon name="edit" size={14}
+                                                                          className="mr-2 opacity-80"
+                                                                          strokeWidth={1.5}/> Rename
+                                                                </DropdownMenu.Item>
+                                                                <DropdownMenu.Item
+                                                                    className={twMerge(dropdownItemClasses, "text-error dark:text-red-400 data-[highlighted]:bg-red-500/10 dark:data-[highlighted]:bg-red-500/20")}
+                                                                    // FIX 2: Use setTimeout to prevent focus trap/race condition when opening the dialog
+                                                                    onSelect={() => setTimeout(() => setListToDelete(list), 0)}>
+                                                                    <Icon name="trash" size={14}
+                                                                          className="mr-2 opacity-80"
+                                                                          strokeWidth={1.5}/> Delete
+                                                                </DropdownMenu.Item>
+                                                            </DropdownMenu.Content>
+                                                        </DropdownMenu.Portal>
+                                                    </DropdownMenu.Root>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )))}
+                                        );
+                                    }))}
                                 </CollapsibleSection>
                                 {tagsToDisplay.length > 0 && (
                                     <CollapsibleSection title={preferences.language === 'zh-CN' ? '标签' : "Tags"}
@@ -411,6 +492,18 @@ const Sidebar: React.FC = () => {
                 </div>
             </aside>
             <AddListModal onAddSuccess={handleListAdded}/>
+            {listToDelete && (
+                <ConfirmDeleteModalRadix
+                    isOpen={!!listToDelete}
+                    onClose={() => setListToDelete(null)}
+                    onConfirm={handleConfirmDelete}
+                    itemTitle={listToDelete.name}
+                    title="Delete List?"
+                    description={`Are you sure you want to delete the list "${listToDelete.name}"? All tasks within this list will be moved to your Inbox.`}
+                    confirmText="Delete List"
+                    confirmVariant="danger"
+                />
+            )}
         </>
     );
 };
