@@ -149,8 +149,6 @@ export const tasksLoadingAtom = atom<boolean>(true);
 export const tasksErrorAtom = atom<string | null>(null);
 
 
-// --- 核心修复逻辑在这里 (3/3) ---
-// 增强 tasksAtom 的写入逻辑以处理子任务
 const findTaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
     const prevMap = new Map(prevTasks.map(t => [t.id, t]));
     const updated: { id: string, changes: TaskUpdate }[] = [];
@@ -210,7 +208,6 @@ const findSubtaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
                 if (prevSub.title !== nextSub.title) changes.title = nextSub.title;
                 if (prevSub.completed !== nextSub.completed) changes.completed = nextSub.completed;
                 if (prevSub.order !== nextSub.order) changes.order = nextSub.order;
-                // 注意：后端当前不支持更新dueDate，但我们保留此逻辑以便未来扩展
                 if (prevSub.dueDate !== nextSub.dueDate) changes.dueDate = nextSub.dueDate ? new Date(nextSub.dueDate).toISOString() : null;
 
                 if (Object.keys(changes).length > 0) {
@@ -283,7 +280,7 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
                     dueDate: mainTaskData.dueDate ? new Date(mainTaskData.dueDate).toISOString() : null,
                     order: mainTaskData.order,
                     completed: mainTaskData.completed,
-                    completePercentage: mainTaskData.completePercentage ?? 0,
+                    completePercentage: mainTaskData.completePercentage || undefined,
                     subtasks: subtasks?.map(s => ({title: s.title}))
                 };
                 return service.apiCreateTask(payload);

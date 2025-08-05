@@ -1,3 +1,4 @@
+// src/components/summary/SummaryView.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -385,16 +386,17 @@ const SummaryView: React.FC = () => {
                     className="flex items-start p-1.5 rounded-base hover:bg-grey-ultra-light dark:hover:bg-neutral-700 transition-colors"
                     title={task.title}>
                     <div
-                        className={twMerge("flex-shrink-0 w-3.5 h-3.5 rounded-full border mt-[1px] mr-2 flex items-center justify-center", task.completed ? "bg-primary border-primary" : task.completePercentage && task.completePercentage > 0 ? "border-primary/70 dark:border-primary-light/70" : "bg-white dark:bg-neutral-750 border-grey-light dark:border-neutral-600")}> {task.completed &&
+                        className={twMerge("flex-shrink-0 w-3.5 h-3.5 rounded-full border mt-[1px] mr-2 flex items-center justify-center", task.completed ? "bg-primary border-primary" : task.completePercentage != null && task.completePercentage > 0 ? "border-primary/70 dark:border-primary-light/70" : "bg-white dark:bg-neutral-750 border-grey-light dark:border-neutral-600")}> {task.completed &&
                         <Icon name="check" size={8} strokeWidth={2}
-                              className="text-white"/>} {task.completePercentage && task.completePercentage > 0 && !task.completed && (
+                              className="text-white"/>} {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
                         <div className="w-1.5 h-1.5 bg-primary/80 dark:bg-primary-light/80 rounded-full"></div>)} </div>
                     <div className="flex-1 overflow-hidden"><p
                         className={twMerge("text-[12px] font-normal text-grey-dark dark:text-neutral-100 leading-snug truncate", task.completed && "line-through text-grey-medium dark:text-neutral-400 font-light")}>{task.title || "Untitled"}</p>
                         <div
-                            className="flex items-center space-x-2 mt-0.5 text-[10px] text-grey-medium dark:text-neutral-400 font-light"> {task.completePercentage && !task.completed && (
-                            <span
-                                className="font-normal text-primary dark:text-primary-light">[{task.completePercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
+                            className="flex items-center space-x-2 mt-0.5 text-[10px] text-grey-medium dark:text-neutral-400 font-light">
+                            {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
+                                <span
+                                    className="font-normal text-primary dark:text-primary-light">[{task.completePercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
                             <span className="flex items-center whitespace-nowrap"><Icon name="calendar" size={10}
                                                                                         strokeWidth={1}
                                                                                         className="mr-0.5 opacity-80"/>{formatRelativeDate(task.dueDate, false)}</span>)} {task.listName && task.listName !== 'Inbox' && (
@@ -465,7 +467,7 @@ const SummaryView: React.FC = () => {
                         <span className="italic">Untitled Task</span>}</span>
                     <div
                         className="text-[11px] font-light text-grey-medium dark:text-neutral-400 flex items-center space-x-2 mt-0.5 flex-wrap gap-y-0.5">
-                        {task.completePercentage && task.completePercentage < 100 && !isDisabled && (<span
+                        {task.completePercentage != null && task.completePercentage > 0 && task.completePercentage < 100 && !isDisabled && (<span
                             className="text-primary dark:text-primary-light font-normal">[{task.completePercentage}%]</span>)}
                         {parsedDueDate && isValid(parsedDueDate) && (<span
                             className={twMerge("flex items-center whitespace-nowrap", overdue && !task.completed && !isDisabled && "text-error dark:text-red-400 font-normal", task.completed && !isDisabled && "line-through")}><Icon

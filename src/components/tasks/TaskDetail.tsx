@@ -398,24 +398,15 @@ const TaskDetail: React.FC = () => {
         });
     }, [updateTask]);
 
-    // --- 核心修复逻辑在这里 ---
     const cycleCompletionPercentage = useCallback(() => {
         if (!selectedTask || selectedTask.listName === 'Trash') return;
-
-        // 明确判断当前是否为完成状态
         const isCurrentlyCompleted = selectedTask.completed || (selectedTask.completePercentage ?? 0) === 100;
         const nextCompleted = !isCurrentlyCompleted;
-
-        // 设置下一个完成百分比：完成时为100，未完成时为0
-        const nextPercentage = nextCompleted ? 100 : 0;
-
-        // 同时更新 completed 和 completePercentage 两个字段
+        const nextPercentage = nextCompleted ? 100 : null;
         updateTask({
             completed: nextCompleted,
             completePercentage: nextPercentage,
         });
-
-        // 如果任务刚刚被标记为完成，则关闭详情视图
         if (nextCompleted) {
             setSelectedTaskId(null);
         }
