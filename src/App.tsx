@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, {lazy, Suspense, useEffect, useRef} from 'react';
+import React, {lazy, Suspense, useEffect, useRef, useState} from 'react';
 import {Navigate, Outlet, Route, Routes, useLocation, useParams} from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import {TaskFilter} from './types';
@@ -30,6 +30,8 @@ import {
 import {startOfDay} from "@/utils/dateUtils";
 import {APP_THEMES} from "@/config/themes";
 import Icon from "@/components/common/Icon";
+import {AnimatePresence, motion} from "framer-motion";
+import {twMerge} from "tailwind-merge";
 
 const MainPage = lazy(() => import('./pages/MainPage'));
 const SummaryPage = lazy(() => import('./pages/SummaryPage'));
@@ -75,7 +77,6 @@ const SettingsApplicator: React.FC = () => {
         document.documentElement.style.setProperty('--color-primary-light-hsl', selectedTheme.colors.light);
         document.documentElement.style.setProperty('--color-primary-dark-hsl', selectedTheme.colors.dark);
 
-        // --- 核心修复逻辑在这里 ---
         if (appearance.backgroundImageUrl && appearance.backgroundImageUrl !== 'none') {
             document.body.style.backgroundImage = `url('${appearance.backgroundImageUrl}')`;
             document.body.style.backgroundSize = 'cover';
@@ -83,11 +84,9 @@ const SettingsApplicator: React.FC = () => {
             document.body.style.backgroundRepeat = 'no-repeat';
             document.body.style.backgroundAttachment = 'fixed';
 
-            // 仅在有背景图时应用滤镜
             const filterValue = `brightness(${appearance.backgroundImageBrightness}%) ${appearance.backgroundImageBlur > 0 ? `blur(${appearance.backgroundImageBlur}px)` : ''}`;
             document.body.style.filter = filterValue.trim();
         } else {
-            // 没有背景图时，移除背景和滤镜
             document.body.style.backgroundImage = 'none';
             document.body.style.filter = 'none';
         }
@@ -171,34 +170,106 @@ const DailyTaskRefresh: React.FC = () => {
 };
 DailyTaskRefresh.displayName = 'DailyTaskRefresh';
 
+interface Notification {
+    id: number;
+    type: 'loading' | 'error';
+    message: string;
+}
+
 const GlobalStatusDisplay: React.FC = () => {
     const isLoadingCurrentUser = useAtomValue(currentUserLoadingAtom);
     const isLoadingTasks = useAtomValue(tasksLoadingAtom);
     const isLoadingAppearance = useAtomValue(appearanceSettingsLoadingAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
-    // userDefinedLists is derived, so no loading state
     const isLoadingSummaries = useAtomValue(storedSummariesLoadingAtom);
+    const anyLoading = isLoadingCurrentUser || isLoadingTasks || isLoadingAppearance || isLoadingPreferences || isLoadingSummaries;
+
     const errorCurrentUser = useAtomValue(currentUserErrorAtom);
     const errorTasks = useAtomValue(tasksErrorAtom);
     const errorAppearance = useAtomValue(appearanceSettingsErrorAtom);
     const errorPreferences = useAtomValue(preferencesSettingsErrorAtom);
-    // No error state for derived userDefinedLists
     const errorSummaries = useAtomValue(storedSummariesErrorAtom);
-    const anyLoading = isLoadingCurrentUser || isLoadingTasks || isLoadingAppearance || isLoadingPreferences || isLoadingSummaries;
-    const errors = [errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries].filter(Boolean);
-    if (!anyLoading && errors.length === 0) return null;
+
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const existingErrorMessages = useRef(new Set<string>());
+
+    useEffect(() => {
+        const errors = [
+            errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries
+        ].filter((e): e is string => typeof e === 'string');
+
+        errors.forEach(errorMsg => {
+            if (!existingErrorMessages.current.has(errorMsg)) {
+                const newNotification: Notification = {
+                    id: Date.now() + Math.random(),
+                    type: 'error',
+                    message: errorMsg,
+                };
+                setNotifications(prev => [...prev, newNotification]);
+                existingErrorMessages.current.add(errorMsg);
+
+                setTimeout(() => {
+                    removeNotification(newNotification.id);
+                }, 5000); // Auto-dismiss after 5 seconds
+            }
+        });
+    }, [errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries]);
+
+    const removeNotification = (id: number) => {
+        setNotifications(prev => {
+            const notificationToRemove = prev.find(n => n.id === id);
+            if (notificationToRemove) {
+                existingErrorMessages.current.delete(notificationToRemove.message);
+            }
+            return prev.filter(n => n.id !== id);
+        });
+    };
+
+    if (!anyLoading && notifications.length === 0) return null;
+
     return (
         <div
-            className="fixed bottom-4 right-4 z-[10000] p-3 bg-neutral-800 text-white rounded-lg shadow-xl text-xs space-y-1 max-w-sm">
-            {anyLoading && (
-                <div className="flex items-center"><Icon name="loader" size={14} className="animate-spin mr-2"/>Loading
-                    application data...</div>
-            )}
-            {errors.map((error, index) => (
-                <div key={index} className="flex items-start text-red-400"><Icon name="alert-circle" size={14}
-                                                                                 className="mr-2 mt-px flex-shrink-0"/><span>{error}</span>
-                </div>
-            ))}
+            className="fixed bottom-4 right-4 z-[10000] space-y-2 max-w-sm w-full flex flex-col items-end">
+            <AnimatePresence>
+                {anyLoading && (
+                    <motion.div
+                        key="loading-indicator"
+                        initial={{opacity: 0, y: 10, scale: 0.95}}
+                        animate={{opacity: 1, y: 0, scale: 1}}
+                        exit={{opacity: 0, y: 10, scale: 0.95}}
+                        transition={{duration: 0.2, ease: "easeOut"}}
+                        className="p-3 bg-neutral-800 text-white rounded-lg shadow-xl text-xs flex items-center w-fit"
+                    >
+                        <Icon name="loader" size={14} className="animate-spin mr-2"/>
+                        <span>Loading application data...</span>
+                    </motion.div>
+                )}
+                {notifications.map((notification) => (
+                    <motion.div
+                        key={notification.id}
+                        layout
+                        initial={{opacity: 0, y: 10, scale: 0.95}}
+                        animate={{opacity: 1, y: 0, scale: 1}}
+                        exit={{opacity: 0, x: 20, scale: 0.95}}
+                        transition={{duration: 0.2, ease: "easeOut"}}
+                        className={twMerge(
+                            "group p-3 rounded-lg shadow-xl text-xs w-full flex items-start relative",
+                            notification.type === 'error' && "bg-error/10 border border-error/20 text-error-dark dark:bg-error/20 dark:border-error/30 dark:text-red-300"
+                        )}
+                    >
+                        <Icon name="alert-circle" size={14}
+                              className="mr-2 mt-px flex-shrink-0 text-error dark:text-red-400"/>
+                        <span className="flex-1 break-words">{notification.message}</span>
+                        <button
+                            onClick={() => removeNotification(notification.id)}
+                            className="ml-2 -mr-1 -mt-1 p-1 rounded-full opacity-50 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
+                            aria-label="Close notification"
+                        >
+                            <Icon name="x" size={12} strokeWidth={2}/>
+                        </button>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
         </div>
     );
 };

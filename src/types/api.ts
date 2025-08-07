@@ -54,8 +54,12 @@ export interface TaskUpdate {
     tags?: string[] | null;
 }
 
-// --- 核心修复逻辑在这里 (1/3) ---
-// 为子任务更新添加类型定义
+export interface SubtaskCreate {
+    title: string;
+    dueDate?: string | null; // ISO 8601 string
+    order?: number;
+}
+
 export interface SubtaskUpdate {
     title?: string;
     completed?: boolean;

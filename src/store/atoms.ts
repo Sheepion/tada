@@ -7,7 +7,6 @@ import {
     PreferencesSettings,
     SettingsTab,
     StoredSummary,
-    Subtask,
     Task,
     TaskFilter,
     TaskGroupCategory,
@@ -15,8 +14,6 @@ import {
 } from '@/types';
 import {
     endOfDay,
-    endOfMonth,
-    endOfWeek,
     isAfter,
     isBefore,
     isSameDay,
@@ -28,10 +25,12 @@ import {
     startOfWeek,
     subDays,
     subMonths,
-    subWeeks
+    subWeeks,
+    endOfMonth,
+    endOfWeek
 } from '@/utils/dateUtils';
 import * as service from '@/services/apiService';
-import {SubtaskUpdate, TaskCreate, TaskUpdate} from "@/types/api";
+import {SubtaskCreate, SubtaskUpdate, TaskCreate, TaskUpdate} from "@/types/api";
 
 type AsyncDataAtom<TData, TUpdate = TData | ((prev: TData | null) => TData) | typeof RESET> = WritableAtom<
     TData | null,
@@ -177,7 +176,7 @@ const findTaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
 };
 
 const findSubtaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
-    const created: { parentTaskId: string, subtask: { title: string } }[] = [];
+    const created: { parentTaskId: string, subtask: SubtaskCreate }[] = [];
     const updated: { id: string, changes: SubtaskUpdate }[] = [];
     const deleted: string[] = [];
     const nextTasksMap = new Map(nextTasks.map(t => [t.id, t]));
@@ -194,7 +193,14 @@ const findSubtaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
         // Find created subtasks
         for (const nextSub of nextSubtasks) {
             if (nextSub.id.startsWith('subtask-')) {
-                created.push({parentTaskId: nextTask.id, subtask: {title: nextSub.title}});
+                created.push({
+                    parentTaskId: nextTask.id,
+                    subtask: {
+                        title: nextSub.title,
+                        order: nextSub.order,
+                        dueDate: nextSub.dueDate ? new Date(nextSub.dueDate).toISOString() : null
+                    }
+                });
             }
         }
 
@@ -202,7 +208,9 @@ const findSubtaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
         for (const prevSub of prevSubtasks) {
             const nextSub = nextSubtaskMap.get(prevSub.id);
             if (!nextSub) {
-                deleted.push(prevSub.id);
+                if (!prevSub.id.startsWith('subtask-')) { // Don't try to delete local-only IDs
+                    deleted.push(prevSub.id);
+                }
             } else {
                 const changes: SubtaskUpdate = {};
                 if (prevSub.title !== nextSub.title) changes.title = nextSub.title;
