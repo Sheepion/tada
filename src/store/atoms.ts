@@ -32,6 +32,14 @@ import {
 import * as service from '@/services/apiService';
 import {SubtaskCreate, SubtaskUpdate, TaskCreate, TaskUpdate} from "@/types/api";
 
+// <<< NEW: Notification type moved here for global access
+export interface Notification {
+    id: number;
+    type: 'success' | 'error' | 'loading';
+    message: string;
+}
+// NEW END >>>
+
 type AsyncDataAtom<TData, TUpdate = TData | ((prev: TData | null) => TData) | typeof RESET> = WritableAtom<
     TData | null,
     [TUpdate],
@@ -372,6 +380,24 @@ export const settingsSelectedTabAtom = atom<SettingsTab>('account');
 export const isAddListModalOpenAtom = atom<boolean>(false);
 export const currentFilterAtom = atom<TaskFilter>('all');
 export const searchTermAtom = atom<string>('');
+
+// <<< NEW: Global Notification Atoms
+export const notificationsAtom = atom<Notification[]>([]);
+
+export const addNotificationAtom = atom(
+    null,
+    (get, set, newNotification: Omit<Notification, 'id'>) => {
+        const id = Date.now() + Math.random();
+        // Add the new notification
+        set(notificationsAtom, (prev) => [...prev, { ...newNotification, id }]);
+
+        // Set a timer to remove it after 5 seconds
+        setTimeout(() => {
+            set(notificationsAtom, (prev) => prev.filter((n) => n.id !== id));
+        }, 5000);
+    }
+);
+// NEW END >>>
 
 // --- Settings Atoms ---
 export type DarkModeOption = 'light' | 'dark' | 'system';

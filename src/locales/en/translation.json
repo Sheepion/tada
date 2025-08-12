@@ -93,7 +93,26 @@
       "changePasswordError": "Error changing password: {{message}}",
       "uploadAvatarError": "Error uploading avatar: {{message}}",
       "deleteAvatarError": "Error deleting avatar: {{message}}",
-      "confirmDeleteAvatar": "Are you sure you want to delete your avatar?"
+      "confirmDeleteAvatar": "Are you sure you want to delete your avatar?",
+      "editUsername": "Edit username",
+      "editPhone": "Edit phone number",
+      "editEmail": "Edit email address",
+      "updateSuccessMessage": "Information updated successfully!",
+      "passwordChangeSuccess": "Password changed successfully!",
+      "errorIdentifierUnchanged": "New information cannot be the same as the current one.",
+      "codeSentMessage": "Verification code sent. Please check your inbox/messages.",
+      "errorSendingCode": "Failed to send verification code. Please try again later.",
+      "errorIdentifierUpdate": "Update failed. Please check your verification code or network.",
+      "codePlaceholder": "Verification Code",
+      "sendCode": "Send Code",
+      "phonePlaceholder": "Enter new phone number",
+      "emailPlaceholder": "Enter new email address",
+      "errorPasswordMismatch": "The passwords you entered do not match.",
+      "errorPasswordLength": "New password must be at least 8 characters long.",
+      "currentPasswordPlaceholder": "Current Password",
+      "newPasswordPlaceholder": "New Password",
+      "confirmPasswordPlaceholder": "Confirm New Password",
+      "currentLabel": "Current"
     },
     "appearance": {
       "title": "Appearance",
@@ -203,7 +222,7 @@
   "taskGroup": {
     "overdue": "Overdue",
     "today": "Today",
-    "next7days": "Next 7 Days",
+    "next7Days": "Next 7 Days",
     "later": "Later",
     "nodate": "No Date"
   },

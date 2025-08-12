@@ -2,6 +2,7 @@
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
+    addNotificationAtom,
     appearanceSettingsAtom,
     currentUserAtom,
     DarkModeOption,
@@ -14,7 +15,7 @@ import {
     settingsSelectedTabAtom,
     userListNamesAtom,
 } from '@/store/atoms';
-import {SettingsTab} from '@/types';
+import {SettingsTab, User} from '@/types';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import {twMerge} from 'tailwind-merge';
@@ -36,9 +37,182 @@ import {useTranslation} from "react-i18next";
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import UserAvatar from "@/components/common/UserAvatar";
 
+interface IdentifierEditModalProps {
+    type: 'email' | 'phone';
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: (updatedUser: User) => void;
+    currentValue: string | null;
+}
+
+const IdentifierEditModal: React.FC<IdentifierEditModalProps> = ({ type, isOpen, onClose, onSuccess, currentValue }) => {
+    const { t } = useTranslation();
+    const [step, setStep] = useState(1);
+    const [newValue, setNewValue] = useState('');
+    const [code, setCode] = useState('');
+    const [isSendingCode, setIsSendingCode] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [message, setMessage] = useState<string | null>(null);
+
+    const title = type === 'email' ? t('settings.account.editEmail') : t('settings.account.editPhone');
+    const placeholder = type === 'email' ? t('settings.account.emailPlaceholder') : t('settings.account.phonePlaceholder');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTimeout(() => {
+                setStep(1);
+                setNewValue('');
+                setCode('');
+                setIsSendingCode(false);
+                setIsLoading(false);
+                setError(null);
+                setMessage(null);
+            }, 200);
+        }
+    }, [isOpen]);
+
+
+    const handleSendCode = async () => {
+        if (!newValue.trim() || newValue.trim() === currentValue) {
+            setError(t('settings.account.errorIdentifierUnchanged'));
+            return;
+        }
+        setIsSendingCode(true);
+        setError(null);
+        setMessage(null);
+        try {
+            const response = await apiService.apiSendCode(newValue, type === 'email' ? 'update_email' : 'update_phone');
+            if (response.success) {
+                setMessage(response.message || t('settings.account.codeSentMessage'));
+                setStep(2);
+            } else {
+                setError(response.error || t('settings.account.errorSendingCode'));
+            }
+        } catch (e: any) {
+            setError(e.message || t('settings.account.errorSendingCode'));
+        } finally {
+            setIsSendingCode(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const updatedUser = type === 'email'
+                ? await apiService.apiUpdateEmailWithCode(newValue, code)
+                : await apiService.apiUpdatePhoneWithCode(newValue, code);
+            onSuccess(updatedUser);
+            onClose();
+        } catch (e: any) {
+            setError(e.message || t('settings.account.errorIdentifierUpdate'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const inputClasses = "w-full h-9 px-3 text-[13px] font-light rounded-base focus:outline-none bg-grey-ultra-light dark:bg-neutral-700 placeholder:text-grey-medium dark:placeholder:text-neutral-400 text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light";
+
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-grey-dark/30 dark:bg-black/60 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-[51] backdrop-blur-sm"/>
+                <Dialog.Content className={twMerge("fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[52]", "bg-white dark:bg-neutral-800 w-full max-w-sm rounded-base shadow-modal flex flex-col p-6", "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide")}>
+                    <Dialog.Title className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 mb-4 text-center">{title}</Dialog.Title>
+
+                    {error && <p className="text-xs text-error dark:text-red-400 text-center bg-error/10 p-2 rounded-base mb-3">{error}</p>}
+                    {message && !error && <p className="text-xs text-success dark:text-green-400 text-center bg-success/10 p-2 rounded-base mb-3">{message}</p>}
+
+                    {step === 1 && (
+                        <div className="space-y-4">
+                            <input type={type === 'email' ? 'email' : 'tel'} value={newValue} onChange={e => setNewValue(e.target.value)} placeholder={placeholder} className={inputClasses}/>
+                            <Button fullWidth variant="primary" size="md" onClick={handleSendCode} loading={isSendingCode}>{t('settings.account.sendCode')}</Button>
+                        </div>
+                    )}
+                    {step === 2 && (
+                        <div className="space-y-4">
+                            <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder={t('settings.account.codePlaceholder')} className={inputClasses} inputMode="numeric" />
+                            <Button fullWidth variant="primary" size="md" onClick={handleSave} loading={isLoading}>{t('common.save')}</Button>
+                        </div>
+                    )}
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
+    )
+}
+IdentifierEditModal.displayName = 'IdentifierEditModal';
+
+const PasswordChangeModal: React.FC<{ isOpen: boolean, onClose: () => void, onSuccess: () => void }> = ({ isOpen, onClose, onSuccess }) => {
+    const { t } = useTranslation();
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTimeout(() => {
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setIsLoading(false);
+                setError(null);
+            }, 200);
+        }
+    }, [isOpen]);
+
+    const handleSave = async () => {
+        if (newPassword !== confirmPassword) {
+            setError(t('settings.account.errorPasswordMismatch'));
+            return;
+        }
+        if (newPassword.length < 8) {
+            setError(t('settings.account.errorPasswordLength'));
+            return;
+        }
+        setError(null);
+        setIsLoading(true);
+        try {
+            await apiService.apiChangePassword(currentPassword, newPassword);
+            onSuccess();
+            onClose();
+        } catch (e: any) {
+            setError(e.message || t('settings.account.changePasswordError', { message: 'Unknown error' }));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const inputClasses = "w-full h-9 px-3 text-[13px] font-light rounded-base focus:outline-none bg-grey-ultra-light dark:bg-neutral-700 placeholder:text-grey-medium dark:placeholder:text-neutral-400 text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light";
+
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-grey-dark/30 dark:bg-black/60 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-[51] backdrop-blur-sm"/>
+                <Dialog.Content className={twMerge("fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[52]", "bg-white dark:bg-neutral-800 w-full max-w-sm rounded-base shadow-modal flex flex-col p-6", "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide")}>
+                    <Dialog.Title className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 mb-4 text-center">{t('settings.account.changePassword')}</Dialog.Title>
+                    {error && <p className="text-xs text-error dark:text-red-400 text-center bg-error/10 p-2 rounded-base mb-3">{error}</p>}
+                    <div className="space-y-4">
+                        <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder={t('settings.account.currentPasswordPlaceholder')} className={inputClasses} autoComplete="current-password" />
+                        <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={t('settings.account.newPasswordPlaceholder')} className={inputClasses} autoComplete="new-password" />
+                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('settings.account.confirmPasswordPlaceholder')} className={inputClasses} autoComplete="new-password" />
+                    </div>
+                    <div className="flex justify-end mt-6 space-x-2">
+                        <Button variant="secondary" size="md" onClick={onClose}>{t('common.cancel')}</Button>
+                        <Button variant="primary" size="md" onClick={handleSave} loading={isLoading}>{t('common.save')}</Button>
+                    </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
+    )
+}
+PasswordChangeModal.displayName = 'PasswordChangeModal';
+
 interface SettingsItem {
     id: SettingsTab;
-    labelKey: string; // Changed to key for translation
+    labelKey: string;
     icon: IconName;
 }
 
@@ -70,7 +244,7 @@ const SettingsRow: React.FC<{
             {value && !action && !children &&
                 <span className="text-grey-medium dark:text-neutral-300 text-right font-normal">{value}</span>}
             {action && !children && <div className="flex justify-end">{action}</div>}
-            {children && <div className="flex justify-end space-x-2">{children}</div>}
+            {children && <div className="flex justify-end items-center space-x-2">{children}</div>}
         </div>
     </div>
 ));
@@ -178,17 +352,29 @@ BackgroundImagePreview.displayName = 'BackgroundImagePreview';
 const AccountSettings: React.FC = memo(() => {
     const {t} = useTranslation();
     const [currentUser, setCurrentUserGlobally] = useAtom(currentUserAtom);
+    const addNotification = useSetAtom(addNotificationAtom);
     const [isEditingName, setIsEditingName] = useState(false);
     const [newName, setNewName] = useState(currentUser?.username || '');
     const [isLoading, setIsLoading] = useState(false);
     const [isDeleteAvatarConfirmOpen, setIsDeleteAvatarConfirmOpen] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    type EditingModal = 'phone' | 'email' | 'password' | null;
+    const [editingModal, setEditingModal] = useState<EditingModal>(null);
 
     useEffect(() => {
         if (currentUser) {
             setNewName(currentUser.username || '');
         }
     }, [currentUser]);
+
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
 
     const handleEditName = () => setIsEditingName(true);
     const handleCancelEditName = () => {
@@ -207,31 +393,20 @@ const AccountSettings: React.FC = memo(() => {
             setCurrentUserGlobally(updatedUser);
             setIsEditingName(false);
         } catch (e: any) {
-            alert(t('settings.account.editNameError', {message: e.message}));
+            addNotification({ type: 'error', message: t('settings.account.editNameError', { message: e.message }) });
         }
         setIsLoading(false);
     };
 
-    const handleChangePassword = async () => {
-        // Prompts are not ideal for production apps, but keeping for simplicity.
-        // They are also not translatable.
-        const currentPassword = prompt("Enter current password:");
-        if (!currentPassword) return;
-        const newPassword = prompt("Enter new password (min. 8 characters):");
-        if (!newPassword) return;
-        if (newPassword.length < 8) {
-            alert("New password must be at least 8 characters long.");
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const response = await apiService.apiChangePassword(currentPassword, newPassword);
-            alert(response.message);
-        } catch (e: any) {
-            alert(t('settings.account.changePasswordError', {message: e.message}));
-        }
-        setIsLoading(false);
-    };
+    const handleIdentifierUpdateSuccess = useCallback((updatedUser: User) => {
+        setCurrentUserGlobally(updatedUser);
+        addNotification({ type: 'success', message: t('settings.account.updateSuccessMessage') });
+    }, [setCurrentUserGlobally, addNotification, t]);
+
+    const handlePasswordUpdateSuccess = useCallback(() => {
+        addNotification({ type: 'success', message: t('settings.account.passwordChangeSuccess') });
+    }, [addNotification, t]);
+
 
     const handleAvatarUploadClick = () => avatarInputRef.current?.click();
 
@@ -244,7 +419,7 @@ const AccountSettings: React.FC = memo(() => {
             const updatedUser = await apiService.apiUploadAvatar(file);
             setCurrentUserGlobally(updatedUser);
         } catch (e: any) {
-            alert(t('settings.account.uploadAvatarError', {message: e.message}));
+            addNotification({ type: 'error', message: t('settings.account.uploadAvatarError', { message: e.message }) });
         }
         setIsLoading(false);
         if (event.target) event.target.value = '';
@@ -262,7 +437,7 @@ const AccountSettings: React.FC = memo(() => {
             const updatedUser = await apiService.apiDeleteAvatar();
             setCurrentUserGlobally(updatedUser);
         } catch (e: any) {
-            alert(t('settings.account.deleteAvatarError', {message: e.message}));
+            addNotification({ type: 'error', message: t('settings.account.deleteAvatarError', { message: e.message }) });
         }
         setIsLoading(false);
     };
@@ -277,7 +452,6 @@ const AccountSettings: React.FC = memo(() => {
     const userEmail = useMemo(() => currentUser?.email ?? 'No email provided', [currentUser]);
     const userPhone = useMemo(() => currentUser?.phone ?? 'No phone provided', [currentUser]);
     const isPremium = useMemo(() => currentUser?.isPremium ?? false, [currentUser]);
-    const displayIdentifier = userEmail || userPhone;
 
     return (<>
         <div className="space-y-6">
@@ -305,8 +479,34 @@ const AccountSettings: React.FC = memo(() => {
                     </div>
                 </div>
                 <div>
-                    <h3 className="text-[18px] font-normal text-grey-dark dark:text-neutral-100">{userName}</h3>
-                    <p className="text-[13px] text-grey-medium dark:text-neutral-300 font-light">{displayIdentifier}</p>
+                    <div className="flex items-center space-x-2">
+                        {isEditingName ? (
+                            <div className="flex items-center">
+                                <input
+                                    ref={nameInputRef}
+                                    type="text"
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                    onBlur={handleSaveName}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveName();
+                                        if (e.key === 'Escape') handleCancelEditName();
+                                    }}
+                                    className="h-7 px-2 text-[18px] font-normal rounded-base bg-grey-ultra-light dark:bg-neutral-700 border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        ) : (
+                            <h3 className="text-[18px] font-normal text-grey-dark dark:text-neutral-100">{userName}</h3>
+                        )}
+                        {!isEditingName && (
+                            <Button variant="ghost" size="icon" icon="edit" onClick={handleEditName} className="w-6 h-6 text-grey-medium hover:text-primary" iconProps={{size: 14, strokeWidth: 1.5}} title={t('settings.account.editUsername')} />
+                        )}
+                    </div>
+                    <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-[13px] text-grey-medium dark:text-neutral-300 font-light">{userPhone}</p>
+                        <Button variant="ghost" size="icon" icon="edit" onClick={() => setEditingModal('phone')} className="w-6 h-6 text-grey-medium hover:text-primary" iconProps={{size: 14, strokeWidth: 1.5}} title={t('settings.account.editPhone')} />
+                    </div>
                     {isPremium && (
                         <div
                             className="text-[11px] text-primary dark:text-primary-light flex items-center mt-1.5 font-normal bg-primary-light dark:bg-primary-dark/30 px-2 py-0.5 rounded-full w-fit">
@@ -319,35 +519,21 @@ const AccountSettings: React.FC = memo(() => {
             </div>
 
             <div className="space-y-0">
-                {isEditingName ? (
-                    <SettingsRow label={t('settings.account.username')}>
-                        <input
-                            type="text"
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            className="flex-grow h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light mr-2 w-full sm:w-auto"
-                            disabled={isLoading}
-                        />
-                        <Button variant="primary" size="sm" onClick={handleSaveName}
-                                disabled={isLoading}>{t('common.save')}</Button>
-                        <Button variant="ghost" size="sm" onClick={handleCancelEditName} className="ml-1"
-                                disabled={isLoading}>{t('common.cancel')}</Button>
-                    </SettingsRow>
-                ) : (
-                    <SettingsRow label={t('settings.account.username')} value={userName}
-                                 action={<Button variant="link" size="sm" onClick={handleEditName}
-                                                 disabled={isLoading}>{t('common.edit')}</Button>}/>
-                )}
-                <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-                {userEmail &&
-                    <SettingsRow label={t('settings.account.email')} value={userEmail}
-                                 description={t('settings.account.emailDescription')}/>}
-                {userPhone &&
-                    <SettingsRow label={t('settings.account.phone')} value={userPhone}
-                                 description={t('settings.account.phoneDescription')}/>}
+                {/* <<< MODIFIED: Use children prop to show both value and button */}
+                <SettingsRow label={t('settings.account.email')}>
+                     <span
+                         className="text-grey-medium dark:text-neutral-300 text-right font-normal mr-2 truncate max-w-[200px]"
+                         title={userEmail}>
+                         {userEmail}
+                    </span>
+                    <Button variant="link" size="sm" onClick={() => setEditingModal('email')}
+                            disabled={isLoading}>{t('common.edit')}</Button>
+                </SettingsRow>
+                {/* MODIFIED END >>> */}
+
                 <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
                 <SettingsRow label={t('settings.account.password')} action={<Button variant="link" size="sm"
-                                                                                    onClick={handleChangePassword}
+                                                                                    onClick={() => setEditingModal('password')}
                                                                                     disabled={isLoading}>{t('settings.account.changePassword')}</Button>}/>
             </div>
 
@@ -356,6 +542,27 @@ const AccountSettings: React.FC = memo(() => {
                         className="w-full sm:w-auto" disabled={isLoading}>{t('settings.account.logout')}</Button>
             </div>
         </div>
+
+        <IdentifierEditModal
+            type="email"
+            isOpen={editingModal === 'email'}
+            onClose={() => setEditingModal(null)}
+            onSuccess={handleIdentifierUpdateSuccess}
+            currentValue={currentUser?.email ?? null}
+        />
+        <IdentifierEditModal
+            type="phone"
+            isOpen={editingModal === 'phone'}
+            onClose={() => setEditingModal(null)}
+            onSuccess={handleIdentifierUpdateSuccess}
+            currentValue={currentUser?.phone ?? null}
+        />
+        <PasswordChangeModal
+            isOpen={editingModal === 'password'}
+            onClose={() => setEditingModal(null)}
+            onSuccess={handlePasswordUpdateSuccess}
+        />
+
         <ConfirmDeleteModalRadix
             isOpen={isDeleteAvatarConfirmOpen}
             onClose={() => setIsDeleteAvatarConfirmOpen(false)}

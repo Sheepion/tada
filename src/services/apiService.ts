@@ -5,7 +5,7 @@ import {
     AuthResponse as ApiAuthResponse,
     ListCreate,
     ListUpdate,
-    SubtaskUpdate, // 核心修复逻辑：导入新的类型
+    SubtaskUpdate,
     TaskBulkDelete,
     TaskBulkUpdate,
     TaskCreate,
@@ -88,7 +88,7 @@ const apiFetch = async <T>(endpoint: string, options: ApiFetchOptions = {}): Pro
 // --- User & Auth ---
 export type AuthResponse = ApiAuthResponse;
 
-export const apiSendCode = async (identifier: string, purpose: 'register' | 'login' | 'reset_password'): Promise<{
+export const apiSendCode = async (identifier: string, purpose: 'register' | 'login' | 'reset_password' | 'update_email' | 'update_phone'): Promise<{
     success: boolean;
     message?: string;
     error?: string
@@ -193,10 +193,24 @@ export const apiLogout = async (): Promise<void> => {
     return Promise.resolve();
 };
 
-export const apiUpdateUser = (updates: Partial<Omit<User, 'id' | 'isPremium'>>): Promise<User> => {
+export const apiUpdateUser = (updates: Partial<Omit<User, 'id' | 'isPremium' | 'email' | 'phone'>>): Promise<User> => {
     return apiFetch<User>('/users/me', {
         method: 'PUT',
         body: updates,
+    });
+};
+
+export const apiUpdateEmailWithCode = (email: string, code: string): Promise<User> => {
+    return apiFetch<User>('/users/me/email', {
+        method: 'PUT',
+        body: { email, code },
+    });
+};
+
+export const apiUpdatePhoneWithCode = (phone: string, code: string): Promise<User> => {
+    return apiFetch<User>('/users/me/phone', {
+        method: 'PUT',
+        body: { phone, code },
     });
 };
 
@@ -307,12 +321,10 @@ export const apiUpdateTask = async (taskId: string, taskData: TaskUpdate): Promi
 };
 
 export const apiCreateSubtask = async (taskId: string, subtaskData: { title: string }): Promise<Subtask> => {
-    // 后端返回的 Subtask DTO 结构与前端的 Subtask 类型基本一致，但日期是字符串
     const apiSubtask = await apiFetch<any>(`/tasks/${taskId}/subtasks`, {
         method: 'POST',
         body: subtaskData,
     });
-    // 将后端返回的日期字符串转换为前端需要的时间戳数字
     return {
         ...apiSubtask,
         dueDate: apiSubtask.dueDate ? new Date(apiSubtask.dueDate).getTime() : null,
@@ -322,9 +334,6 @@ export const apiCreateSubtask = async (taskId: string, subtaskData: { title: str
     } as Subtask;
 };
 
-
-// --- 核心修复逻辑在这里 (2/3) ---
-// 添加更新和删除子任务的API函数
 const transformSubtaskFromApi = (apiSubtask: any): Subtask => ({
     ...apiSubtask,
     dueDate: apiSubtask.dueDate ? new Date(apiSubtask.dueDate).getTime() : null,
@@ -388,11 +397,10 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
 
     const controller = new AbortController();
 
-    // This is our custom object that will behave like a native EventSource
     const customEventSource: any = {
         _listeners: {message: [], end: [], error: []},
         onmessage: null,
-        onend: null, // Add listener for 'end' event
+        onend: null,
         onerror: null,
 
         addEventListener(type: 'message' | 'end' | 'error', listener: (event: any) => void) {
@@ -400,14 +408,11 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
             this._listeners[type].push(listener);
         },
 
-        // A helper to dispatch events to the correct listeners
         dispatchEvent(event: MessageEvent) {
             const type = event.type as 'message' | 'end' | 'error';
-            // Call direct on-handlers (e.g., onmessage)
             if (typeof this[`on${type}`] === 'function') {
                 this[`on${type}`](event);
             }
-            // Call listeners added via addEventListener
             if (this._listeners[type]) {
                 this._listeners[type].forEach((l: any) => l(event));
             }
@@ -433,7 +438,6 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
             const decoder = new TextDecoder();
             let buffer = '';
 
-            // This loop processes the stream, correctly parsing event blocks
             while (true) {
                 const {done, value} = await reader.read();
                 if (done) {
@@ -441,14 +445,13 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
                 }
 
                 buffer += decoder.decode(value, {stream: true});
-                // SSE events are separated by double newlines
                 let boundary = buffer.indexOf('\n\n');
 
                 while (boundary > -1) {
                     const eventBlock = buffer.substring(0, boundary);
-                    buffer = buffer.substring(boundary + 2); // Move buffer past the processed event
+                    buffer = buffer.substring(boundary + 2);
 
-                    let eventType = 'message'; // Default event type
+                    let eventType = 'message';
                     const dataLines: string[] = [];
 
                     eventBlock.split('\n').forEach(line => {
@@ -480,14 +483,11 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
     return customEventSource;
 };
 
-
-// Also, ensure your transformSummaryFromApi can handle ISO date strings if they ever come from this endpoint
 const transformSummaryFromApi = (apiSummary: any): StoredSummary => {
-    // Helper to convert both seconds (number) and ISO date (string) to milliseconds
     const toMs = (timestamp: number | string | null | undefined): number => {
         if (timestamp === null || timestamp === undefined) return 0;
         if (typeof timestamp === 'string') return new Date(timestamp).getTime();
-        if (Number.isFinite(timestamp)) return Math.round(timestamp * 1000); // Assuming seconds
+        if (Number.isFinite(timestamp)) return Math.round(timestamp * 1000);
         return 0;
     };
 

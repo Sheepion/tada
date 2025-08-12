@@ -5,6 +5,7 @@ import MainLayout from './components/layout/MainLayout';
 import {TaskFilter} from './types';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
+    addNotificationAtom,
     appearanceSettingsAtom,
     appearanceSettingsErrorAtom,
     appearanceSettingsLoadingAtom,
@@ -14,6 +15,8 @@ import {
     currentUserLoadingAtom,
     defaultAppearanceSettingsForApi,
     defaultPreferencesSettingsForApi,
+    Notification,
+    notificationsAtom,
     preferencesSettingsAtom,
     preferencesSettingsErrorAtom,
     preferencesSettingsLoadingAtom,
@@ -84,14 +87,11 @@ const SettingsApplicator: React.FC = () => {
             const filterValue = `brightness(${appearance.backgroundImageBrightness}%) ${appearance.backgroundImageBlur > 0 ? `blur(${appearance.backgroundImageBlur}px)` : ''}`;
             document.documentElement.style.setProperty('--app-background-filter', filterValue.trim());
 
-            // 使 body 背景透明，以便伪元素背景可见
             document.body.style.backgroundColor = 'transparent';
         } else {
-            // 移除背景图时，清除 CSS 变量并恢复 body 的背景色
             document.documentElement.style.removeProperty('--app-background-image');
             document.documentElement.style.removeProperty('--app-background-filter');
 
-            // 移除内联样式，让 CSS 文件中的 body 规则重新生效
             document.body.style.backgroundColor = '';
         }
 
@@ -181,12 +181,8 @@ const DailyTaskRefresh: React.FC = () => {
 };
 DailyTaskRefresh.displayName = 'DailyTaskRefresh';
 
-interface Notification {
-    id: number;
-    type: 'loading' | 'error';
-    message: string;
-}
 
+// <<< MODIFIED: GlobalStatusDisplay now uses Jotai atoms and handles success notifications
 const GlobalStatusDisplay: React.FC = () => {
     const {t} = useTranslation();
     const isLoadingCurrentUser = useAtomValue(currentUserLoadingAtom);
@@ -202,7 +198,8 @@ const GlobalStatusDisplay: React.FC = () => {
     const errorPreferences = useAtomValue(preferencesSettingsErrorAtom);
     const errorSummaries = useAtomValue(storedSummariesErrorAtom);
 
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useAtom(notificationsAtom);
+    const addNotification = useSetAtom(addNotificationAtom);
     const existingErrorMessages = useRef(new Set<string>());
 
     useEffect(() => {
@@ -212,29 +209,20 @@ const GlobalStatusDisplay: React.FC = () => {
 
         errors.forEach(errorMsg => {
             if (!existingErrorMessages.current.has(errorMsg)) {
-                const newNotification: Notification = {
-                    id: Date.now() + Math.random(),
+                addNotification({
                     type: 'error',
                     message: errorMsg,
-                };
-                setNotifications(prev => [...prev, newNotification]);
+                });
                 existingErrorMessages.current.add(errorMsg);
-
                 setTimeout(() => {
-                    removeNotification(newNotification.id);
-                }, 5000); // Auto-dismiss after 5 seconds
+                    existingErrorMessages.current.delete(errorMsg);
+                }, 5100); // Slightly longer than notification timeout
             }
         });
-    }, [errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries]);
+    }, [errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries, addNotification]);
 
     const removeNotification = (id: number) => {
-        setNotifications(prev => {
-            const notificationToRemove = prev.find(n => n.id === id);
-            if (notificationToRemove) {
-                existingErrorMessages.current.delete(notificationToRemove.message);
-            }
-            return prev.filter(n => n.id !== id);
-        });
+        setNotifications(prev => prev.filter(n => n.id !== id));
     };
 
     if (!anyLoading && notifications.length === 0) return null;
@@ -266,11 +254,13 @@ const GlobalStatusDisplay: React.FC = () => {
                         transition={{duration: 0.2, ease: "easeOut"}}
                         className={twMerge(
                             "group p-3 rounded-lg shadow-xl text-xs w-full flex items-start relative",
-                            notification.type === 'error' && "bg-error/10 border border-error/20 text-error-dark dark:bg-error/20 dark:border-error/30 dark:text-red-300"
+                            notification.type === 'error' && "bg-error/10 border border-error/20 text-error-dark dark:bg-error/20 dark:border-error/30 dark:text-red-300",
+                            notification.type === 'success' && "bg-success/10 border border-success/20 text-green-800 dark:bg-success/20 dark:border-green-500/30 dark:text-green-300"
                         )}
                     >
-                        <Icon name="alert-circle" size={14}
-                              className="mr-2 mt-px flex-shrink-0 text-error dark:text-red-400"/>
+                        {notification.type === 'error' && <Icon name="alert-circle" size={14} className="mr-2 mt-px flex-shrink-0 text-error dark:text-red-400"/>}
+                        {notification.type === 'success' && <Icon name="check-circle" size={14} className="mr-2 mt-px flex-shrink-0 text-success dark:text-green-400"/>}
+
                         <span className="flex-1 break-words">{notification.message}</span>
                         <button
                             onClick={() => removeNotification(notification.id)}
@@ -286,6 +276,7 @@ const GlobalStatusDisplay: React.FC = () => {
     );
 };
 GlobalStatusDisplay.displayName = 'GlobalStatusDisplay';
+// MODIFIED END >>>
 
 
 const ProtectedRoute: React.FC = () => {
@@ -312,7 +303,6 @@ const AppRoutes: React.FC = () => {
             <Route path="/login" element={<LoginPage/>}/>
             <Route path="/register" element={<RegisterPage/>}/>
             <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
-            {/* The /reset-password/:token route is removed as the flow is now handled by forgot-password */}
 
             <Route element={<ProtectedRoute/>}>
                 <Route path="/" element={<MainLayout/>}>
