@@ -37,12 +37,6 @@ const light = {
     codeAttribute: "#0891B2",    // Cyan - Attributes
     codeType: "#CA8A04",         // Gold - Types
 
-    // Blockquote Colors
-    blockquoteColor1: "#cbd5e1",
-    blockquoteColor2: "#94a3b8",
-    blockquoteColor3: "#64748b",
-    blockquoteColorDeep: "#4b5563",
-
     // --- Styles aligned with table formatting ---
     inlineCodeBg: "#f3f4f6",
     inlineCodeColor: "#e11d48",
@@ -92,11 +86,7 @@ const dark = {
     codeAttribute: "#22D3EE",    // Cyan - Attributes
     codeType: "#FCD34D",         // Yellow - Types
 
-    // Blockquote Colors
-    blockquoteColor1: "#475569",
-    blockquoteColor2: "#64748b",
-    blockquoteColor3: "#94a3b8",
-    blockquoteColorDeep: "#cbd5e1",
+    // Blockquote Colors (No longer used, now dynamic)
 
     // --- Styles aligned with table formatting ---
     inlineCodeBg: "#0f172a",
@@ -126,17 +116,15 @@ const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) 
         "&": {
             color: colors.primaryText,
             backgroundColor: colors.background,
-            height: '100%', // Ensure the editor wrapper takes full height
-            // Define CSS variables for blockquote styling
+            height: '100%',
             "--bq-bar-width": "3px",
             "--bq-bar-gap": "12px",
             "--bq-padding-base": "12px",
             "--bq-text-gap": "16px",
-            "--bq-border-radius": "8px",
-            "--bq-color-1": colors.blockquoteColor1,
-            "--bq-color-2": colors.blockquoteColor2,
-            "--bq-color-3": colors.blockquoteColor3,
-            "--bq-color-deep": colors.blockquoteColorDeep,
+            "--bq-color-1": isDark ? 'hsl(var(--color-primary-light-hsl) / 0.6)' : 'hsl(var(--color-primary-hsl) / 0.5)',
+            "--bq-color-2": isDark ? 'hsl(var(--color-primary-light-hsl) / 0.8)' : 'hsl(var(--color-primary-hsl) / 0.7)',
+            "--bq-color-3": isDark ? 'hsl(var(--color-primary-light-hsl))' : 'hsl(var(--color-primary-hsl) / 0.9)',
+            "--bq-color-deep": isDark ? 'hsl(var(--color-primary-hsl))' : 'hsl(var(--color-primary-dark-hsl))',
         },
         ".cm-scroller": {
             fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
@@ -387,7 +375,7 @@ const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) 
         },
 
         // List styling
-        ".cm-bullet-list": { color: colors.marker, fontWeight: "bold" },
+        ".cm-bullet-list": { color: visibleMarkdownColor, fontWeight: "bold" },
         ".cm-ordered-list-marker, .cm-ordered-list-marker > span": {
             color: `${colors.primaryText} !important`,
             fontFamily: "inherit !important"

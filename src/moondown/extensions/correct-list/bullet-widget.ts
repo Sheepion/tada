@@ -9,7 +9,7 @@ export class BulletWidget extends WidgetType {
     toDOM() {
         const span = document.createElement("span");
         const bulletSymbol = this.getBulletSymbol(this.level);
-        span.innerHTML = `${this.indentation}<span class="bullet-symbol" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-weight: bold;">${bulletSymbol}</span> `;
+        span.innerHTML = `${this.indentation}<span class="bullet-symbol" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-weight: bold; transform: scale(0.6); display: inline-block;">${bulletSymbol}</span> `;
         span.className = `cm-bullet-list ${this.className}`;
         span.style.display = 'inline-block';
         return span;
