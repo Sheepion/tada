@@ -9,21 +9,17 @@ import {
     selectedTaskIdAtom,
     tasksAtom,
     userListsAtom,
-} from '@/store/atoms';
-import Icon from '../common/Icon';
-import Button from '../common/Button';
-import CodeMirrorEditor, {CodeMirrorEditorRef} from '../common/CodeMirrorEditor';
+} from '@/store/jotai.ts';
+import Icon from '@/components/ui/Icon.tsx';
+import Button from '@/components/ui/Button.tsx';
 import {formatDateTime, formatRelativeDate, isOverdue, isValid, safeParseDate,} from '@/utils/dateUtils';
 import {Subtask, Task, TaskGroupCategory} from '@/types';
 import {twMerge} from 'tailwind-merge';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Popover from '@radix-ui/react-popover';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import {CustomDatePickerContent} from '../common/CustomDatePickerPopover';
-import AddTagsPopoverContent from '../common/AddTagsPopoverContent';
-import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import {ProgressIndicator} from './TaskItem';
-import {IconName} from "@/components/common/IconMap";
+import {IconName} from "@/components/ui/IconMap.ts";
 import {
     closestCenter,
     DndContext,
@@ -41,7 +37,11 @@ import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/
 import {AnimatePresence, motion} from "framer-motion";
 import SubtaskItemDetail from "./SubtaskItemDetail";
 import {useTranslation} from "react-i18next";
-import * as service from "@/services/localStorageService";
+import * as service from "@/services/storageService.ts";
+import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
+import AddTagsPopoverContent from "@/components/ui/TagInput.tsx";
+import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
+import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
 
 interface TagPillProps {
     tag: string;

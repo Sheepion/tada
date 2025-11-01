@@ -1,7 +1,7 @@
 // src/components/common/AddTagsPopoverContent.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtomValue} from 'jotai';
-import {userTagNamesAtom} from '@/store/atoms';
+import {userTagNamesAtom} from '@/store/jotai.ts';
 import Icon from './Icon';
 import {twMerge} from 'tailwind-merge';
 import useDebounce from "@/hooks/useDebounce";

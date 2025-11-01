@@ -2,7 +2,7 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import {twMerge} from 'tailwind-merge';
-import {iconMap, IconName} from "@/components/common/IconMap";
+import {iconMap, IconName} from "@/components/ui/IconMap.ts";
 
 interface IconProps extends Omit<LucideIcons.LucideProps, 'ref'> {
     name: IconName;

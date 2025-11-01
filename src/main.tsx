@@ -7,7 +7,7 @@ import App from './App';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 // Import i18n configuration to initialize it
-import './i18n';
+import '@/locales';
 
 // Import base styles LAST to ensure Tailwind utilities override defaults
 import './styles/index.css';

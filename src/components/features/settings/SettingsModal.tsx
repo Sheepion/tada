@@ -14,12 +14,12 @@ import {
     preferencesSettingsAtom,
     settingsSelectedTabAtom,
     userListNamesAtom,
-} from '@/store/atoms';
+} from '@/store/jotai.ts';
 import {AISettings as AISettingsType, SettingsTab} from '@/types';
-import Icon from '../common/Icon';
-import Button from '../common/Button';
+import Icon from '@/components/ui/Icon.tsx';
+import Button from '@/components/ui/Button.tsx';
 import {twMerge} from 'tailwind-merge';
-import {IconName} from "@/components/common/IconMap";
+import {IconName} from "@/components/ui/IconMap.ts";
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Select from '@radix-ui/react-select';
 import * as RadioGroup from '@radix-ui/react-radio-group';
@@ -30,7 +30,7 @@ import {
     CHANGELOG_HTML,
     PRIVACY_POLICY_HTML,
     TERMS_OF_USE_HTML
-} from '@/config/themes';
+} from '@/config/app.ts';
 import {useTranslation} from "react-i18next";
 import {AIProvider, AI_PROVIDERS} from "@/config/aiProviders";
 import {fetchProviderModels, testConnection} from "@/services/aiService";

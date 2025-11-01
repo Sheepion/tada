@@ -3,7 +3,7 @@ import React from 'react';
 import {twMerge} from 'tailwind-merge';
 import {clsx} from 'clsx';
 import Icon from './Icon';
-import {IconName} from "@/components/common/IconMap";
+import {IconName} from "@/components/ui/IconMap.ts";
 
 type ButtonVariant = 'primary' | 'secondary' | 'link' | 'danger' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';

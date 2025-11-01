@@ -1,5 +1,5 @@
 // src/types/index.ts
-import {DarkModeOption, DefaultNewTaskDueDate} from "@/store/atoms.ts";
+import {DarkModeOption, DefaultNewTaskDueDate} from "@/store/jotai.ts";
 import {AIProvider, AIModel} from "@/config/aiProviders.ts";
 
 export interface List {

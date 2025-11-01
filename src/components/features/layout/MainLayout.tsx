@@ -4,7 +4,7 @@ import {Outlet, useLocation} from 'react-router-dom';
 import IconBar from './IconBar';
 import Sidebar from './Sidebar';
 import SettingsModal from '../settings/SettingsModal';
-import Icon from "@/components/common/Icon";
+import Icon from "@/components/ui/Icon.tsx";
 import {twMerge} from 'tailwind-merge';
 
 const LoadingSpinner: React.FC = () => (

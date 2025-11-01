@@ -1,19 +1,19 @@
 // src/components/tasks/SubtaskItemDetail.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Subtask} from '@/types';
-import Button from '../common/Button';
+import Button from '@/components/ui/Button.tsx';
 import {formatRelativeDate, isOverdue, isValid, safeParseDate,} from '@/utils/dateUtils';
 import {twMerge} from 'tailwind-merge';
 import * as Popover from '@radix-ui/react-popover';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import {CustomDatePickerContent} from '../common/CustomDatePickerPopover';
-import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
-import SelectionCheckboxRadix from "@/components/common/SelectionCheckbox";
 import {useSortable} from "@dnd-kit/sortable";
 import {CSS} from "@dnd-kit/utilities";
 import {useTranslation} from "react-i18next";
 import {useAtomValue} from "jotai";
-import {preferencesSettingsAtom} from "@/store/atoms";
+import {preferencesSettingsAtom} from "@/store/jotai.ts";
+import SelectionCheckboxRadix from "@/components/ui/SelectionCheckbox.tsx";
+import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
+import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
 
 interface SubtaskItemDetailProps {
     subtask: Subtask;

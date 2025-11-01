@@ -1,14 +1,14 @@
 // src/pages/MainPage.tsx
 import React from 'react';
-import TaskList from '../components/tasks/TaskList';
-import TaskDetail from '../components/tasks/TaskDetail';
-import TaskDetailPlaceholder from '../components/tasks/TaskDetailPlaceholder';
 import {useAtomValue, useSetAtom} from 'jotai';
-import {selectedTaskIdAtom} from '../store/atoms';
+import {selectedTaskIdAtom} from '../store/jotai.ts';
 import {TaskFilter} from '@/types';
 import {twMerge} from 'tailwind-merge';
 import {AnimatePresence, motion} from 'framer-motion';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import TaskList from "@/components/features/tasks/TaskList.tsx";
+import TaskDetailPlaceholder from "@/components/features/tasks/TaskDetailPlaceholder.tsx";
+import TaskDetail from "@/components/features/tasks/TaskDetail.tsx";
 
 interface MainPageProps {
     title: string;

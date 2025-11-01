@@ -16,12 +16,11 @@ import {
     tasksAtom,
     tasksLoadingAtom,
     userListsAtom,
-} from '@/store/atoms';
-import Icon from '../common/Icon';
-import Button from '../common/Button';
+} from '@/store/jotai.ts';
+import Icon from '@/components/ui/Icon.tsx';
+import Button from '@/components/ui/Button.tsx';
 import * as Popover from '@radix-ui/react-popover';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import {CustomDatePickerContent} from '../common/CustomDatePickerPopover';
 import {Task, TaskGroupCategory} from '@/types';
 import {
     closestCenter,
@@ -51,9 +50,10 @@ import {
 } from '@/utils/dateUtils';
 import {twMerge} from 'tailwind-merge';
 import {TaskItemMenuProvider} from '@/context/TaskItemMenuContext';
-import {IconName} from '../common/IconMap';
+import {IconName} from '@/components/ui/IconMap.ts';
 import {analyzeTaskInputWithAI} from '@/services/aiService';
 import {useTranslation} from "react-i18next";
+import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
 
 const TaskGroupHeader: React.FC<{
     title: string;

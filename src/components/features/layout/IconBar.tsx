@@ -1,14 +1,14 @@
 // src/components/layout/IconBar.tsx
 import React, {memo, useCallback, useMemo} from 'react';
 import {NavLink, useLocation} from 'react-router-dom';
-import Icon from '../common/Icon';
+import Icon from '@/components/ui/Icon.tsx';
 import {useAtom, useSetAtom} from 'jotai';
-import {isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/atoms';
+import {isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/jotai.ts';
 import {twMerge} from 'tailwind-merge';
-import Button from "@/components/common/Button";
-import {IconName} from "@/components/common/IconMap";
+import Button from "@/components/ui/Button.tsx";
 import * as SortTooltip from '@radix-ui/react-tooltip';
 import {useTranslation} from "react-i18next";
+import {IconName} from "@/components/ui/IconMap.ts";
 
 const IconBar: React.FC = memo(() => {
     const {t} = useTranslation();

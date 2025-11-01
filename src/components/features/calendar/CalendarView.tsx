@@ -1,8 +1,6 @@
 // src/components/calendar/CalendarView.tsx
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {preferencesSettingsAtom, selectedTaskIdAtom, tasksAtom, tasksLoadingAtom} from '@/store/atoms';
-import Button from '../common/Button';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {Task} from '@/types';
 import {
@@ -41,9 +39,11 @@ import {
     useDroppable
 } from '@dnd-kit/core';
 import {CSS} from '@dnd-kit/utilities';
-import Icon from "@/components/common/Icon";
 import {useTranslation} from "react-i18next";
 import {Locale} from "date-fns";
+import Button from "@/components/ui/Button.tsx";
+import {preferencesSettingsAtom, selectedTaskIdAtom, tasksAtom, tasksLoadingAtom} from "@/store/jotai.ts";
+import Icon from "@/components/ui/Icon.tsx";
 
 interface DraggableTaskProps {
     task: Task;

@@ -1,6 +1,6 @@
 // src/pages/SummaryPage.tsx
 import React from 'react';
-import SummaryView from '../components/summary/SummaryView';
+import SummaryView from "@/components/features/summary/SummaryView.tsx";
 
 // Simple wrapper component for the Summary View
 const SummaryPage: React.FC = () => {

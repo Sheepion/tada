@@ -1,6 +1,6 @@
 // src/pages/CalendarPage.tsx
 import React from 'react';
-import CalendarView from '../components/calendar/CalendarView';
+import CalendarView from "@/components/features/calendar/CalendarView.tsx";
 
 // Simple wrapper component for the Calendar View
 const CalendarPage: React.FC = () => {

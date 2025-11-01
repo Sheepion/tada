@@ -26,10 +26,9 @@ import {
     summarySelectedTaskIdsAtom,
     tasksAtom,
     userListNamesAtom,
-} from '@/store/atoms';
-import Button from '../common/Button';
-import Icon from '../common/Icon';
-import CodeMirrorEditor, {CodeMirrorEditorRef} from '../common/CodeMirrorEditor';
+} from '@/store/jotai.ts';
+import Button from '@/components/ui/Button.tsx';
+import Icon from '@/components/ui/Icon.tsx';
 import {StoredSummary, Task} from '@/types';
 import {
     format,
@@ -42,14 +41,15 @@ import {
     startOfDay
 } from '@/utils/dateUtils';
 import {twMerge} from 'tailwind-merge';
-import SelectionCheckboxRadix from '../common/SelectionCheckbox';
 import useDebounce from '@/hooks/useDebounce';
-import {CustomDateRangePickerContent} from '../common/CustomDateRangePickerPopover';
 import SummaryHistoryModal from './SummaryHistoryModal';
 import {AnimatePresence, motion} from 'framer-motion';
 import {generateAiSummary} from '@/services/aiService';
 import {useTranslation} from "react-i18next";
-import * as service from "@/services/localStorageService";
+import * as service from "@/services/storageService.ts";
+import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
+import SelectionCheckboxRadix from "@/components/ui/SelectionCheckbox.tsx";
+import {CustomDateRangePickerContent} from "@/components/ui/DateRangePicker.tsx";
 
 const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",

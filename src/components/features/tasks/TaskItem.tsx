@@ -11,23 +11,23 @@ import {
     selectedTaskIdAtom,
     tasksAtom,
     userListsAtom
-} from '@/store/atoms';
-import Icon from '../common/Icon';
+} from '@/store/jotai.ts';
+import Icon from '@/components/ui/Icon.tsx';
 import {twMerge} from 'tailwind-merge';
 import {clsx} from 'clsx';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import Button from "@/components/common/Button";
+import Button from "@/components/ui/Button.tsx";
 import Highlighter from "react-highlight-words";
-import {IconName} from "@/components/common/IconMap";
+import {IconName} from "@/components/ui/IconMap.ts";
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Popover from '@radix-ui/react-popover';
-import {CustomDatePickerContent} from "@/components/common/CustomDatePickerPopover";
 import {useTaskItemMenu} from '@/context/TaskItemMenuContext';
-import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import * as Tooltip from '@radix-ui/react-tooltip';
-import AddTagsPopoverContent from "@/components/common/AddTagsPopoverContent";
 import {useTranslation} from "react-i18next";
+import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
+import AddTagsPopoverContent from "@/components/ui/TagInput.tsx";
+import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
 
 export const ProgressIndicator: React.FC<{
     percentage: number | null; isTrash: boolean; size?: number; className?: string;

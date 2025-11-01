@@ -12,7 +12,7 @@ import {
     defaultAISettingsForApi,
     defaultAppearanceSettingsForApi,
     defaultPreferencesSettingsForApi
-} from "@/store/atoms";
+} from "@/store/jotai.ts";
 
 const LOCAL_STORAGE_KEY = 'tada-app-data';
 

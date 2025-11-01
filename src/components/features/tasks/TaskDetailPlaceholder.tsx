@@ -1,6 +1,6 @@
 // src/components/tasks/TaskDetailPlaceholder.tsx
 import React from 'react';
-import Icon from '../common/Icon';
+import Icon from '@/components/ui/Icon.tsx';
 import {twMerge} from 'tailwind-merge';
 import {useTranslation} from "react-i18next";
 

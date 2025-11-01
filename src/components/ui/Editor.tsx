@@ -1,14 +1,14 @@
 // src/components/common/CodeMirrorEditor.tsx
 import React, {forwardRef, memo, useEffect, useImperativeHandle, useRef, useMemo, useCallback} from 'react';
 import {twMerge} from 'tailwind-merge';
-import Moondown from '@/moondown/moondown';
 import {useAtomValue} from 'jotai';
-import {aiSettingsAtom, appearanceSettingsAtom} from '@/store/atoms';
+import {aiSettingsAtom, appearanceSettingsAtom} from '@/store/jotai.ts';
 import {EditorView} from '@codemirror/view';
 import {useTranslation} from "react-i18next";
 import {AI_PROVIDERS} from "@/config/aiProviders";
 import {streamChatCompletionForEditor} from "@/services/aiService";
-import {MoondownTranslations} from "@/moondown/core";
+import Moondown from "@/lib/moondown/moondown.ts";
+import {MoondownTranslations} from "@/lib/moondown/core";
 
 interface CodeMirrorEditorProps {
     value: string;

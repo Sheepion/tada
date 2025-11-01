@@ -17,8 +17,7 @@ import {
     safeParseDate, startOfDay, startOfMonth, startOfWeek, subDays, subMonths,
     subWeeks, endOfMonth, endOfWeek
 } from '@/utils/dateUtils';
-import * as service from '@/services/localStorageService';
-import {AI_PROVIDERS, AIModel} from "@/config/aiProviders";
+import * as service from '@/services/storageService.ts';
 
 export interface Notification {
     id: number;

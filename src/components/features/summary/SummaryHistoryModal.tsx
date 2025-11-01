@@ -1,15 +1,15 @@
 // src/components/summary/SummaryHistoryModal.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {twMerge} from 'tailwind-merge';
-import Button from '../common/Button';
-import Icon from '../common/Icon';
+import Button from '@/components/ui/Button.tsx';
+import Icon from '@/components/ui/Icon.tsx';
 import {format, formatDistanceToNowStrict, isSameDay, isValid, parseISO, startOfDay, subDays} from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {StoredSummary, Task} from '@/types';
 import useDebounce from '@/hooks/useDebounce';
 import Highlighter from 'react-highlight-words';
-import {IconName} from "@/components/common/IconMap";
+import {IconName} from "@/components/ui/IconMap.ts";
 import * as Dialog from '@radix-ui/react-dialog';
 import {VisuallyHidden} from '@radix-ui/react-visually-hidden';
 import {useTranslation} from "react-i18next";

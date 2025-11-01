@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate} from 'react-router-dom';
-import Icon from '../common/Icon';
+import Icon from '@/components/ui/Icon.tsx';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     currentFilterAtom,
@@ -14,19 +14,19 @@ import {
     tasksAtom,
     userListsAtom,
     userTagNamesAtom
-} from '@/store/atoms';
+} from '@/store/jotai.ts';
 import {List, Task, TaskFilter} from '@/types';
 import {twMerge} from 'tailwind-merge';
-import Button from '../common/Button';
-import AddListModal from '../common/AddListModal';
-import {IconName} from "@/components/common/IconMap";
+import Button from '@/components/ui/Button.tsx';
+import {IconName} from "@/components/ui/IconMap.ts";
 import Highlighter from "react-highlight-words";
 import {AnimatePresence, motion} from 'framer-motion';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import * as service from "@/services/localStorageService";
+import * as service from "@/services/storageService.ts";
 import {RESET} from "jotai/utils";
-import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import {useTranslation} from "react-i18next";
+import AddListModal from "@/components/features/layout/AddListModal.tsx";
+import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);

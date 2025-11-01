@@ -1,6 +1,6 @@
 // src/services/aiService.ts
 import {AISettings, StoredSummary, Task} from '@/types';
-import * as service from './localStorageService';
+import * as service from './storageService.ts';
 import {AI_PROVIDERS, AIModel, AIProvider} from "@/config/aiProviders";
 
 export interface AiTaskAnalysis {

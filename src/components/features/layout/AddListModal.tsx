@@ -1,11 +1,11 @@
 // src/components/common/AddListModal.tsx
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {isAddListModalOpenAtom, tasksAtom, userListNamesAtom, userListsAtom} from '@/store/atoms';
-import Button from './Button';
+import {isAddListModalOpenAtom, tasksAtom, userListNamesAtom, userListsAtom} from '@/store/jotai.ts';
+import Button from '@/components/ui/Button.tsx';
 import {twMerge} from 'tailwind-merge';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as service from '@/services/localStorageService';
+import * as service from '@/services/storageService.ts';
 import {useTranslation} from "react-i18next";
 
 interface AddListModalProps {
