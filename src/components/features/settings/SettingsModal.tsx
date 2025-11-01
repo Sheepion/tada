@@ -344,7 +344,7 @@ const ProviderCard: React.FC<{
         >
             <div className="w-6 h-6 mr-3 flex items-center justify-center flex-shrink-0">
                 <img
-                    src={`/icons/ai-providers/${provider.id}.png`}
+                    src={`icons/ai-providers/${provider.id}.png`}
                     alt={t(provider.nameKey)}
                     className="w-6 h-6 object-contain"
                     onError={(e) => {
