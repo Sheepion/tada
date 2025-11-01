@@ -134,6 +134,15 @@ const TaskDetail: React.FC = () => {
         return date && isValid(date) ? date : undefined;
     });
 
+    // --- Start of Fix: Refs to mirror state for stable callbacks ---
+    const localTitleRef = useRef(localTitle);
+    const localContentRef = useRef(localContent);
+    const localDueDateRef = useRef(localDueDate);
+    useEffect(() => { localTitleRef.current = localTitle; }, [localTitle]);
+    useEffect(() => { localContentRef.current = localContent; }, [localContent]);
+    useEffect(() => { localDueDateRef.current = localDueDate; }, [localDueDate]);
+    // --- End of Fix ---
+
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
     const [isFooterDatePickerOpen, setIsFooterDatePickerOpen] = useState(false);
@@ -161,13 +170,7 @@ const TaskDetail: React.FC = () => {
     const hasUnsavedChangesRef = useRef(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
-
-    const popoverContentWrapperClasses = useMemo(() => twMerge(
-        "z-[70] bg-white rounded-base shadow-popover dark:bg-neutral-800 dark:border dark:border-neutral-700",
-        "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
-    ), []);
-
+    // --- Start of Fix: Stable savePendingChanges using refs ---
     const savePendingChanges = useCallback(() => {
         if (!selectedTask || !hasUnsavedChangesRef.current) return;
 
@@ -176,8 +179,11 @@ const TaskDetail: React.FC = () => {
             saveTimeoutRef.current = null;
         }
 
-        const processedTitle = localTitle.trim();
-        const processedDueDateTimestamp = localDueDate && isValid(localDueDate) ? localDueDate.getTime() : null;
+        const processedTitle = localTitleRef.current.trim();
+        const currentContent = localContentRef.current;
+        const currentDueDate = localDueDateRef.current;
+
+        const processedDueDateTimestamp = currentDueDate && isValid(currentDueDate) ? currentDueDate.getTime() : null;
 
         setTasks(prevTasksValue => {
             const prevTasks = prevTasksValue ?? [];
@@ -186,7 +192,7 @@ const TaskDetail: React.FC = () => {
 
             const changesToSave: Partial<Task> = {};
             if (processedTitle !== originalTaskState.title) changesToSave.title = processedTitle || t('common.untitledTask');
-            if (localContent !== (originalTaskState.content || '')) changesToSave.content = localContent;
+            if (currentContent !== (originalTaskState.content || '')) changesToSave.content = currentContent;
 
             const originalDueTime = originalTaskState.dueDate ?? null;
             if (processedDueDateTimestamp !== originalDueTime) changesToSave.dueDate = processedDueDateTimestamp;
@@ -201,10 +207,14 @@ const TaskDetail: React.FC = () => {
         });
 
         hasUnsavedChangesRef.current = false;
-    }, [selectedTask, localTitle, localContent, localDueDate, setTasks, t]);
+    }, [selectedTask, setTasks, t]);
+    // --- End of Fix ---
 
 
+    // --- Start of Fix: Save on unmount using stable savePendingChanges ---
     useEffect(() => {
+        // This effect runs once on mount and captures the stable savePendingChanges function.
+        // The cleanup will run on unmount, correctly saving any pending changes.
         return () => {
             if (hasUnsavedChangesRef.current) {
                 savePendingChanges();
@@ -214,6 +224,7 @@ const TaskDetail: React.FC = () => {
             }
         };
     }, [savePendingChanges]);
+    // --- End of Fix ---
 
     useEffect(() => {
         if (selectedTask && selectedTask.title === '' && titleInputRef.current) {
@@ -263,9 +274,14 @@ const TaskDetail: React.FC = () => {
     }, [selectedTask, setTasks, savePendingChanges]);
 
 
+    // --- Start of Fix: Save before closing ---
     const handleClose = useCallback(() => {
+        if (hasUnsavedChangesRef.current) {
+            savePendingChanges();
+        }
         setSelectedTaskId(null);
-    }, [setSelectedTaskId]);
+    }, [setSelectedTaskId, savePendingChanges]);
+    // --- End of Fix ---
 
     const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalTitle(e.target.value);
@@ -411,12 +427,17 @@ const TaskDetail: React.FC = () => {
             completedAt: sub.completed ? now : null,
         }));
 
+        // Use refs to get the absolute latest values for duplication
+        const newTitle = `${localTitleRef.current || t('common.untitledTask')} (Copy)`;
+        const newContent = localContentRef.current;
+        const newDueDate = localDueDateRef.current;
+
         const newTaskData: Omit<Task, 'groupCategory'> & { groupCategory?: TaskGroupCategory } = {
             ...selectedTask,
             id: localId,
-            title: `${localTitle || t('common.untitledTask')} (Copy)`,
-            content: localContent,
-            dueDate: localDueDate ? localDueDate.getTime() : null,
+            title: newTitle,
+            content: newContent,
+            dueDate: newDueDate ? newDueDate.getTime() : null,
             order: (selectedTask.order ?? 0) + 0.01,
             createdAt: now,
             updatedAt: now,
@@ -437,7 +458,7 @@ const TaskDetail: React.FC = () => {
 
         setSelectedTaskId(localId);
         setIsMoreActionsOpen(false);
-    }, [selectedTask, localTitle, localContent, localDueDate, setTasks, setSelectedTaskId, t, savePendingChanges]);
+    }, [selectedTask, setTasks, setSelectedTaskId, t, savePendingChanges]);
 
 
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -540,6 +561,11 @@ const TaskDetail: React.FC = () => {
 
     const mainPanelClass = useMemo(() => twMerge("h-full flex flex-col", "bg-transparent"), []);
     const headerClass = useMemo(() => twMerge("px-4 py-2 h-[56px] flex items-center justify-between flex-shrink-0", "border-b border-grey-light/50 dark:border-neutral-700/50", "bg-white/50 dark:bg-grey-deep/50 backdrop-blur-md transition-colors duration-300"), []);
+    const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
+    const popoverContentWrapperClasses = useMemo(() => twMerge(
+        "z-[70] bg-white rounded-base shadow-popover dark:bg-neutral-800 dark:border dark:border-neutral-700",
+        "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
+    ), []);
     const taskListPriorityMap: Record<number, {
         label: string;
         iconColor: string;
