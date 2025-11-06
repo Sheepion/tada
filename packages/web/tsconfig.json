@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
@@ -9,7 +8,11 @@
     "composite": true,
     "noEmit": true
   },
-  "include": ["src", "vite.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts"
+  ],
   "references": [
     { "path": "./tsconfig.node.json" },
     { "path": "../core" }
