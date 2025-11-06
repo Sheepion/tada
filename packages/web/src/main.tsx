@@ -4,12 +4,16 @@ import { HashRouter } from 'react-router-dom';
 import { Provider as JotaiProvider } from 'jotai';
 import { App } from '@tada/core';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import storageManager from '@tada/core/services/storageManager';
+import { LocalStorageService } from './services/localStorageService';
 
 // Import i18n configuration from core to initialize it
 import '@tada/core/locales';
 
 // Import base styles from core
 import '@tada/core/styles/index.css';
+
+storageManager.register(new LocalStorageService());
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

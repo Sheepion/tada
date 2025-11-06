@@ -36,7 +36,7 @@ import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/
 import {AnimatePresence, motion} from "framer-motion";
 import SubtaskItemDetail from "./SubtaskItemDetail";
 import {useTranslation} from "react-i18next";
-import * as service from "@/services/storageService.ts";
+import storageManager from '@/services/storageManager.ts';
 import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
 import AddTagsPopoverContent from "@/components/ui/TagInput.tsx";
 import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
@@ -398,7 +398,7 @@ const TaskDetail: React.FC = () => {
 
     const confirmPermanentDelete = useCallback(() => {
         if (!selectedTask) return;
-        service.deleteTask(selectedTask.id);
+        storageManager.get().deleteTask(selectedTask.id);
         setTasks(prev => (prev ?? []).filter(t => t.id !== selectedTask.id));
         setSelectedTaskId(null);
         setIsPermanentDeleteDialogOpen(false);

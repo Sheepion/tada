@@ -7,10 +7,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./locales": "./src/locales/index.ts",
-    "./styles/index.css": "./src/styles/index.css"
+    "./styles/index.css": "./src/styles/index.css",
+    "./services/storageInterface": "./src/services/storageInterface.ts",
+    "./services/storageManager": "./src/services/storageManager.ts",
+    "./types": "./src/types/index.ts",
+    "./store/jotai": "./src/store/jotai.ts"
   },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "tsc -b"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.19.1",

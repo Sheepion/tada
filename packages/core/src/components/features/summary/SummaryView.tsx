@@ -45,7 +45,7 @@ import SummaryHistoryModal from './SummaryHistoryModal';
 import {AnimatePresence, motion} from 'framer-motion';
 import {generateAiSummary} from '@/services/aiService';
 import {useTranslation} from "react-i18next";
-import * as service from "@/services/storageService.ts";
+import storageManager from '@/services/storageManager.ts';
 import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
 import SelectionCheckboxRadix from "@/components/ui/SelectionCheckbox.tsx";
 import {CustomDateRangePickerContent} from "@/components/ui/DateRangePicker.tsx";
@@ -154,6 +154,7 @@ const SummaryView: React.FC = () => {
 
     const handleGenerateClick = useCallback(async () => {
         if (isGenerating) return;
+        const service = storageManager.get();
 
         forceSaveCurrentSummary();
         setEditMode(false);

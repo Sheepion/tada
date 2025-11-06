@@ -4,7 +4,7 @@ import {isAddListModalOpenAtom, tasksAtom, userListNamesAtom, userListsAtom} fro
 import Button from '@/components/ui/Button.tsx';
 import {twMerge} from 'tailwind-merge';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as service from '@/services/storageService.ts';
+import storageManager from '@/services/storageManager.ts';
 import {useTranslation} from "react-i18next";
 
 interface AddListModalProps {
@@ -64,8 +64,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
         setIsLoading(true);
 
         try {
-            // Use the local storage service
-            service.createList({name: trimmedName});
+            storageManager.get().createList({name: trimmedName});
             onAddSuccess();
             handleOpenChange(false);
         } catch (e: any) {

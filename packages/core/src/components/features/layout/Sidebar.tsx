@@ -21,7 +21,7 @@ import {IconName} from "@/components/ui/IconMap.ts";
 import Highlighter from "react-highlight-words";
 import {AnimatePresence, motion} from 'framer-motion';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import * as service from "@/services/storageService.ts";
+import storageManager from '@/services/storageManager.ts';
 import {RESET} from "jotai/utils";
 import {useTranslation} from "react-i18next";
 import AddListModal from "@/components/features/layout/AddListModal.tsx";
@@ -187,7 +187,7 @@ const Sidebar: React.FC = () => {
 
     const handleListAdded = useCallback(() => {
         setIsAddListModalOpen(false);
-        setListsAtom(RESET); // Resync with localStorage
+        setListsAtom(RESET); // Resync with storage
     }, [setListsAtom, setIsAddListModalOpen]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,6 +215,7 @@ const Sidebar: React.FC = () => {
 
     const handleSaveRename = useCallback(() => {
         if (!editingListId) return;
+        const service = storageManager.get();
         const originalList = userLists?.find(l => l.id === editingListId);
         const trimmedName = editingListName.trim();
 
@@ -249,6 +250,7 @@ const Sidebar: React.FC = () => {
 
     const handleConfirmDelete = useCallback(() => {
         if (!listToDelete) return;
+        const service = storageManager.get();
         if (listToDelete.name === 'Inbox') {
             alert("The 'Inbox' list cannot be deleted.");
             setListToDelete(null);

@@ -16,7 +16,7 @@ import {
     safeParseDate, startOfDay, startOfMonth, startOfWeek, subDays, subMonths,
     subWeeks, endOfMonth, endOfWeek
 } from '@/utils/dateUtils';
-import * as service from '@/services/storageService.ts';
+import storageManager from "@/services/storageManager.ts";
 
 export interface Notification {
     id: number;
@@ -73,6 +73,7 @@ export const tasksErrorAtom = atom<string | null>(null);
 export const tasksAtom: LocalDataAtom<Task[]> = atom(
     (get) => get(baseTasksDataAtom),
     (get, set, update) => {
+        const service = storageManager.get();
         if (update === RESET) {
             const fetchedTasks = service.fetchTasks();
             const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
@@ -105,6 +106,7 @@ export const userListsErrorAtom = atom<string | null>(null);
 export const userListsAtom: LocalDataAtom<List[]> = atom(
     (get) => get(baseUserListsAtom),
     (get, set, update) => {
+        const service = storageManager.get();
         if (update === RESET) {
             set(baseUserListsAtom, service.fetchLists());
             return;
@@ -150,6 +152,7 @@ export const appearanceSettingsErrorAtom = atom<string | null>(null);
 export const appearanceSettingsAtom: LocalDataAtom<AppearanceSettings> = atom(
     (get) => get(baseAppearanceSettingsAtom),
     (get, set, newSettingsParam) => {
+        const service = storageManager.get();
         if (newSettingsParam === RESET) {
             set(baseAppearanceSettingsAtom, service.fetchSettings().appearance);
             return;
@@ -174,6 +177,7 @@ export const preferencesSettingsErrorAtom = atom<string | null>(null);
 export const preferencesSettingsAtom: LocalDataAtom<PreferencesSettings> = atom(
     (get) => get(basePreferencesSettingsAtom),
     (get, set, newSettingsParam) => {
+        const service = storageManager.get();
         if (newSettingsParam === RESET) {
             set(basePreferencesSettingsAtom, service.fetchSettings().preferences);
             return;
@@ -196,6 +200,7 @@ export const aiSettingsErrorAtom = atom<string | null>(null);
 export const aiSettingsAtom: LocalDataAtom<AISettings> = atom(
     (get) => get(baseAISettingsAtom),
     (get, set, newSettingsParam) => {
+        const service = storageManager.get();
         if (newSettingsParam === RESET) {
             const savedSettings = service.fetchSettings().ai;
             const defaultSettings = defaultAISettingsForApi();
@@ -232,6 +237,7 @@ export const storedSummariesErrorAtom = atom<string | null>(null);
 export const storedSummariesAtom: LocalDataAtom<StoredSummary[]> = atom(
     (get) => get(baseStoredSummariesAtom),
     (get, set, update) => {
+        const service = storageManager.get();
         if (update === RESET) {
             set(baseStoredSummariesAtom, service.fetchSummaries());
             return;

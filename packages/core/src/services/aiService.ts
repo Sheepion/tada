@@ -1,5 +1,5 @@
 import {AISettings, StoredSummary, Task} from '@/types';
-import * as service from './storageService.ts';
+import storageManager from './storageManager.ts';
 import {AI_PROVIDERS, AIModel, AIProvider} from "@/config/aiProviders";
 
 export interface AiTaskAnalysis {
@@ -323,6 +323,7 @@ export const generateAiSummary = async (
     systemPrompt: string,
     onDelta: (chunk: string) => void,
 ): Promise<StoredSummary> => {
+    const service = storageManager.get();
     const allTasks = service.fetchTasks();
     const tasksToSummarize = allTasks.filter(t => taskIds.includes(t.id));
     const futureTasks = allTasks.filter(t => futureTaskIds.includes(t.id));
