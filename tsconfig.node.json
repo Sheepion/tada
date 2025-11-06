@@ -4,7 +4,8 @@
     "composite": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true
   },
   "include": ["tailwind.config.ts", "postcss.config.js"]
 }

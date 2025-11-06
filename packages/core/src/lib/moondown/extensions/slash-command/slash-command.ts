@@ -7,33 +7,26 @@ import { createElement, createIconElement, debounce, scrollIntoView as scrollEle
 import {translationsState} from "../default-extensions";
 import {MoondownTranslations} from "../../core";
 
-/**
- * SlashCommandPlugin - Implements the slash command menu functionality
- * Provides quick insertion of markdown elements via "/" trigger
- */
-
 export const slashCommandPlugin = ViewPlugin.fromClass(class {
-    private menu: HTMLElement;
-    private debounceTimer: number | null = null;
-    private currentAbortController: AbortController | null = null;
-    private debouncedUpdate: (update: ViewUpdate) => void;
+    menu: HTMLElement;
+    debounceTimer: number | null;
+    currentAbortController: AbortController | null;
+    debouncedUpdate: (update: ViewUpdate) => void;
 
     constructor(view: EditorView) {
         this.menu = createElement('div', CSS_CLASSES.SLASH_COMMAND_MENU);
         view.dom.appendChild(this.menu);
-
-        // Create debounced update function
+        this.debounceTimer = null;
+        this.currentAbortController = null;
         this.debouncedUpdate = debounce(
             (update: ViewUpdate) => this.updateMenu(update),
             TIMING.DEBOUNCE_DELAY
         );
 
-        // Add click event listener to the editor
         view.dom.addEventListener('click', () => {
             this.abortAIContinuation();
         });
 
-        // Close menu on outside clicks
         document.addEventListener('click', (e) => {
             if (!this.menu.contains(e.target as Node) && !view.dom.contains(e.target as Node)) {
                 view.dispatch({
@@ -48,10 +41,7 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
         this.debouncedUpdate(update);
     }
 
-    /**
-     * Updates the menu position and content
-     */
-    private updateMenu(update: ViewUpdate): void {
+    updateMenu(update: ViewUpdate): void {
         const state = update.state.field(slashCommandState);
         const translations = update.state.field(translationsState);
 
@@ -68,12 +58,9 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
                 const editorRect = update.view.dom.getBoundingClientRect();
                 const menuRect = this.menu.getBoundingClientRect();
 
-                // Position menu above or below cursor based on available space
                 if (pos.top + menuRect.height > editorRect.bottom) {
-                    // Position above cursor
                     this.menu.style.top = `${pos.top - editorRect.top - menuRect.height}px`;
                 } else {
-                    // Position below cursor
                     this.menu.style.top = `${pos.top - editorRect.top + 20}px`;
                 }
 
@@ -86,10 +73,7 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
         this.renderCommands(filteredCommands, state.selectedIndex, update.view, state.pos, translations);
     }
 
-    /**
-     * Filters commands based on search text
-     */
-    private filterCommands(filterText: string, translations: MoondownTranslations): SlashCommandOption[] {
+    filterCommands(filterText: string, translations: MoondownTranslations): SlashCommandOption[] {
         return slashCommands.filter(cmd => {
                 const title = translations[cmd.titleKey] || cmd.titleKey;
                 return title.toLowerCase().includes(filterText.toLowerCase())
@@ -97,10 +81,7 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
         );
     }
 
-    /**
-     * Renders the command list
-     */
-    private renderCommands(
+    renderCommands(
         commands: SlashCommandOption[],
         selectedIndex: number,
         view: EditorView,
@@ -143,21 +124,16 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
             this.menu.innerHTML = '';
             this.menu.appendChild(fragment);
 
-            // Initialize Lucide icons
             createIcons({
                 icons,
                 attrs: ICON_SIZES.MEDIUM,
             });
 
-            // Ensure selected item is visible
             this.scrollSelectedIntoView();
         });
     }
 
-    /**
-     * Scrolls the selected item into view
-     */
-    private scrollSelectedIntoView(): void {
+    scrollSelectedIntoView(): void {
         const selectedItem = this.menu.querySelector(
             `.${CSS_CLASSES.SLASH_COMMAND_ITEM}.${CSS_CLASSES.SLASH_COMMAND_SELECTED}`
         ) as HTMLElement;
@@ -167,10 +143,7 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
         }
     }
 
-    /**
-     * Executes a slash command
-     */
-    private executeCommand(view: EditorView, cmd: SlashCommandOption, pos: number): void {
+    executeCommand(view: EditorView, cmd: SlashCommandOption, pos: number): void {
         view.dispatch({
             changes: { from: pos, to: view.state.selection.main.from, insert: "" },
             effects: toggleSlashCommand.of(false)
@@ -188,37 +161,22 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
         view.focus();
     }
 
-    /**
-     * Shows the menu
-     */
-    private show(): void {
+    show(): void {
         this.menu.style.display = "block";
     }
 
-    /**
-     * Hides the menu
-     */
-    private hide(): void {
+    hide(): void {
         this.menu.style.display = "none";
     }
 
-    /**
-     * Sets the current abort controller for AI operations
-     */
     setCurrentAbortController(controller: AbortController): void {
         this.currentAbortController = controller;
     }
 
-    /**
-     * Clears the current abort controller
-     */
     clearCurrentAbortController(): void {
         this.currentAbortController = null;
     }
 
-    /**
-     * Aborts any ongoing AI continuation
-     */
     abortAIContinuation(): void {
         if (this.currentAbortController) {
             this.currentAbortController.abort();
@@ -226,11 +184,8 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
         }
     }
 
-    /**
-     * Cleanup on plugin destroy
-     */
     destroy(): void {
         this.menu.remove();
         this.abortAIContinuation();
     }
-})
+});
