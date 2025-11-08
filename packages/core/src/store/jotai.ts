@@ -25,10 +25,26 @@ export interface Notification {
 }
 
 type LocalDataAtom<TData, TUpdate = TData | ((prev: TData | null) => TData) | typeof RESET> = WritableAtom<
-    TData | null,
+TData | null,
     [TUpdate],
-    void
+void
 >;
+
+// 防抖辅助函数
+function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout | null = null;
+    return function executedFunction(...args: Parameters<T>) {
+        const later = () => {
+            timeout = null;
+            func(...args);
+        };
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
 export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): TaskGroupCategory => {
     if (task.completed || task.listName === 'Trash') {
@@ -65,7 +81,30 @@ export const defaultAISettingsForApi = (): AISettings => ({
     availableModels: [],
 });
 
-// --- Task Atoms ---
+// --- 性能优化：防抖持久化 ---
+const debouncedPersistTasks = debounce((tasks: Task[]) => {
+    const service = storageManager.get();
+    if (service.batchUpdateTasks) {
+        service.batchUpdateTasks(tasks).catch(err => {
+            console.error('Failed to batch update tasks:', err);
+        });
+    } else {
+        service.updateTasks(tasks);
+    }
+}, 500); // 500ms 防抖
+
+const debouncedPersistLists = debounce((lists: List[]) => {
+    const service = storageManager.get();
+    if (service.batchUpdateLists) {
+        service.batchUpdateLists(lists).catch(err => {
+            console.error('Failed to batch update lists:', err);
+        });
+    } else {
+        service.updateLists(lists);
+    }
+}, 500);
+
+// --- Task Atoms with optimized persistence ---
 const baseTasksDataAtom = atom<Task[] | null>(null);
 export const tasksLoadingAtom = atom<boolean>(false);
 export const tasksErrorAtom = atom<string | null>(null);
@@ -74,6 +113,7 @@ export const tasksAtom: LocalDataAtom<Task[]> = atom(
     (get) => get(baseTasksDataAtom),
     (get, set, update) => {
         const service = storageManager.get();
+
         if (update === RESET) {
             const fetchedTasks = service.fetchTasks();
             const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
@@ -82,23 +122,35 @@ export const tasksAtom: LocalDataAtom<Task[]> = atom(
         }
 
         const previousTasks = get(baseTasksDataAtom) ?? [];
-        const nextTasksUnprocessed = typeof update === 'function' ? (update as (prev: Task[] | null) => Task[])(previousTasks) : update;
+        const nextTasksUnprocessed = typeof update === 'function'
+            ? (update as (prev: Task[] | null) => Task[])(previousTasks)
+            : update;
 
         const nextTasksWithCategory = nextTasksUnprocessed.map(task => ({
             ...task,
             groupCategory: getTaskGroupCategory(task),
         }));
 
+        // 乐观更新：立即更新 UI
         set(baseTasksDataAtom, nextTasksWithCategory);
 
-        service.updateTasks(nextTasksWithCategory);
+        // 延迟持久化到存储
+        debouncedPersistTasks(nextTasksWithCategory);
     }
 );
+
 tasksAtom.onMount = (setSelf) => {
     setSelf(RESET);
+
+    // 组件卸载时刷新未完成的写入
+    return () => {
+        storageManager.flush().catch(err => {
+            console.error('Failed to flush tasks on unmount:', err);
+        });
+    };
 };
 
-// --- List Atoms ---
+// --- List Atoms with optimized persistence ---
 const baseUserListsAtom = atom<List[] | null>(null);
 export const userListsLoadingAtom = atom<boolean>(false);
 export const userListsErrorAtom = atom<string | null>(null);
@@ -107,21 +159,35 @@ export const userListsAtom: LocalDataAtom<List[]> = atom(
     (get) => get(baseUserListsAtom),
     (get, set, update) => {
         const service = storageManager.get();
+
         if (update === RESET) {
             set(baseUserListsAtom, service.fetchLists());
             return;
         }
-        const nextLists = typeof update === 'function' ? (update as (prev: List[] | null) => List[])(get(baseUserListsAtom)) : update;
+
+        const nextLists = typeof update === 'function'
+            ? (update as (prev: List[] | null) => List[])(get(baseUserListsAtom))
+            : update;
+
+        // 乐观更新
         set(baseUserListsAtom, nextLists);
 
-        service.updateLists(nextLists);
+        // 延迟持久化
+        debouncedPersistLists(nextLists);
     }
 );
+
 userListsAtom.onMount = (setSelf) => {
     setSelf(RESET);
+
+    return () => {
+        storageManager.flush().catch(err => {
+            console.error('Failed to flush lists on unmount:', err);
+        });
+    };
 };
 
-// --- UI State Atoms ---
+// --- UI State Atoms (unchanged) ---
 export const selectedTaskIdAtom = atom<string | null>(null);
 export const isSettingsOpenAtom = atom<boolean>(false);
 export const settingsSelectedTabAtom = atom<SettingsTab>('appearance');
@@ -228,7 +294,7 @@ export type SummaryPeriodOption = SummaryPeriodKey | { start: number; end: numbe
 export const summaryPeriodFilterAtom = atom<SummaryPeriodOption>('thisWeek');
 export const summaryListFilterAtom = atom<string>('all');
 export const summarySelectedTaskIdsAtom = atom<Set<string>>(new Set<string>());
-export const summarySelectedFutureTaskIdsAtom = atom<Set<string>>(new Set<string>()); // New atom for future plans
+export const summarySelectedFutureTaskIdsAtom = atom<Set<string>>(new Set<string>());
 
 const baseStoredSummariesAtom = atom<StoredSummary[] | null>(null);
 export const storedSummariesLoadingAtom = atom<boolean>(false);
@@ -255,7 +321,7 @@ storedSummariesAtom.onMount = (setSelf) => {
 export const currentSummaryIndexAtom = atom<number>(0);
 export const isGeneratingSummaryAtom = atom<boolean>(false);
 
-// --- Derived Atoms ---
+// --- Derived Atoms (unchanged) ---
 export const selectedTaskAtom = atom((get) => {
     const tasks = get(tasksAtom);
     const selectedId = get(selectedTaskIdAtom);
@@ -421,7 +487,6 @@ export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     const listStr = list;
     return `${periodStr}__${listStr}`;
 });
-
 
 export const relevantStoredSummariesAtom = atom<StoredSummary[]>((get) => {
     const allSummaries = get(storedSummariesAtom) ?? [];

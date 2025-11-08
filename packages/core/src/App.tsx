@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useAtomValue } from 'jotai';
 import {
     aiSettingsAtom,
@@ -13,6 +13,7 @@ import SettingsApplicator from '@/components/global/SettingsApplicator';
 import DailyTaskRefresh from '@/components/global/DailyTaskRefresh';
 import GlobalStatusDisplay from '@/components/global/GlobalStatusDisplay';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import storageManager from '@/services/storageManager';
 
 const App: React.FC = () => {
     // These calls ensure the atoms are initialized and start loading data
@@ -23,6 +24,15 @@ const App: React.FC = () => {
     useAtomValue(preferencesSettingsAtom);
     useAtomValue(aiSettingsAtom);
     useAtomValue(storedSummariesAtom);
+
+    // 确保应用卸载时刷新所有待处理的写入
+    useEffect(() => {
+        return () => {
+            storageManager.flush().catch(err => {
+                console.error('Failed to flush on app unmount:', err);
+            });
+        };
+    }, []);
 
     return (
         <>
