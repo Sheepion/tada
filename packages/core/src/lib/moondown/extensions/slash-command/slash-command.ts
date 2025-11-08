@@ -144,10 +144,29 @@ export const slashCommandPlugin = ViewPlugin.fromClass(class {
     }
 
     executeCommand(view: EditorView, cmd: SlashCommandOption, pos: number): void {
-        view.dispatch({
-            changes: { from: pos, to: view.state.selection.main.from, insert: "" },
-            effects: toggleSlashCommand.of(false)
-        });
+        const state = view.state;
+        const currentPos = state.selection.main.from;
+        const line = state.doc.lineAt(currentPos);
+        const lineStart = line.from;
+        const lineText = line.text;
+        const cursorInLine = currentPos - lineStart;
+
+        const beforeCursor = lineText.slice(0, cursorInLine);
+        const slashMatch = beforeCursor.match(/\/\w*$/);
+
+        if (slashMatch) {
+            const slashStart = lineStart + beforeCursor.lastIndexOf(slashMatch[0]);
+            const slashEnd = currentPos;
+
+            view.dispatch({
+                changes: { from: slashStart, to: slashEnd, insert: "" },
+                effects: toggleSlashCommand.of(false)
+            });
+        } else {
+            view.dispatch({
+                effects: toggleSlashCommand.of(false)
+            });
+        }
 
         const result = cmd.execute(view);
         if (result instanceof Promise) {

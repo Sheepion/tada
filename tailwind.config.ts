@@ -8,6 +8,7 @@ export default {
     content: [
         path.join(__dirname, './packages/core/src/**/*.{js,ts,jsx,tsx}'),
         path.join(__dirname, './packages/web/src/**/*.{js,ts,jsx,tsx}'),
+        path.join(__dirname, './packages/desktop/src/**/*.{js,ts,jsx,tsx}'),
     ],
     darkMode: 'class',
     theme: {

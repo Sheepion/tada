@@ -6,7 +6,9 @@
   "description": "Tada Monorepo",
   "scripts": {
     "dev": "pnpm --filter @tada/web dev",
+    "dev:desktop": "pnpm --filter @tada/desktop tauri dev",
     "build": "pnpm --filter @tada/web build",
+    "build:desktop": "pnpm --filter @tada/desktop tauri build",
     "lint": "pnpm --filter \"./packages/**\" lint"
   },
   "keywords": [],
