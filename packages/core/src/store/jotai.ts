@@ -340,8 +340,9 @@ export const userListNamesAtom = atom<string[]>((get) => {
 
 export const userTagNamesAtom = atom((get) => {
     const tasks = get(tasksAtom) ?? [];
+    const activeTasks = tasks.filter(task => !task.completed && task.listName !== 'Trash');
     const tags = new Set<string>();
-    tasks.forEach(task => task.tags?.forEach(tag => tags.add(tag.trim())));
+    activeTasks.forEach(task => task.tags?.forEach(tag => tags.add(tag.trim())));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
 });
 
