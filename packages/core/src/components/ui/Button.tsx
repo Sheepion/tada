@@ -1,13 +1,12 @@
 import React from 'react';
 import {twMerge} from 'tailwind-merge';
 import {clsx} from 'clsx';
+import {Slot} from '@radix-ui/react-slot';
 import Icon from './Icon';
 import {IconName} from "@/components/ui/IconMap.ts";
 
 type ButtonVariant = 'primary' | 'secondary' | 'link' | 'danger' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
-
-// Define a specific type for the 'type' prop when 'as' is 'button' or undefined
 type ButtonType = "button" | "submit" | "reset";
 
 interface AsButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
@@ -34,6 +33,7 @@ export type ButtonProps = (AsButtonProps | AsLinkProps) & {
     children?: React.ReactNode;
     className?: string;
     'aria-label'?: string;
+    asChild?: boolean;
 };
 
 /**
@@ -42,9 +42,20 @@ export type ButtonProps = (AsButtonProps | AsLinkProps) & {
  */
 const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
     ({
-         as = 'button', children, variant = 'primary', size = 'md', icon, iconPosition = 'left', iconProps,
-         className, fullWidth = false, loading = false, disabled,
-         'aria-label': ariaLabel, ...props
+         as = 'button',
+         children,
+         variant = 'primary',
+         size = 'md',
+         icon,
+         iconPosition = 'left',
+         iconProps,
+         className,
+         fullWidth = false,
+         loading = false,
+         disabled,
+         asChild = false,
+         'aria-label': ariaLabel,
+         ...props
      }, ref) => {
         const isDisabled = disabled || loading;
 
@@ -129,6 +140,19 @@ const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPro
                 )}
             </>
         );
+
+        if (asChild) {
+            return (
+                <Slot
+                    ref={ref}
+                    className={finalClassName}
+                    aria-label={finalAriaLabel}
+                    {...props}
+                >
+                    {children}
+                </Slot>
+            );
+        }
 
         if (as === 'a') {
             const {type, ...linkProps} = props as AsLinkProps;

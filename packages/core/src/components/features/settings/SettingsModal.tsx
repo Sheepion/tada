@@ -1,4 +1,4 @@
-import React, {memo, useCallback, useMemo, useState} from 'react';
+import React, {memo, useCallback, useMemo, useState, useEffect} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     addNotificationAtom,
@@ -26,14 +26,17 @@ import * as RadixSwitch from '@radix-ui/react-switch';
 import {
     APP_THEMES,
     APP_VERSION,
-    CHANGELOG_HTML,
-    PRIVACY_POLICY_HTML,
-    TERMS_OF_USE_HTML
+    loadChangelog,
+    loadPrivacyPolicy,
+    loadTermsOfUse
 } from '@/config/app.ts';
 import {useTranslation} from "react-i18next";
 import {AIProvider, AI_PROVIDERS} from "@/config/aiProviders";
 import {fetchProviderModels, testConnection} from "@/services/aiService";
 import DataSettings from './DataSettings';
+import { Link } from 'react-router-dom';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface SettingsItem {
     id: SettingsTab;
@@ -401,10 +404,62 @@ ProviderCard.displayName = 'ProviderCard';
  * changelog, privacy policy, and links for feedback.
  */
 const AboutSettings: React.FC = memo(() => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [showChangelog, setShowChangelog] = useState(false);
     const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
     const [showTermsOfUse, setShowTermsOfUse] = useState(false);
+    const [changelogContent, setChangelogContent] = useState<string>('');
+    const [privacyContent, setPrivacyContent] = useState<string>('');
+    const [termsContent, setTermsContent] = useState<string>('');
+    const [loadingContent, setLoadingContent] = useState<{[key: string]: boolean}>({});
+
+    const loadContent = async (type: 'changelog' | 'privacy' | 'terms') => {
+        const language = i18n.language === 'zh-CN' ? 'zh-CN' : 'en';
+        setLoadingContent(prev => ({ ...prev, [type]: true }));
+
+        try {
+            let content = '';
+            switch (type) {
+                case 'changelog':
+                    content = await loadChangelog(language);
+                    setChangelogContent(content); // 直接存储 markdown 文本
+                    break;
+                case 'privacy':
+                    content = await loadPrivacyPolicy(language);
+                    setPrivacyContent(content); // 直接存储 markdown 文本
+                    break;
+                case 'terms':
+                    content = await loadTermsOfUse(language);
+                    setTermsContent(content); // 直接存储 markdown 文本
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error loading ${type}:`, error);
+        } finally {
+            setLoadingContent(prev => ({ ...prev, [type]: false }));
+        }
+    };
+
+    const handleToggleChangelog = async () => {
+        if (!showChangelog && !changelogContent) {
+            await loadContent('changelog');
+        }
+        setShowChangelog(!showChangelog);
+    };
+
+    const handleTogglePrivacy = async () => {
+        if (!showPrivacyPolicy && !privacyContent) {
+            await loadContent('privacy');
+        }
+        setShowPrivacyPolicy(!showPrivacyPolicy);
+    };
+
+    const handleToggleTerms = async () => {
+        if (!showTermsOfUse && !termsContent) {
+            await loadContent('terms');
+        }
+        setShowTermsOfUse(!showTermsOfUse);
+    };
 
     return (
         <div className="space-y-0">
@@ -417,22 +472,36 @@ const AboutSettings: React.FC = memo(() => {
             <SettingsRow
                 label={t('settings.about.changelog')}
                 action={
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowChangelog(!showChangelog)}
-                        className="text-[13px]"
-                    >
-                        {showChangelog ? t('settings.about.hide') : t('settings.about.view')}
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleToggleChangelog}
+                            disabled={loadingContent.changelog}
+                            className="text-[13px]"
+                        >
+                            {showChangelog ? t('settings.about.hide') : t('settings.about.view')}
+                        </Button>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            icon="external-link"
+                            className="text-[13px]"
+                        >
+                            <Link to="/changelog">{t('settings.about.viewFull')}</Link>
+                        </Button>
+                    </div>
                 }
             />
             {showChangelog && (
                 <div className="pl-0 pr-0 pb-4">
                     <div
-                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar"
-                        dangerouslySetInnerHTML={{ __html: CHANGELOG_HTML }}
-                    />
+                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {changelogContent}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             )}
 
@@ -441,22 +510,36 @@ const AboutSettings: React.FC = memo(() => {
             <SettingsRow
                 label={t('settings.about.privacyPolicy')}
                 action={
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowPrivacyPolicy(!showPrivacyPolicy)}
-                        className="text-[13px]"
-                    >
-                        {showPrivacyPolicy ? t('settings.about.hide') : t('settings.about.view')}
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleTogglePrivacy}
+                            disabled={loadingContent.privacy}
+                            className="text-[13px]"
+                        >
+                            {showPrivacyPolicy ? t('settings.about.hide') : t('settings.about.view')}
+                        </Button>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            icon="external-link"
+                            className="text-[13px]"
+                        >
+                            <Link to="/privacy-policy">{t('settings.about.viewFull')}</Link>
+                        </Button>
+                    </div>
                 }
             />
             {showPrivacyPolicy && (
                 <div className="pl-0 pr-0 pb-4">
                     <div
-                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar"
-                        dangerouslySetInnerHTML={{ __html: PRIVACY_POLICY_HTML }}
-                    />
+                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {privacyContent}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             )}
 
@@ -465,22 +548,36 @@ const AboutSettings: React.FC = memo(() => {
             <SettingsRow
                 label={t('settings.about.termsOfUse')}
                 action={
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowTermsOfUse(!showTermsOfUse)}
-                        className="text-[13px]"
-                    >
-                        {showTermsOfUse ? t('settings.about.hide') : t('settings.about.view')}
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleToggleTerms}
+                            disabled={loadingContent.terms}
+                            className="text-[13px]"
+                        >
+                            {showTermsOfUse ? t('settings.about.hide') : t('settings.about.view')}
+                        </Button>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            icon="external-link"
+                            className="text-[13px]"
+                        >
+                            <Link to="/terms-of-use">{t('settings.about.viewFull')}</Link>
+                        </Button>
+                    </div>
                 }
             />
             {showTermsOfUse && (
                 <div className="pl-0 pr-0 pb-4">
                     <div
-                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar"
-                        dangerouslySetInnerHTML={{ __html: TERMS_OF_USE_HTML }}
-                    />
+                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {privacyContent}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             )}
 
@@ -494,7 +591,7 @@ const AboutSettings: React.FC = memo(() => {
                         variant="ghost"
                         size="sm"
                         icon="mail"
-                        onClick={() => window.open('mailto:feedback@example.com')}
+                        onClick={() => window.open('mailto:feedback@tada-app.com')}
                         className="text-[13px]"
                     >
                         {t('settings.about.sendEmail')}
@@ -512,7 +609,7 @@ const AboutSettings: React.FC = memo(() => {
                         variant="ghost"
                         size="sm"
                         icon="external-link"
-                        onClick={() => window.open('https://github.com/example/issues')}
+                        onClick={() => window.open('https://github.com/tada-app/issues')}
                         className="text-[13px]"
                     >
                         {t('settings.about.reportButton')}

@@ -15,7 +15,8 @@
     "ok": "确定",
     "clear": "清除",
     "today": "今天",
-    "tomorrow": "明天"
+    "tomorrow": "明天",
+    "backToApp": "返回应用"
   },
   "priorityLabels": {
     "none": "无优先级",
@@ -187,7 +188,8 @@
       "sendEmail": "发送邮件",
       "reportIssue": "报告问题",
       "reportIssueDescription": "发现了一个bug？让我们知道。",
-      "reportButton": "报告问题"
+      "reportButton": "报告问题",
+      "viewFull": "查看完整版本"
     }
   },
   "aiProviders": {

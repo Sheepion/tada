@@ -15,7 +15,8 @@
     "ok": "OK",
     "clear": "Clear",
     "today": "Today",
-    "tomorrow": "Tomorrow"
+    "tomorrow": "Tomorrow",
+    "backToApp": "Back to App"
   },
   "priorityLabels": {
     "none": "No Priority",
@@ -187,7 +188,8 @@
       "sendEmail": "Send Email",
       "reportIssue": "Report an Issue",
       "reportIssueDescription": "Found a bug? Let us know.",
-      "reportButton": "Report Issue"
+      "reportButton": "Report Issue",
+      "viewFull": "View Full"
     }
   },
   "aiProviders": {

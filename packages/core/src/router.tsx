@@ -10,6 +10,9 @@ import MainLayout from '@/components/features/layout/MainLayout';
 const MainPage = lazy(() => import('@/pages/MainPage'));
 const SummaryPage = lazy(() => import('@/pages/SummaryPage'));
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
+const TermsOfUsePage = lazy(() => import('@/pages/TermsOfUsePage'));
+const ChangelogPage = lazy(() => import('@/pages/ChangelogPage'));
 
 /**
  * A component that listens for route changes and updates global state accordingly.
@@ -85,6 +88,12 @@ const AppRouter: React.FC = () => {
 
     return (
         <Routes>
+            {/* Standalone pages without main layout */}
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+            <Route path="/changelog" element={<ChangelogPage />} />
+
+            {/* Main application routes with layout */}
             <Route path="/" element={<MainLayout />}>
                 <Route element={<RouteChangeHandler />}>
                     <Route index element={<Navigate to="/all" replace />} />
