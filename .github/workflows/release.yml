@@ -1,15 +1,11 @@
 name: Release Desktop App
 
 on:
-  # Triggers the workflow on push events for tags matching v*.*.* (e.g., v1.0.0)
   push:
     tags:
       - 'v*.*.*'
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Set permissions of the GITHUB_TOKEN to allow creating releases
 permissions:
   contents: write
 
@@ -18,8 +14,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Build the app for macOS, Linux, and Windows
-        platform: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          - platform: 'macos-13'
+            target: 'x86_64-apple-darwin'
+          - platform: 'macos-latest'
+            target: 'aarch64-apple-darwin'
+
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+          - platform: 'windows-latest'
+            target: 'aarch64-pc-windows-msvc'
+
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+
+          - platform: 'ubuntu-24.04-arm'
+            target: 'aarch64-unknown-linux-gnu'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -35,9 +45,13 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      # Install dependencies required for Tauri build on Linux (Ubuntu)
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
@@ -45,18 +59,17 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # The web app's frontend assets must be built before the Tauri build.
       - name: Build Web App
         run: pnpm build
 
-      # Core step: Use the tauri-action to build, package, and create a GitHub release
       - name: Build Tauri App and Create Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }} # e.g., v1.0.0
+          tagName: ${{ github.ref_name }}
           releaseName: 'Tada ${{ github.ref_name }}'
           releaseBody: 'See the assets below for the latest version of the Tada desktop app.'
-          releaseDraft: false # Set to false to publish directly, or true to create a draft for manual review
+          releaseDraft: false
           prerelease: false
+          args: --target ${{ matrix.target }}
