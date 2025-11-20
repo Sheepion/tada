@@ -5,7 +5,7 @@
   "identifier": "com.loadshine.tada",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "pnpm --filter @tada/desktop build",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5174"
   },
