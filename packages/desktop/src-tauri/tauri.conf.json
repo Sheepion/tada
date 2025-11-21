@@ -12,7 +12,20 @@
   "app": {
     "security": {
       "csp": null,
-      "capabilities": []
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "description": "Capability for the main window",
+          "windows": ["main"],
+          "permissions": [
+            "sql:allow-load",
+            "sql:allow-execute",
+            "sql:allow-select",
+            "sql:default",
+            "core:default"
+          ]
+        }
+      ]
     },
     "windows": [
       {
