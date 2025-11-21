@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-13'
+          - platform: 'macos-15-intel'
             target: 'x86_64-apple-darwin'
           - platform: 'macos-latest'
             target: 'aarch64-apple-darwin'
@@ -61,7 +61,6 @@ jobs:
       - name: Build App (Custom Script)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # ✨ 关键点：将 matrix 中的 target 传给脚本
           TAURI_TARGET: ${{ matrix.target }}
         run: pnpm build:desktop
 
@@ -69,18 +68,14 @@ jobs:
         if: runner.os == 'macOS'
         uses: softprops/action-gh-release@v1
         with:
-          # ✨ 修改路径匹配逻辑，使用 ** 匹配可能存在的 target 中间目录
           files: packages/desktop/src-tauri/target/**/release/bundle/dmg/*.dmg
 
       - name: Upload Release Assets (Windows)
         if: runner.os == 'Windows'
         uses: softprops/action-gh-release@v1
         with:
-          # ✨ 1. 增加 msi 路径
-          # ✨ 2. 使用 ** 匹配 target/<arch>/release 目录
           files: |
             packages/desktop/src-tauri/target/**/release/bundle/nsis/*.exe
-            packages/desktop/src-tauri/target/**/release/bundle/msi/*.msi
 
       - name: Upload Release Assets (Linux)
         if: runner.os == 'Linux'
