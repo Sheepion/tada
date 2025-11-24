@@ -356,7 +356,6 @@ These Terms, together with our Privacy Policy and any other legal notices publis
 
 If you have any questions about these Terms, please contact us:
 
-**Email:** legal@tada-app.com  
 **Address:** Room 202N, Building 7, No. 1288, Liangmu Road, Cangqian Sub-district, Yuhang District, Hangzhou City, Zhejiang Province
 **Business Hours:** 9:00 AM - 6:00 PM (Monday to Friday)
 

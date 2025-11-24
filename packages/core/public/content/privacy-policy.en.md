@@ -257,9 +257,7 @@ We may update this Privacy Policy from time to time. When we do:
 
 If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:
 
-**Email:** privacy@tada-app.com  
 **Address:** Room 202N, Building 7, No. 1288, Liangmu Road, Cangqian Sub-district, Yuhang District, Hangzhou City, Zhejiang Province
-**Data Protection Officer:** dpo@tada-app.com
 
 ---
 
