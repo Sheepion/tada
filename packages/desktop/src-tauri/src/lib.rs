@@ -3,6 +3,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     Manager, WindowEvent,
+    image::Image,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -116,10 +117,13 @@ pub fn run() {
             let show_i = MenuItem::with_id(app, "show", "Show Tada", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
+            let icon_bytes = include_bytes!("../icons/tray-icon.png");
+            let icon = Image::from_bytes(icon_bytes).expect("Failed to load tray icon");
+
             // Build the tray icon
-            let _tray = TrayIconBuilder::with_id("tray")
-                .icon(app.default_window_icon().unwrap().clone())
+            let tray_builder = TrayIconBuilder::with_id("tray")
                 .menu(&menu)
+                .icon(icon) // 使用加载的 icon
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
@@ -150,8 +154,12 @@ pub fn run() {
                         }
                     }
                     _ => {}
-                })
-                .build(app)?;
+                });
+
+            #[cfg(target_os = "macos")]
+            let tray_builder = tray_builder.icon_as_template(true);
+
+            tray_builder.build(app)?;
 
             Ok(())
         })
