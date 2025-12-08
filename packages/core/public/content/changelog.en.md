@@ -1,6 +1,18 @@
 # Changelog
 
-## Version 0.1.2 (Current)
+## Version 0.1.3 (Current)
+*Released: December 8, 2025*
+
+### ✨ New Features
+- **Added Zen Mode**: Introduced a new Zen Mode for a distraction-free experience.
+- **Visual Update**: Updated the background styling for Zen Mode.
+
+### 🐛 Bug Fixes
+- **Tauri Compatibility**: Fixed an issue where the full-screen functionality in Zen Mode was unavailable in the Tauri environment.
+
+---
+
+## Version 0.1.2
 *Released: November 27, 2025*
 
 ### ✨ Improvements
