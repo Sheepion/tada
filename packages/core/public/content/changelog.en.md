@@ -1,6 +1,14 @@
 # Changelog
 
-## Version 0.2.0 (Current)
+## Version 0.2.1 (Current)
+*Release Date: December 24, 2025*
+
+### 🐛 Bug Fixes
+- Urgent fix: The move to today feature on the zen mode page may cause the remaining tasks to hide
+
+---
+
+## Version 0.2.0
 *Release Date: December 22, 2025*
 
 ### ✨ New Features

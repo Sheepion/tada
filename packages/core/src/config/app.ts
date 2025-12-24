@@ -71,7 +71,7 @@ export const APP_THEMES: AppTheme[] = [
     }
 ];
 
-export const APP_VERSION = '0.2.0';
+export const APP_VERSION = '0.2.1';
 
 const getContentUrl = (path: string): string => {
     const baseUrl = import.meta.env.BASE_URL;
