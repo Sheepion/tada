@@ -11,7 +11,8 @@ import {
     ImportOptions,
     ImportResult,
     DataConflict,
-    ConflictResolution
+    ConflictResolution,
+    EchoReport
 } from '@tada/core/types';
 import {
     defaultAISettingsForApi,
@@ -27,6 +28,7 @@ const KEYS = {
     TASKS: 'tada-tasks',
     LISTS: 'tada-lists',
     SUMMARIES: 'tada-summaries',
+    ECHO_REPORTS: 'tada-echo-reports',
     APPEARANCE_SETTINGS: 'tada-appearanceSettings',
     PREFERENCES_SETTINGS: 'tada-preferencesSettings',
     AI_SETTINGS: 'tada-aiSettings',
@@ -150,12 +152,12 @@ initializeDefaultData();
 
 /**
  * LocalStorage-based storage service implementation for web application
- * Provides persistent data storage with in-memory caching and deferred writes
  */
 export class LocalStorageService implements IStorageService {
     private tasksCache = new MemoryCache<Task[]>();
     private listsCache = new MemoryCache<List[]>();
     private summariesCache = new MemoryCache<StoredSummary[]>();
+    private echoReportsCache = new MemoryCache<EchoReport[]>();
     private appearanceCache = new MemoryCache<AppearanceSettings>();
     private preferencesCache = new MemoryCache<PreferencesSettings>();
     private aiCache = new MemoryCache<AISettings>();
@@ -416,6 +418,7 @@ export class LocalStorageService implements IStorageService {
                     if (key === KEYS.TASKS) cache = this.tasksCache;
                     else if (key === KEYS.LISTS) cache = this.listsCache;
                     else if (key === KEYS.SUMMARIES) cache = this.summariesCache;
+                    else if (key === KEYS.ECHO_REPORTS) cache = this.echoReportsCache;
                     else if (key === KEYS.APPEARANCE_SETTINGS) cache = this.appearanceCache;
                     else if (key === KEYS.PREFERENCES_SETTINGS) cache = this.preferencesCache;
                     else if (key === KEYS.AI_SETTINGS) cache = this.aiCache;
@@ -444,6 +447,7 @@ export class LocalStorageService implements IStorageService {
             { key: KEYS.TASKS, cache: this.tasksCache },
             { key: KEYS.LISTS, cache: this.listsCache },
             { key: KEYS.SUMMARIES, cache: this.summariesCache },
+            { key: KEYS.ECHO_REPORTS, cache: this.echoReportsCache },
             { key: KEYS.APPEARANCE_SETTINGS, cache: this.appearanceCache },
             { key: KEYS.PREFERENCES_SETTINGS, cache: this.preferencesCache },
             { key: KEYS.AI_SETTINGS, cache: this.aiCache },
@@ -583,14 +587,52 @@ export class LocalStorageService implements IStorageService {
         return summaries;
     }
 
-    /**
-     * Export all data from localStorage
-     */
+    // Echo Reports
+    fetchEchoReports() {
+        return getItem<EchoReport[]>(KEYS.ECHO_REPORTS, [], this.echoReportsCache);
+    }
+
+    createEchoReport(reportData: Omit<EchoReport, 'id' | 'createdAt'>) {
+        const reports = this.fetchEchoReports();
+        const now = Date.now();
+        const newReport: EchoReport = {
+            ...reportData,
+            id: `echo-${now}-${Math.random()}`,
+            createdAt: now,
+        };
+        reports.unshift(newReport);
+        setItem(KEYS.ECHO_REPORTS, reports, this.echoReportsCache);
+        return newReport;
+    }
+
+    updateEchoReport(reportId: string, updates: Partial<EchoReport>) {
+        const reports = this.fetchEchoReports();
+        let updatedReport: EchoReport | undefined;
+        const newReports = reports.map(r => {
+            if (r.id === reportId) {
+                updatedReport = { ...r, ...updates };
+                return updatedReport;
+            }
+            return r;
+        });
+        if (!updatedReport) throw new Error("Echo report not found");
+        setItem(KEYS.ECHO_REPORTS, newReports, this.echoReportsCache);
+        return updatedReport;
+    }
+
+    deleteEchoReport(reportId: string) {
+        const reports = this.fetchEchoReports();
+        const newReports = reports.filter(r => r.id !== reportId);
+        setItem(KEYS.ECHO_REPORTS, newReports, this.echoReportsCache);
+    }
+
+    // Import/Export
     exportData(): ExportedData {
         const settings = this.fetchSettings();
         const lists = this.fetchLists();
         const tasks = this.fetchTasks();
         const summaries = this.fetchSummaries();
+        const echoReports = this.fetchEchoReports();
 
         return {
             version: '1.0.0',
@@ -600,7 +642,8 @@ export class LocalStorageService implements IStorageService {
                 settings,
                 lists,
                 tasks,
-                summaries
+                summaries,
+                echoReports
             }
         };
     }
@@ -669,6 +712,23 @@ export class LocalStorageService implements IStorageService {
             });
         }
 
+        if (options.includeEcho && data.data.echoReports) {
+            const localReports = this.fetchEchoReports();
+            const localReportsMap = new Map(localReports.map(report => [report.id, report]));
+
+            data.data.echoReports.forEach(importedReport => {
+                const localReport = localReportsMap.get(importedReport.id);
+                if (localReport) {
+                    conflicts.push({
+                        id: importedReport.id,
+                        type: 'echo',
+                        local: localReport,
+                        imported: importedReport
+                    });
+                }
+            });
+        }
+
         return conflicts;
     }
 
@@ -683,7 +743,8 @@ export class LocalStorageService implements IStorageService {
                 settings: 0,
                 lists: 0,
                 tasks: 0,
-                summaries: 0
+                summaries: 0,
+                echo: 0
             },
             conflicts: [],
             errors: []
@@ -722,21 +783,11 @@ export class LocalStorageService implements IStorageService {
 
                     if (existingList) {
                         const resolution = conflictResolutions?.get(importedList.id) || options.conflictResolution;
-
                         switch (resolution) {
-                            case 'keep-local':
-                                shouldImport = false;
-                                break;
-                            case 'keep-imported':
-                                listToImport = importedList;
-                                break;
-                            case 'keep-newer':
-                                // Lists don't have updatedAt, so we compare by name change or keep local
-                                shouldImport = existingList.name !== importedList.name;
-                                break;
-                            case 'skip':
-                                shouldImport = false;
-                                break;
+                            case 'keep-local': shouldImport = false; break;
+                            case 'keep-imported': listToImport = importedList; break;
+                            case 'keep-newer': shouldImport = existingList.name !== importedList.name; break;
+                            case 'skip': shouldImport = false; break;
                         }
                     }
 
@@ -750,7 +801,6 @@ export class LocalStorageService implements IStorageService {
                         result.imported.lists++;
                     }
                 });
-
                 this.updateLists(lists);
             }
 
@@ -766,20 +816,11 @@ export class LocalStorageService implements IStorageService {
 
                     if (existingTask) {
                         const resolution = conflictResolutions?.get(importedTask.id) || options.conflictResolution;
-
                         switch (resolution) {
-                            case 'keep-local':
-                                shouldImport = false;
-                                break;
-                            case 'keep-imported':
-                                taskToImport = { ...importedTask, groupCategory: getTaskGroupCategory(importedTask) };
-                                break;
-                            case 'keep-newer':
-                                shouldImport = importedTask.updatedAt > existingTask.updatedAt;
-                                break;
-                            case 'skip':
-                                shouldImport = false;
-                                break;
+                            case 'keep-local': shouldImport = false; break;
+                            case 'keep-imported': taskToImport = { ...importedTask, groupCategory: getTaskGroupCategory(importedTask) }; break;
+                            case 'keep-newer': shouldImport = importedTask.updatedAt > existingTask.updatedAt; break;
+                            case 'skip': shouldImport = false; break;
                         }
                     }
 
@@ -793,7 +834,6 @@ export class LocalStorageService implements IStorageService {
                         result.imported.tasks++;
                     }
                 });
-
                 this.updateTasks(tasks);
             }
 
@@ -809,20 +849,11 @@ export class LocalStorageService implements IStorageService {
 
                     if (existingSummary) {
                         const resolution = conflictResolutions?.get(importedSummary.id) || options.conflictResolution;
-
                         switch (resolution) {
-                            case 'keep-local':
-                                shouldImport = false;
-                                break;
-                            case 'keep-imported':
-                                summaryToImport = importedSummary;
-                                break;
-                            case 'keep-newer':
-                                shouldImport = importedSummary.updatedAt > existingSummary.updatedAt;
-                                break;
-                            case 'skip':
-                                shouldImport = false;
-                                break;
+                            case 'keep-local': shouldImport = false; break;
+                            case 'keep-imported': summaryToImport = importedSummary; break;
+                            case 'keep-newer': shouldImport = importedSummary.updatedAt > existingSummary.updatedAt; break;
+                            case 'skip': shouldImport = false; break;
                         }
                     }
 
@@ -836,8 +867,34 @@ export class LocalStorageService implements IStorageService {
                         result.imported.summaries++;
                     }
                 });
-
                 this.updateSummaries(summaries);
+            }
+
+            if (options.includeEcho && data.data.echoReports) {
+                let reports = options.replaceAllData ? [] : this.fetchEchoReports();
+                const localReportsMap = new Map(reports.map(report => [report.id, report]));
+
+                data.data.echoReports.forEach(importedReport => {
+                    const existingReport = localReportsMap.get(importedReport.id);
+                    let shouldImport = true;
+                    let reportToImport = importedReport;
+
+                    if (existingReport) {
+                        const resolution = conflictResolutions?.get(importedReport.id) || options.conflictResolution;
+                        if (resolution === 'keep-local' || resolution === 'skip') shouldImport = false;
+                    }
+
+                    if (shouldImport) {
+                        if (existingReport) {
+                            const index = reports.findIndex(r => r.id === importedReport.id);
+                            reports[index] = reportToImport;
+                        } else {
+                            reports.push(reportToImport);
+                        }
+                        result.imported.echo++;
+                    }
+                });
+                setItem(KEYS.ECHO_REPORTS, reports, this.echoReportsCache);
             }
 
             result.success = true;

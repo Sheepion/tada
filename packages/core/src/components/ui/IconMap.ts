@@ -94,6 +94,12 @@ export const iconMap = {
     'maximize-2': LucideIcons.Maximize2,
     'minimize-2': LucideIcons.Minimize2,
     'undo': LucideIcons.Undo2,
+    'user-cog': LucideIcons.UserCog,
+    'telescope': LucideIcons.Telescope,
+    'scale': LucideIcons.Scale,
+    'brain-circuit': LucideIcons.BrainCircuit,
+    'align-left': LucideIcons.AlignLeft,
+    'webhook': LucideIcons.Webhook,
 };
 
 export type IconName = keyof typeof iconMap;

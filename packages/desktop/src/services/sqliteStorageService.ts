@@ -12,7 +12,8 @@ import {
     ImportOptions,
     ImportResult,
     DataConflict,
-    ConflictResolution
+    ConflictResolution,
+    EchoReport
 } from '@tada/core/types';
 import {
     defaultAISettingsForApi,
@@ -71,6 +72,15 @@ interface DbSummary {
     summary_text: string;
 }
 
+interface DbEchoReport {
+    id: string;
+    created_at: number;
+    content: string;
+    job_types: string;
+    style: string;
+    user_input: string | null;
+}
+
 interface DbSetting {
     key: string;
     value: string;
@@ -88,6 +98,7 @@ export class SqliteStorageService implements IStorageService {
     private listsCache: List[] = [];
     private tasksCache: Task[] = [];
     private summariesCache: StoredSummary[] = [];
+    private echoReportsCache: EchoReport[] = [];
     private settingsCache: {
         appearance: AppearanceSettings;
         preferences: PreferencesSettings;
@@ -134,6 +145,7 @@ export class SqliteStorageService implements IStorageService {
             await db.execute('CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON tasks(updated_at)');
             await db.execute('CREATE INDEX IF NOT EXISTS idx_subtasks_parent_id ON subtasks(parent_id)');
             await db.execute('CREATE INDEX IF NOT EXISTS idx_summaries_period_list ON summaries(period_key, list_key)');
+            await db.execute('CREATE INDEX IF NOT EXISTS idx_echo_reports_created_at ON echo_reports(created_at)');
         } catch (error) {
             console.error('Failed to ensure indexes:', error);
         }
@@ -142,15 +154,17 @@ export class SqliteStorageService implements IStorageService {
     async preloadData(): Promise<void> {
         if (this.isDataLoaded) return;
         try {
-            const [lists, tasks, summaries, settings] = await Promise.all([
+            const [lists, tasks, summaries, echoReports, settings] = await Promise.all([
                 this.fetchListsAsync(),
                 this.fetchTasksAsync(),
                 this.fetchSummariesAsync(),
+                this.fetchEchoReportsAsync(),
                 this.fetchSettingsAsync()
             ]);
             this.listsCache = lists;
             this.tasksCache = tasks;
             this.summariesCache = summaries;
+            this.echoReportsCache = echoReports;
             this.settingsCache = settings;
             this.isDataLoaded = true;
         } catch (error) {
@@ -359,8 +373,8 @@ export class SqliteStorageService implements IStorageService {
     private async updateListInDb(listId: string, updates: Partial<List>): Promise<void> {
         const db = this.getDb();
         const now = Date.now();
-        const updateFields = [];
-        const values = [];
+        const updateFields: string[] = [];
+        const values: any[] = [];
         if (updates.name !== undefined) { updateFields.push('name = ?'); values.push(updates.name); }
         if (updates.icon !== undefined) { updateFields.push('icon = ?'); values.push(updates.icon); }
         if (updates.color !== undefined) { updateFields.push('color = ?'); values.push(updates.color); }
@@ -480,8 +494,8 @@ export class SqliteStorageService implements IStorageService {
     private async updateTaskInDb(taskId: string, updates: Partial<Task>): Promise<void> {
         const db = this.getDb();
         const now = Date.now();
-        const updateFields = [];
-        const values = [];
+        const updateFields: string[] = [];
+        const values: any[] = [];
         Object.entries(updates).forEach(([key, value]) => {
             switch (key) {
                 case 'title': updateFields.push('title = ?'); values.push(value); break;
@@ -632,8 +646,8 @@ export class SqliteStorageService implements IStorageService {
 
         this.queueWrite(async () => {
             const db = this.getDb();
-            const updateFields = [];
-            const values = [];
+            const updateFields: string[] = [];
+            const values: any[] = [];
             Object.entries(updates).forEach(([key, value]) => {
                 switch (key) {
                     case 'title': updateFields.push('title = ?'); values.push(value); break;
@@ -697,8 +711,8 @@ export class SqliteStorageService implements IStorageService {
         this.summariesCache[index] = { ...this.summariesCache[index], ...updates, updatedAt: now };
         this.queueWrite(async () => {
             const db = this.getDb();
-            const updateFields = [];
-            const values = [];
+            const updateFields: string[] = [];
+            const values: any[] = [];
             Object.entries(updates).forEach(([key, value]) => {
                 switch (key) {
                     case 'periodKey': updateFields.push('period_key = ?'); values.push(value); break;
@@ -737,6 +751,64 @@ export class SqliteStorageService implements IStorageService {
         return summaries;
     }
 
+    // Echo Reports
+    fetchEchoReports(): EchoReport[] {
+        return this.echoReportsCache;
+    }
+
+    async fetchEchoReportsAsync(): Promise<EchoReport[]> {
+        const db = this.getDb();
+        const dbReports = await db.select<DbEchoReport[]>('SELECT * FROM echo_reports ORDER BY created_at DESC');
+        const reports = dbReports.map(this.mapDbEchoToEcho);
+        this.echoReportsCache = reports;
+        return reports;
+    }
+
+    createEchoReport(reportData: Omit<EchoReport, 'id' | 'createdAt'>): EchoReport {
+        const now = Date.now();
+        const id = `echo-${now}-${Math.random()}`;
+        const newReport: EchoReport = { ...reportData, id, createdAt: now };
+        this.echoReportsCache.unshift(newReport);
+        this.queueWrite(async () => {
+            const db = this.getDb();
+            await db.execute(`INSERT INTO echo_reports (id, created_at, content, job_types, style, user_input) VALUES (?, ?, ?, ?, ?, ?)`,
+                [newReport.id, newReport.createdAt, newReport.content, JSON.stringify(newReport.jobTypes), newReport.style, newReport.userInput || null]);
+        });
+        return newReport;
+    }
+
+    updateEchoReport(reportId: string, updates: Partial<EchoReport>): EchoReport {
+        const index = this.echoReportsCache.findIndex(r => r.id === reportId);
+        if (index === -1) throw new Error("Report not found");
+        this.echoReportsCache[index] = { ...this.echoReportsCache[index], ...updates };
+        this.queueWrite(async () => {
+            const db = this.getDb();
+            const updateFields: string[] = [];
+            const values: any[] = [];
+            Object.entries(updates).forEach(([key, value]) => {
+                switch (key) {
+                    case 'content': updateFields.push('content = ?'); values.push(value); break;
+                    case 'jobTypes': updateFields.push('job_types = ?'); values.push(JSON.stringify(value)); break;
+                    case 'style': updateFields.push('style = ?'); values.push(value); break;
+                    case 'userInput': updateFields.push('user_input = ?'); values.push(value); break;
+                }
+            });
+            if (updateFields.length > 0) {
+                values.push(reportId);
+                await db.execute(`UPDATE echo_reports SET ${updateFields.join(', ')} WHERE id = ?`, values);
+            }
+        });
+        return this.echoReportsCache[index];
+    }
+
+    deleteEchoReport(reportId: string): void {
+        this.echoReportsCache = this.echoReportsCache.filter(r => r.id !== reportId);
+        this.queueWrite(async () => {
+            const db = this.getDb();
+            await db.execute('DELETE FROM echo_reports WHERE id = ?', [reportId]);
+        });
+    }
+
     exportData(): ExportedData {
         return {
             version: '1.0.0',
@@ -746,7 +818,8 @@ export class SqliteStorageService implements IStorageService {
                 settings: this.fetchSettings(),
                 lists: this.fetchLists(),
                 tasks: this.fetchTasks(),
-                summaries: this.fetchSummaries()
+                summaries: this.fetchSummaries(),
+                echoReports: this.fetchEchoReports()
             }
         };
     }
@@ -779,11 +852,19 @@ export class SqliteStorageService implements IStorageService {
                 if (localSummary) conflicts.push({ id: importedSummary.id, type: 'summary', local: localSummary, imported: importedSummary });
             });
         }
+        if (options.includeEcho && data.data.echoReports) {
+            const localReports = this.fetchEchoReports();
+            const localReportsMap = new Map(localReports.map(report => [report.id, report]));
+            data.data.echoReports.forEach(importedReport => {
+                const localReport = localReportsMap.get(importedReport.id);
+                if (localReport) conflicts.push({ id: importedReport.id, type: 'echo', local: localReport, imported: importedReport });
+            });
+        }
         return conflicts;
     }
 
     importData(data: ExportedData, options: ImportOptions, conflictResolutions?: Map<string, ConflictResolution>): ImportResult {
-        const result: ImportResult = { success: false, message: '', imported: { settings: 0, lists: 0, tasks: 0, summaries: 0 }, conflicts: [], errors: [] };
+        const result: ImportResult = { success: false, message: '', imported: { settings: 0, lists: 0, tasks: 0, summaries: 0, echo: 0 }, conflicts: [], errors: [] };
         try {
             if (!data || !data.data) throw new Error('Invalid import data format');
 
@@ -858,6 +939,38 @@ export class SqliteStorageService implements IStorageService {
                 });
                 this.updateSummaries(summaries);
             }
+
+            if (options.includeEcho && data.data.echoReports) {
+                let reports = options.replaceAllData ? [] : this.fetchEchoReports();
+                const localReportsMap = new Map(reports.map(report => [report.id, report]));
+                data.data.echoReports.forEach(importedReport => {
+                    const existingReport = localReportsMap.get(importedReport.id);
+                    let shouldImport = true;
+                    let reportToImport = importedReport;
+                    if (existingReport) {
+                        const resolution = conflictResolutions?.get(importedReport.id) || options.conflictResolution;
+                        if (resolution === 'keep-local') shouldImport = false;
+                        else if (resolution === 'skip') shouldImport = false;
+                    }
+                    if (shouldImport) {
+                        if (existingReport) reports[reports.findIndex(r => r.id === importedReport.id)] = reportToImport;
+                        else reports.push(reportToImport);
+                        result.imported.echo++;
+                    }
+                });
+                this.echoReportsCache = reports;
+                this.queueWrite(async () => {
+                    const db = this.getDb();
+                    await db.execute('BEGIN TRANSACTION');
+                    await db.execute('DELETE FROM echo_reports');
+                    for (const report of reports) {
+                        await db.execute(`INSERT INTO echo_reports (id, created_at, content, job_types, style, user_input) VALUES (?, ?, ?, ?, ?, ?)`,
+                            [report.id, report.createdAt, report.content, JSON.stringify(report.jobTypes), report.style, report.userInput || null]);
+                    }
+                    await db.execute('COMMIT');
+                });
+            }
+
             result.success = true;
             result.message = 'Data imported successfully';
         } catch (error) {
@@ -895,6 +1008,13 @@ export class SqliteStorageService implements IStorageService {
             id: dbSummary.id, createdAt: dbSummary.created_at, updatedAt: dbSummary.updated_at,
             periodKey: dbSummary.period_key, listKey: dbSummary.list_key, taskIds: JSON.parse(dbSummary.task_ids),
             summaryText: dbSummary.summary_text
+        };
+    }
+
+    private mapDbEchoToEcho(dbEcho: DbEchoReport): EchoReport {
+        return {
+            id: dbEcho.id, createdAt: dbEcho.created_at, content: dbEcho.content,
+            jobTypes: JSON.parse(dbEcho.job_types), style: dbEcho.style as any, userInput: dbEcho.user_input || undefined
         };
     }
 }

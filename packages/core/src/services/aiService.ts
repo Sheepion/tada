@@ -1,4 +1,4 @@
-import {AISettings, StoredSummary, Task} from '@/types';
+import {AISettings, StoredSummary, Task, EchoReport} from '@/types';
 import storageManager from './storageManager.ts';
 import {AI_PROVIDERS, AIModel, AIProvider} from "@/config/aiProviders";
 
@@ -378,5 +378,118 @@ export const generateAiSummary = async (
         listKey,
         taskIds,
         summaryText: fullText,
+    });
+};
+
+// --- Echo Report Generation ---
+
+export const generateEchoReport = async (
+    jobTypes: string[],
+    pastExamples: string,
+    settings: AISettings,
+    t: (key: string) => string,
+    language: string, // 'en' | 'zh-CN'
+    style: 'exploration' | 'reflection' | 'balanced' = 'balanced',
+    userInput: string = '',
+    onDelta: (chunk: string) => void
+): Promise<EchoReport> => {
+    const service = storageManager.get();
+    const allTasks = service.fetchTasks();
+    const summaries = service.fetchSummaries();
+
+    // Filter for recent context (last 7 days)
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recentTasks = allTasks.filter(t => (t.completedAt && t.completedAt > sevenDaysAgo) || (t.updatedAt > sevenDaysAgo));
+    const recentSummaries = summaries.slice(0, 3); // Last 3 summaries
+
+    // Construct Context
+    const taskContext = recentTasks.map(t => `- ${t.title} (${t.completed ? 'Done' : 'In Progress'})`).join('\n');
+    const summaryContext = recentSummaries.map(s => s.summaryText).join('\n---\n');
+
+    // Get Job Persona Instructions dynamically from translation files
+    const personas = jobTypes.map(job => {
+        const key = `echo.prompts.personas.${job}`;
+        const localizedPersona = t(key);
+        return localizedPersona !== key ? localizedPersona : "";
+    }).filter(Boolean).join("\n\n");
+
+    // Map language code to human readable name for the LLM
+    const targetLanguage = language === 'zh-CN' ? 'Simplified Chinese' : 'English';
+
+    // Style Instructions (Keeping Logic in English for better LLM adherence)
+    let styleInstruction = "";
+    if (style === 'exploration') {
+        styleInstruction = "Focus heavily (80%) on 'Exploration' (market research, technology scanning, benchmarking, trend analysis). 20% Reflection.";
+    } else if (style === 'reflection') {
+        styleInstruction = "Focus heavily (80%) on 'Reflection' (process review, methodology auditing, planning, structural optimization). 20% Exploration.";
+    } else {
+        styleInstruction = "Maintain a 50/50 balance between 'Exploration' (external research) and 'Reflection' (internal planning/review).";
+    }
+
+    // User Input Handling Instructions
+    const userInputContext = userInput ? `
+    CRITICAL: The user has explicitly stated they were doing: "${userInput}".
+    
+    Your PRIMARY task is to TRANSLATE this activity into high-level, professional, corporate-safe language suitable for the job personas.
+    
+    Examples of transformation (Mental Model):
+    - "Browsing news" -> "Monitoring industry trends and external environment."
+    - "Shopping" -> "Analyzing market product positioning and pricing strategies."
+    - "Chatting" -> "Cross-departmental alignment and informal information synchronization."
+    - "Slacking/Nothing" -> "Deep thinking on long-term strategy and process bottlenecks."
+    
+    Do NOT mention the raw activity. Use the TRANSLATED value as the core theme of the report.
+    ` : "The user has not specified specific activities. Infer plausible high-value 'soft work' (planning, researching, reviewing) based on the Job Personas.";
+
+    const systemPrompt = `You are an expert Ghostwriter for corporate daily reports. Your goal is to generate a **professional, safe, unverifiable, and high-value** daily report.
+    
+    **Target Audience**: A manager who values proactivity, strategic thinking, and continuous improvement.
+    
+    **Job Role Context**:
+    ${personas}
+
+    **Core Philosophy**:
+    - **Safety First**: Never imply idleness. Every minute is accounted for with high-level cognitive work.
+    - **Unverifiable**: Avoid specific metrics (e.g., "wrote 500 lines of code") that can be checked. Use abstract progress (e.g., "Optimized module architecture").
+    - **Constructive**: Even if nothing was "done", value was "created" through thought and research.
+    
+    **Report Structure**:
+    - Format: Markdown (bullet points, bold highlights).
+    - Tone: Professional, Insightful, Forward-looking.
+    
+    **Specific Instructions**:
+    ${styleInstruction}
+    ${userInputContext}
+    
+    **IMPORTANT: Output Language**:
+    You MUST generate the final report in **${targetLanguage}**.
+    
+    **User History Context (Use for flavor/continuity, do not repeat verbatim):**
+    ${taskContext ? `Recent Tasks:\n${taskContext}` : ''}
+    ${summaryContext ? `Recent Summaries:\n${summaryContext}` : ''}
+    ${pastExamples ? `User's Past Approved Style:\n${pastExamples}` : ''}
+    
+    **Output:**
+    Generate ONLY the report content in ${targetLanguage}. No conversational fillers.
+    `;
+
+    const stream = await streamChatCompletionForEditor(settings, systemPrompt, "Generate Daily Report", new AbortController().signal);
+    const reader = stream.getReader();
+    let fullText = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+            fullText += value;
+            onDelta(value);
+        }
+    }
+
+    return service.createEchoReport({
+        content: fullText,
+        jobTypes,
+        style,
+        userInput
     });
 };

@@ -47,7 +47,8 @@
     "allTasks": "All Tasks",
     "calendar": "Calendar",
     "aiSummary": "AI Summary",
-    "accountSettings": "App Settings"
+    "accountSettings": "App Settings",
+    "echo": "Echo"
   },
   "addListModal": {
     "title": "Create New List",
@@ -122,7 +123,9 @@
       "defaultList": "Default List",
       "defaultListDescription": "Set the default list for newly created tasks.",
       "confirmDeletions": "Confirm Deletions",
-      "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash."
+      "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash.",
+      "enableEcho": "Enable Echo",
+      "enableEchoDescription": "Enable the creative daily report generator (Resonance)."
     },
     "ai": {
       "title": "AI Settings",
@@ -160,7 +163,7 @@
         "title": "Import Data",
         "description": "Import data from a previously exported JSON file.",
         "button": "Import from File",
-        "success": "Import successful: {{tasks}} tasks, {{lists}} lists, and {{summaries}} summaries imported.",
+        "success": "Import successful: {{tasks}} tasks, {{lists}} lists, {{summaries}} summaries, and {{echo}} echoes imported.",
         "error": "Data import failed.",
         "invalidFile": "Import failed: Invalid file format."
       },
@@ -354,6 +357,77 @@
     "emptyMind": "Empty mind, empty list",
     "noRegrets": "No past regrets",
     "shyNativeMode": "Shy Native Mode"
+  },
+  "echo": {
+    "title": "Echo",
+    "generateNew": "Generate New",
+    "onboarding": {
+      "title": "Initialize Echo",
+      "description": "Tell us about your role to help Echo generate relevant professional reflections.",
+      "selectRole": "Select Your Role(s)",
+      "pasteExamples": "Paste Past Report Examples (Optional)",
+      "start": "Start Using Echo"
+    },
+    "jobTypes": {
+      "dev": "R&D / Engineering",
+      "product": "Product / Design",
+      "marketing": "Marketing / Content",
+      "sales": "Sales / BD",
+      "ops": "Operations / Support",
+      "admin": "HR / Admin",
+      "research": "Research / Analysis",
+      "freelance": "Freelance / Consultant"
+    },
+    "jobDescriptions": {
+      "dev": "Code, Architecture, Refactoring",
+      "product": "User Flows, Specs, Review",
+      "marketing": "Campaigns, Copy, Social",
+      "sales": "Leads, CRM, Client Relations",
+      "ops": "Process, Tickets, Logistics",
+      "admin": "Policies, Events, Compliance",
+      "research": "Data, Trends, Experiments",
+      "freelance": "Hours, Client Comms"
+    },
+    "emptyState": {
+      "title": "Create Resonance",
+      "description": "Generate a professional reflection of your day, focusing on value and depth.",
+      "button": "Generate Daily Echo"
+    },
+    "adjust": {
+      "title": "Fine-tune Echo",
+      "focus": "Focus Direction",
+      "exploration": "Exploration",
+      "explorationDesc": "80% Research",
+      "reflection": "Reflection",
+      "reflectionDesc": "80% Review",
+      "balanced": "Balanced",
+      "balancedDesc": "50/50 Mix",
+      "inputLabel": "What did you actually do? (Optional)",
+      "inputHint": "e.g. Browsing news, Chatting with colleagues... Echo will translate this into professional language.",
+      "regenerate": "Regenerate Report"
+    },
+    "history": {
+      "title": "History",
+      "empty": "No history yet."
+    },
+    "prompts": {
+      "personas": {
+        "dev": "**Role Persona**: Senior Engineer / Technical Architect.\n**Keywords**: Refactoring, Technical Debt, Architecture Review, Performance Optimization, Code Review, Scalability, Security Audits, CI/CD Pipeline, Research.\n**'Soft Work' Examples**: 'Investigating potential memory leaks in legacy modules', 'Researching serverless architecture patterns for Q3 roadmap', 'Reviewing PRs to ensure code quality standards'.",
+        "product": "**Role Persona**: Product Manager / UX Lead.\n**Keywords**: User Journey, Competitive Analysis, Market Research, Requirement Gathering, Stakeholder Alignment, Design System, Usability Testing, Roadmap Planning.\n**'Soft Work' Examples**: 'Deep dive into competitor feature sets', 'Analyzing user feedback for pain point identification', 'Refining user flow for the upcoming checkout module'.",
+        "marketing": "**Role Persona**: Brand Manager / Content Strategist.\n**Keywords**: Brand Consistency, Market Trends, User Sentiment, Campaign Strategy, SEO Analysis, Copy Optimization, Channel Strategy, Engagement Metrics.\n**'Soft Work' Examples**: 'Monitoring social sentiment regarding recent industry shifts', 'Brainstorming angles for the holiday campaign', 'Analyzing high-performing competitor content'.",
+        "sales": "**Role Persona**: Account Executive / Partnership Manager.\n**Keywords**: Pipeline Health, Client Relationship, Market Intelligence, Lead Qualification, Strategic Alignment, Networking, Value Proposition, Negotiation Prep.\n**'Soft Work' Examples**: 'Researching prospect background for strategic alignment', 'Reviewing CRM data to identify upsell opportunities', 'Networking with industry peers to gauge market temperature'.",
+        "ops": "**Role Persona**: Operations Manager / Customer Success Lead.\n**Keywords**: Process Optimization, SOP Refinement, Incident Analysis, Quality Assurance, Workflow Efficiency, Resource Allocation, Feedback Loop.\n**'Soft Work' Examples**: 'Analyzing ticket volume trends to optimize shift scheduling', 'Reviewing current SOPs for efficiency gaps', 'Post-mortem analysis of recent support escalations'.",
+        "admin": "**Role Persona**: HRBP / Administrative Specialist.\n**Keywords**: Employee Engagement, Compliance, Culture Building, Policy Review, Talent Pipeline, Organizational Health, Logistics Planning.\n**'Soft Work' Examples**: 'Researching best practices for remote team engagement', 'Reviewing compliance updates for the next quarter', 'Planning cultural initiatives to boost team morale'.",
+        "research": "**Role Persona**: Data Analyst / Research Scientist.\n**Keywords**: Data Cleaning, Trend Identification, Hypothesis Generation, Model Validation, Literature Review, Methodology Refinement, Insight Synthesis.\n**'Soft Work' Examples**: 'Exploratory data analysis on Q2 metrics', 'Reviewing academic literature for new methodologies', 'Validating hypothesis constraints for the next experiment'.",
+        "freelance": "**Role Persona**: Independent Consultant.\n**Keywords**: Client Expectations, Project Scoping, Skill Acquisition, Industry Networking, Portfolio Review, Strategy Formulation, Billing Efficiency.\n**'Soft Work' Examples**: 'Refining service offerings based on market demand', 'Upskilling in new tools to improve delivery speed', 'Strategic planning for client acquisition'."
+      }
+    },
+    "copy": {
+      "button": "Copy",
+      "copied": "Copied!",
+      "markdown": "Copy Markdown",
+      "plainText": "Copy Plain Text"
+    }
   },
   "moondown": {
     "ai": {

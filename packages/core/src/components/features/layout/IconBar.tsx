@@ -1,8 +1,8 @@
 import React, {memo, useCallback, useMemo} from 'react';
 import {NavLink, useLocation} from 'react-router-dom';
 import Icon from '@/components/ui/Icon.tsx';
-import {useAtom, useSetAtom} from 'jotai';
-import {isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/jotai.ts';
+import {useAtom, useSetAtom, useAtomValue} from 'jotai';
+import {isSettingsOpenAtom, settingsSelectedTabAtom, preferencesSettingsAtom} from '@/store/jotai.ts';
 import {twMerge} from 'tailwind-merge';
 import Button from "@/components/ui/Button.tsx";
 import * as SortTooltip from '@radix-ui/react-tooltip';
@@ -11,21 +11,29 @@ import {IconName} from "@/components/ui/IconMap.ts";
 
 /**
  * A vertical icon bar for primary navigation within the application.
- * It provides links to main sections like All Tasks, Calendar, and AI Summary,
- * and an entry point to the settings modal.
  */
 const IconBar: React.FC = memo(() => {
     const {t} = useTranslation();
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
+    const preferences = useAtomValue(preferencesSettingsAtom);
     const location = useLocation();
 
-    const navigationItems: { path: string; icon: IconName, labelKey: string }[] = useMemo(() => [
-        {path: '/all', icon: 'archive', labelKey: 'iconBar.allTasks'},
-        {path: '/calendar', icon: 'calendar-days', labelKey: 'iconBar.calendar'},
-        {path: '/summary', icon: 'sparkles', labelKey: 'iconBar.aiSummary'},
-        {path: '/zen', icon: 'circle', labelKey: 'Zen Mode'},
-    ], []);
+    const navigationItems: { path: string; icon: IconName, labelKey: string }[] = useMemo(() => {
+        const items = [
+            {path: '/all', icon: 'archive', labelKey: 'iconBar.allTasks'},
+            {path: '/calendar', icon: 'calendar-days', labelKey: 'iconBar.calendar'},
+            {path: '/summary', icon: 'sparkles', labelKey: 'iconBar.aiSummary'},
+            {path: '/zen', icon: 'circle', labelKey: 'Zen Mode'},
+        ] as { path: string; icon: IconName, labelKey: string }[];
+
+        // Add Echo button if enabled in preferences
+        if (preferences?.enableEcho) {
+            items.push({path: '/echo', icon: 'webhook', labelKey: 'iconBar.echo'});
+        }
+
+        return items;
+    }, [preferences?.enableEcho]);
 
     const handleSettingsClick = useCallback(() => {
         setSettingsTab('appearance');
@@ -34,7 +42,6 @@ const IconBar: React.FC = memo(() => {
 
     /**
      * Determines the CSS classes for a navigation link based on the current route.
-     * The '/all' route is considered active for any path that isn't '/calendar' or '/summary'.
      */
     const getNavLinkClass = useCallback((itemPath: string): string => {
         let isSectionActive = false;
@@ -42,7 +49,8 @@ const IconBar: React.FC = memo(() => {
         if (itemPath === '/calendar') isSectionActive = currentPath.startsWith('/calendar');
         else if (itemPath === '/summary') isSectionActive = currentPath.startsWith('/summary');
         else if (itemPath === '/zen') isSectionActive = currentPath.startsWith('/zen');
-        else if (itemPath === '/all') isSectionActive = !currentPath.startsWith('/calendar') && !currentPath.startsWith('/summary') && !currentPath.startsWith('/zen');
+        else if (itemPath === '/echo') isSectionActive = currentPath.startsWith('/echo');
+        else if (itemPath === '/all') isSectionActive = !currentPath.startsWith('/calendar') && !currentPath.startsWith('/summary') && !currentPath.startsWith('/zen') && !currentPath.startsWith('/echo');
 
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-base transition-colors duration-200 ease-in-out group relative',

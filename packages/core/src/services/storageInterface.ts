@@ -10,7 +10,8 @@ import {
     ImportOptions,
     ImportResult,
     DataConflict,
-    ConflictResolution
+    ConflictResolution,
+    EchoReport
 } from '@/types';
 
 /**
@@ -53,6 +54,12 @@ export interface IStorageService {
     createSummary(summaryData: Omit<StoredSummary, 'id' | 'createdAt' | 'updatedAt'>): StoredSummary;
     updateSummary(summaryId: string, updates: Partial<StoredSummary>): StoredSummary;
     updateSummaries(summaries: StoredSummary[]): StoredSummary[];
+
+    // Echo Reports
+    fetchEchoReports(): EchoReport[];
+    createEchoReport(reportData: Omit<EchoReport, 'id' | 'createdAt'>): EchoReport;
+    updateEchoReport(reportId: string, updates: Partial<EchoReport>): EchoReport;
+    deleteEchoReport(reportId: string): void;
 
     // Import/Export
     exportData(): ExportedData;

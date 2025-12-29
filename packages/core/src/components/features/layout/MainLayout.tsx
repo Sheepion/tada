@@ -30,7 +30,7 @@ const MainLayout: React.FC = () => {
 
     // Determine if the sidebar should be hidden based on the current route.
     const hideSidebar = useMemo(() => {
-        return ['/calendar', '/summary', '/zen'].some(path => location.pathname.startsWith(path));
+        return ['/calendar', '/summary', '/zen', '/echo'].some(path => location.pathname.startsWith(path));
     }, [location.pathname]);
 
     return (

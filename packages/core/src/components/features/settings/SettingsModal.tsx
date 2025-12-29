@@ -278,6 +278,10 @@ const PreferencesSettings: React.FC = memo(() => {
         ...(p ?? defaultPreferencesFromAtoms),
         confirmDeletions: checked
     }));
+    const handleEchoToggle = (checked: boolean) => setPreferences(p => ({
+        ...(p ?? defaultPreferencesFromAtoms),
+        enableEcho: checked
+    }));
 
     const dueDateOptions = [
         {value: 'none', label: t('settings.preferences.dueDateOptions.none')},
@@ -341,6 +345,24 @@ const PreferencesSettings: React.FC = memo(() => {
                 >
                     <RadixSwitch.Thumb
                         className={twMerge("custom-switch-thumb", currentPreferences.confirmDeletions ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
+                </RadixSwitch.Root>
+            </SettingsRow>
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+            <SettingsRow label={t('settings.preferences.enableEcho')}
+                         description={t('settings.preferences.enableEchoDescription')}
+                         htmlFor="echoToggle">
+                <RadixSwitch.Root
+                    id="echoToggle"
+                    checked={currentPreferences.enableEcho}
+                    onCheckedChange={handleEchoToggle}
+                    aria-label="Toggle echo feature"
+                    className={twMerge(
+                        "custom-switch-track",
+                        currentPreferences.enableEcho ? "custom-switch-track-on" : "custom-switch-track-off"
+                    )}
+                >
+                    <RadixSwitch.Thumb
+                        className={twMerge("custom-switch-thumb", currentPreferences.enableEcho ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
                 </RadixSwitch.Root>
             </SettingsRow>
         </div>
@@ -422,15 +444,15 @@ const AboutSettings: React.FC = memo(() => {
             switch (type) {
                 case 'changelog':
                     content = await loadChangelog(language);
-                    setChangelogContent(content); // 直接存储 markdown 文本
+                    setChangelogContent(content);
                     break;
                 case 'privacy':
                     content = await loadPrivacyPolicy(language);
-                    setPrivacyContent(content); // 直接存储 markdown 文本
+                    setPrivacyContent(content);
                     break;
                 case 'terms':
                     content = await loadTermsOfUse(language);
-                    setTermsContent(content); // 直接存储 markdown 文本
+                    setTermsContent(content);
                     break;
             }
         } catch (error) {

@@ -13,7 +13,8 @@ import {
     ImportOptions,
     ConflictResolution,
     ExportedData,
-    ImportResult
+    ImportResult,
+    EchoReport
 } from '@/types';
 import {
     endOfDay, isAfter, isBefore, isSameDay, isValid, isWithinNext7Days,
@@ -63,6 +64,7 @@ export const defaultAppearanceSettingsForApi = (): AppearanceSettings => ({
 export const defaultPreferencesSettingsForApi = (): PreferencesSettings => ({
     language: 'zh-CN', defaultNewTaskDueDate: null, defaultNewTaskPriority: null,
     defaultNewTaskList: 'Inbox', confirmDeletions: true, zenModeShyNative: false,
+    enableEcho: false, echoJobTypes: [], echoPastExamples: ''
 });
 export const defaultAISettingsForApi = (): AISettings => ({
     provider: 'openai',
@@ -257,6 +259,24 @@ export const storedSummariesAtom: LocalDataAtom<StoredSummary[]> = atom(
     }
 );
 storedSummariesAtom.onMount = (setSelf) => {
+    setSelf(RESET);
+};
+
+// --- Echo (Resonance) Feature Atoms ---
+const baseEchoReportsAtom = atom<EchoReport[] | null>(null);
+export const echoReportsAtom: LocalDataAtom<EchoReport[]> = atom(
+    (get) => get(baseEchoReportsAtom),
+    (get, set, update) => {
+        const service = storageManager.get();
+        if (update === RESET) {
+            set(baseEchoReportsAtom, service.fetchEchoReports());
+            return;
+        }
+        const updatedReports = typeof update === 'function' ? (update as (prev: EchoReport[] | null) => EchoReport[])(get(baseEchoReportsAtom) ?? []) : update;
+        set(baseEchoReportsAtom, updatedReports);
+    }
+);
+echoReportsAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
@@ -516,13 +536,14 @@ export const importDataAtom = atom(
                 set(tasksAtom, RESET);
                 set(userListsAtom, RESET);
                 set(storedSummariesAtom, RESET);
+                set(echoReportsAtom, RESET);
                 set(appearanceSettingsAtom, RESET);
                 set(preferencesSettingsAtom, RESET);
                 set(aiSettingsAtom, RESET);
 
                 set(addNotificationAtom, {
                     type: 'success',
-                    message: `Import successful: ${result.imported.tasks} tasks, ${result.imported.lists} lists, ${result.imported.summaries} summaries`
+                    message: `Import successful: ${result.imported.tasks} tasks, ${result.imported.lists} lists, ${result.imported.summaries} summaries, ${result.imported.echo} echoes.`
                 });
             } else {
                 set(addNotificationAtom, {
@@ -541,7 +562,7 @@ export const importDataAtom = atom(
             return {
                 success: false,
                 message: 'Import failed',
-                imported: { settings: 0, lists: 0, tasks: 0, summaries: 0 },
+                imported: { settings: 0, lists: 0, tasks: 0, summaries: 0, echo: 0 },
                 conflicts: [],
                 errors: [error instanceof Error ? error.message : 'Unknown error']
             };

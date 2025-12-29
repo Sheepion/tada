@@ -95,6 +95,18 @@ export interface StoredSummary {
 }
 
 /**
+ * Represents a stored Echo (Resonance) report.
+ */
+export interface EchoReport {
+    id: string;
+    createdAt: number;
+    content: string;
+    jobTypes: string[];
+    style: 'balanced' | 'exploration' | 'reflection';
+    userInput?: string;
+}
+
+/**
  * Defines the structure for appearance-related settings.
  */
 export interface AppearanceSettings {
@@ -113,6 +125,9 @@ export interface PreferencesSettings {
     defaultNewTaskList: string;
     confirmDeletions: boolean;
     zenModeShyNative: boolean;
+    enableEcho: boolean; // Toggle for the Echo feature
+    echoJobTypes: string[]; // Selected job types for Echo
+    echoPastExamples?: string; // User provided past report examples
 }
 
 /**
@@ -142,6 +157,7 @@ export interface ExportedData {
         lists: List[];
         tasks: Task[];
         summaries: StoredSummary[];
+        echoReports: EchoReport[];
     };
 }
 
@@ -155,7 +171,7 @@ export type ConflictResolution = 'keep-local' | 'keep-imported' | 'keep-newer' |
  */
 export interface DataConflict {
     id: string;
-    type: 'list' | 'task' | 'summary';
+    type: 'list' | 'task' | 'summary' | 'echo';
     local: any;
     imported: any;
 }
@@ -168,6 +184,7 @@ export interface ImportOptions {
     includeLists: boolean;
     includeTasks: boolean;
     includeSummaries: boolean;
+    includeEcho: boolean;
     conflictResolution: ConflictResolution;
     replaceAllData: boolean;
 }
@@ -183,6 +200,7 @@ export interface ImportResult {
         lists: number;
         tasks: number;
         summaries: number;
+        echo: number;
     };
     conflicts: DataConflict[];
     errors: string[];
