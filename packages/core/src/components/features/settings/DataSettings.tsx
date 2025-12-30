@@ -255,6 +255,7 @@ const DataSettings: React.FC = () => {
 
                 // Default import options
                 const options: ImportOptions = {
+                    includeEcho: true,
                     includeSettings: true,
                     includeLists: true,
                     includeTasks: true,
