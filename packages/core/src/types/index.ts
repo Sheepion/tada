@@ -128,6 +128,7 @@ export interface PreferencesSettings {
     enableEcho: boolean; // Toggle for the Echo feature
     echoJobTypes: string[]; // Selected job types for Echo
     echoPastExamples?: string; // User provided past report examples
+    alwaysUseAITask: boolean; // Toggle for always using AI task input
 }
 
 /**

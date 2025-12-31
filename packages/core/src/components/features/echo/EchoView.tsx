@@ -4,7 +4,9 @@ import {AnimatePresence, motion} from 'framer-motion';
 import {
     aiSettingsAtom,
     echoReportsAtom,
-    preferencesSettingsAtom
+    preferencesSettingsAtom,
+    isSettingsOpenAtom,
+    settingsSelectedTabAtom
 } from '@/store/jotai.ts';
 import Button from '@/components/ui/Button.tsx';
 import Icon from '@/components/ui/Icon.tsx';
@@ -16,9 +18,10 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {twMerge} from 'tailwind-merge';
-import {generateEchoReport} from '@/services/aiService';
+import {generateEchoReport, isAIConfigValid} from '@/services/aiService';
 import {formatDistanceToNow} from 'date-fns';
 import {zhCN, enUS} from 'date-fns/locale';
+import {AI_PROVIDERS} from "@/config/aiProviders";
 
 // --- Types ---
 interface EchoConfigModalProps {
@@ -361,6 +364,8 @@ const EchoView: React.FC = () => {
     const [preferences, setPreferences] = useAtom(preferencesSettingsAtom);
     const [echoReports, setEchoReports] = useAtom(echoReportsAtom);
     const aiSettings = useAtomValue(aiSettingsAtom);
+    const setIsSettingsOpen = useSetAtom(isSettingsOpenAtom);
+    const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
 
     // UI State
     const [isGenerating, setIsGenerating] = useState(false);
@@ -411,6 +416,13 @@ const EchoView: React.FC = () => {
     const showConfigModal = needsOnboarding || isConfigOpen;
 
     const handleGenerate = async (style: 'balanced' | 'exploration' | 'reflection' = 'balanced', input: string = '') => {
+        // Ensure configuration is complete before generating
+        if (!isAIConfigValid(aiSettings)) {
+            setSettingsTab('ai');
+            setIsSettingsOpen(true);
+            return;
+        }
+
         setIsGenerating(true);
         setCurrentReportText("");
         setIsAdjustOpen(false);

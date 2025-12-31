@@ -125,7 +125,10 @@
       "confirmDeletions": "Confirm Deletions",
       "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash.",
       "enableEcho": "Enable Echo",
-      "enableEchoDescription": "Enable the creative daily report generator."
+      "enableEchoDescription": "Enable the creative daily report generator.",
+      "alwaysUseAITask": "Always Use AI Task",
+      "alwaysUseAITaskDescription": "Automatically enable AI task input when opening the All Tasks page",
+      "alwaysUseAITaskDisabledHint": "Configure AI Provider and API Key to enable this feature."
     },
     "ai": {
       "title": "AI Settings",
@@ -152,6 +155,8 @@
       "searchModels": "Search models...",
       "noModelsFound": "No models found",
       "modelDescriptionCustom": "Enter a custom model name for your provider."
+      "statusVerified": "Verified & Ready to use",
+      "statusFailed": "Connection verification failed"
     },
     "data": {
       "title": "Data",

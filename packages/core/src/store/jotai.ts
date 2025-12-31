@@ -64,7 +64,7 @@ export const defaultAppearanceSettingsForApi = (): AppearanceSettings => ({
 export const defaultPreferencesSettingsForApi = (): PreferencesSettings => ({
     language: 'zh-CN', defaultNewTaskDueDate: null, defaultNewTaskPriority: null,
     defaultNewTaskList: 'Inbox', confirmDeletions: true, zenModeShyNative: false,
-    enableEcho: true, echoJobTypes: [], echoPastExamples: ''
+    enableEcho: true, echoJobTypes: [], echoPastExamples: '', alwaysUseAITask: false
 });
 export const defaultAISettingsForApi = (): AISettings => ({
     provider: 'openai',
@@ -142,7 +142,8 @@ export const isAddListModalOpenAtom = atom<boolean>(false);
 export const currentFilterAtom = atom<TaskFilter>('all');
 export const searchTermAtom = atom<string>('');
 export const notificationsAtom = atom<Notification[]>([]);
-export const isZenFullScreenAtom = atom<boolean>(false); // Added for Zen Mode
+export const isZenFullScreenAtom = atom<boolean>(false);
+export const aiConnectionStatusAtom = atom<'idle' | 'success' | 'error'>('idle');
 
 export const addNotificationAtom = atom(
     null,
@@ -228,6 +229,9 @@ export const aiSettingsAtom: LocalDataAtom<AISettings> = atom(
 
         const savedSettings = service.updateAISettings(updatedSettings);
         set(baseAISettingsAtom, savedSettings);
+
+        // Reset connection status to idle whenever settings change
+        set(aiConnectionStatusAtom, 'idle');
     }
 );
 aiSettingsAtom.onMount = (setSelf) => {
