@@ -1,6 +1,24 @@
 # Changelog
 
-## Version 0.3.1 (Current)
+## Version 0.3.2 (Current)
+*Release Date: May 21, 2024*
+
+### ✨ New Features
+- **AI Task Option**: Added a toggle option for "Always use AI task".
+- **Model Selection**: Introduced a Model Combo Box for better model selection experience, including translation support.
+- **UI Improvement**: The "Always Use AI Task" button is now disabled if the AI API Key is not configured.
+- **Echo Function**: The Echo function will now display an alert when the API Key is missing.
+
+### 🐛 Bug Fixes
+- Fixed an issue regarding the wrong Ollama endpoint and JSON parsing errors.
+
+### ❤️ Contributors
+Special thanks to the contributors of this release:
+**@Sheepion**
+
+---
+
+## Version 0.3.1
 *Release Date: December 30, 2025*
 
 ### 🐛 Bug Fixes

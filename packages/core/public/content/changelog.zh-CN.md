@@ -1,6 +1,24 @@
 # 更新日志
 
-## Version 0.3.1（当前版本）
+## Version 0.3.2（当前版本）
+*发布日期: 2024年05月21日*
+
+### ✨ 新特性 (New Features)
+- **AI 任务选项**: 新增了 "Always use AI task"（始终使用 AI 任务）的开关选项。
+- **模型选择**: 添加了模型组合框（Model Combo Box），以便更方便地选择模型，并补充了相关的翻译。
+- **交互优化**: 当未配置 AI API Key 时，"Always Use AI Task" 按钮将被自动禁用。
+- **Echo 功能优化**: 当未配置 API Key 时，使用 Echo 功能现在会弹出提示警告。
+
+### 🐛 问题修复 (Bug Fixes)
+- 修复了 Ollama 端点错误以及 JSON 解析的问题。
+
+### ❤️ 贡献者 (Contributors)
+特别感谢以下贡献者对本版本的支持：
+**@Sheepion**:
+
+---
+
+## Version 0.3.1
 *发布日期: 2025年12月30日*
 
 ### 🐛 Bug Fixes
