@@ -4,7 +4,9 @@ import {AnimatePresence, motion} from 'framer-motion';
 import {
     aiSettingsAtom,
     echoReportsAtom,
-    preferencesSettingsAtom
+    preferencesSettingsAtom,
+    isSettingsOpenAtom,
+    settingsSelectedTabAtom
 } from '@/store/jotai.ts';
 import Button from '@/components/ui/Button.tsx';
 import Icon from '@/components/ui/Icon.tsx';
@@ -19,6 +21,7 @@ import {twMerge} from 'tailwind-merge';
 import {generateEchoReport} from '@/services/aiService';
 import {formatDistanceToNow} from 'date-fns';
 import {zhCN, enUS} from 'date-fns/locale';
+import {AI_PROVIDERS} from "@/config/aiProviders";
 
 // --- Types ---
 interface EchoConfigModalProps {
@@ -361,6 +364,8 @@ const EchoView: React.FC = () => {
     const [preferences, setPreferences] = useAtom(preferencesSettingsAtom);
     const [echoReports, setEchoReports] = useAtom(echoReportsAtom);
     const aiSettings = useAtomValue(aiSettingsAtom);
+    const setIsSettingsOpen = useSetAtom(isSettingsOpenAtom);
+    const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
 
     // UI State
     const [isGenerating, setIsGenerating] = useState(false);
@@ -411,6 +416,18 @@ const EchoView: React.FC = () => {
     const showConfigModal = needsOnboarding || isConfigOpen;
 
     const handleGenerate = async (style: 'balanced' | 'exploration' | 'reflection' = 'balanced', input: string = '') => {
+        const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
+        const requiresApiKey = currentProvider?.requiresApiKey;
+        const hasApiKey = !!aiSettings?.apiKey;
+        const hasModel = !!aiSettings?.model;
+
+        // Ensure configuration is complete before generating
+        if (!currentProvider || (requiresApiKey && !hasApiKey) || !hasModel) {
+            setSettingsTab('ai');
+            setIsSettingsOpen(true);
+            return;
+        }
+
         setIsGenerating(true);
         setCurrentReportText("");
         setIsAdjustOpen(false);

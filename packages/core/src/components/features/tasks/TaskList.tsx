@@ -145,10 +145,6 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
 
     const { createTask, createSubtask, batchUpdateTasks } = useTaskOperations();
 
-    const isAiEnabled = useMemo(() => {
-        return !!(aiSettings && aiSettings.provider && (aiSettings.apiKey || !AI_PROVIDERS.find(p => p.id === aiSettings.provider)?.requiresApiKey));
-    }, [aiSettings]);
-
     const groupTitles: Record<TaskGroupCategory, string> = useMemo(() => ({
         overdue: t('taskGroup.overdue'),
         today: t('taskGroup.today'),
@@ -470,8 +466,10 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
         const requiresApiKey = currentProvider?.requiresApiKey;
         const hasApiKey = !!aiSettings?.apiKey;
+        const hasModel = !!aiSettings?.model;
 
-        if (requiresApiKey && !hasApiKey) {
+        // Check for missing configuration (Key or Model)
+        if (!currentProvider || (requiresApiKey && !hasApiKey) || !hasModel) {
             setSettingsTab('ai');
             setIsSettingsOpen(true);
             return;
@@ -509,6 +507,14 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
     const handleAiTaskCommit = useCallback(async () => {
         const sentence = newTaskTitle.trim();
         if (!sentence || isAiProcessing || !aiSettings) return;
+
+        // Double check configuration before sending request
+        const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
+        if (!currentProvider || (currentProvider.requiresApiKey && !aiSettings.apiKey) || !aiSettings.model) {
+            setSettingsTab('ai');
+            setIsSettingsOpen(true);
+            return;
+        }
 
         setIsAiProcessing(true);
 
@@ -572,7 +578,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         }
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        createTask, createSubtask, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t, aiSettings, addNotification
+        createTask, createSubtask, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t, aiSettings, addNotification, setIsSettingsOpen, setSettingsTab
     ]);
 
 

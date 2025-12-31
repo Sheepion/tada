@@ -517,16 +517,21 @@ const ZenModeView: React.FC = () => {
 
     const handleAiCreation = async (prompt: string) => {
         if (isAiProcessing) return;
+
+        const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
+        const requiresApiKey = currentProvider?.requiresApiKey;
+        const hasApiKey = !!aiSettings?.apiKey;
+        const hasModel = !!aiSettings?.model;
+
+        if (!currentProvider || (requiresApiKey && !hasApiKey) || !hasModel) {
+            setSettingsTab('ai');
+            setIsSettingsOpen(true);
+            return;
+        }
+
         setIsAiProcessing(true);
 
         try {
-            const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
-            if (currentProvider?.requiresApiKey && !aiSettings?.apiKey) {
-                setSettingsTab('ai');
-                setIsSettingsOpen(true);
-                return;
-            }
-
             const systemPrompt = tZen('prompts.taskAnalysis', { currentDate: new Date().toLocaleDateString() });
             const aiAnalysis = await analyzeTaskInputWithAI(prompt, aiSettings!, systemPrompt);
 
@@ -583,6 +588,18 @@ const ZenModeView: React.FC = () => {
     };
 
     const toggleAiMode = () => {
+        // Validation check before even toggling
+        const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
+        const requiresApiKey = currentProvider?.requiresApiKey;
+        const hasApiKey = !!aiSettings?.apiKey;
+        const hasModel = !!aiSettings?.model;
+
+        if (!currentProvider || (requiresApiKey && !hasApiKey) || !hasModel) {
+            setSettingsTab('ai');
+            setIsSettingsOpen(true);
+            return;
+        }
+
         setIsAiMode(!isAiMode);
         inputRef.current?.focus();
     };

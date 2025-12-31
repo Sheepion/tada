@@ -25,6 +25,8 @@ import {
     summarySelectedTaskIdsAtom,
     tasksAtom,
     userListNamesAtom,
+    isSettingsOpenAtom,
+    settingsSelectedTabAtom
 } from '@/store/jotai.ts';
 import Button from '@/components/ui/Button.tsx';
 import Icon from '@/components/ui/Icon.tsx';
@@ -94,6 +96,8 @@ const SummaryView: React.FC = () => {
     const allTasks = useMemo(() => allTasksData ?? [], [allTasksData]);
     const preferences = useAtomValue(preferencesSettingsAtom);
     const aiSettings = useAtomValue(aiSettingsAtom);
+    const setIsSettingsOpen = useSetAtom(isSettingsOpenAtom);
+    const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
 
     const isAiEnabled = useMemo(() => {
         return !!(aiSettings && aiSettings.provider && (aiSettings.apiKey || !AI_PROVIDERS.find(p => p.id === aiSettings.provider)?.requiresApiKey));
@@ -153,6 +157,20 @@ const SummaryView: React.FC = () => {
 
     const handleGenerateClick = useCallback(async () => {
         if (isGenerating) return;
+
+        // Check for AI configuration if user tries to generate
+        const currentProvider = AI_PROVIDERS.find(p => p.id === aiSettings?.provider);
+        const requiresApiKey = currentProvider?.requiresApiKey;
+        const hasApiKey = !!aiSettings?.apiKey;
+        const hasModel = !!aiSettings?.model;
+
+        // If configuration is incomplete, open settings and stop
+        if (!currentProvider || (requiresApiKey && !hasApiKey) || !hasModel) {
+            setSettingsTab('ai');
+            setIsSettingsOpen(true);
+            return;
+        }
+
         const service = storageManager.get();
 
         forceSaveCurrentSummary();
@@ -175,33 +193,6 @@ const SummaryView: React.FC = () => {
         const [periodKey, listKey] = filterKey.split('__');
 
         const systemPrompt = t('prompts.taskSummary');
-
-        if (!isAiEnabled) {
-            const completedTasks = tasksToSummarize.filter(t => t.completed);
-            const pendingTasks = tasksToSummarize.filter(t => !t.completed);
-
-            let summaryText = `## Task Report\n\nA summary of **${tasksToSummarize.length}** selected tasks.\n\n`;
-            if (completedTasks.length > 0) {
-                summaryText += `### ✅ Completed Tasks (${completedTasks.length})\n`;
-                summaryText += completedTasks.map(t => `- ${t.title}`).join('\n') + '\n\n';
-            }
-            if (pendingTasks.length > 0) {
-                summaryText += `### ⏳ Pending Tasks (${pendingTasks.length})\n`;
-                summaryText += pendingTasks.map(t => `- ${t.title}`).join('\n') + '\n\n';
-            }
-            if (futureTasksToConsider.length > 0) {
-                summaryText += `### 🚀 Future Plans (${futureTasksToConsider.length})\n`;
-                summaryText += futureTasksToConsider.map(t => `- ${t.title}`).join('\n') + '\n\n';
-            }
-
-            const newSummary = service.createSummary({periodKey, listKey, taskIds: taskIdsToSummarize, summaryText});
-            setStoredSummaries(prev => [newSummary, ...(prev ?? [])]);
-            setSummaryDisplayContent(summaryText);
-            setTimeout(() => setCurrentIndex(0), 100);
-            setIsGenerating(false);
-            addNotification({ type: 'success', message: 'Simple task report generated.' });
-            return;
-        }
 
         try {
             const onDelta = (chunk: string) => {
@@ -229,7 +220,7 @@ const SummaryView: React.FC = () => {
     }, [
         isGenerating, forceSaveCurrentSummary, allTasks, selectedTaskIds, selectedFutureTaskIds,
         filterKey, setStoredSummaries, setCurrentIndex, setIsGenerating, aiSettings, addNotification,
-        isAiEnabled, t
+        t, setIsSettingsOpen, setSettingsTab
     ]);
 
     const handleEditorChange = useCallback((newValue: string) => {
