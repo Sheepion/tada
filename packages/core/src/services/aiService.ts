@@ -115,7 +115,7 @@ export const fetchProviderModels = async (settings: AISettings): Promise<AIModel
 /**
  * Tests the connection to the configured AI provider to verify settings.
  * @param settings The current AI settings.
- * @returns A promise that resolves to `true` if the connection is successful, `false` otherwise.
+ * @returns A promise that resolves to `true` if the connection is successful. Throws error otherwise.
  */
 export const testConnection = async (settings: AISettings): Promise<boolean> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
@@ -125,20 +125,17 @@ export const testConnection = async (settings: AISettings): Promise<boolean> => 
         throw new Error("API key is required to test connection.");
     }
 
-    try {
-        if (provider.listModelsEndpoint) {
-            await fetchProviderModels(settings);
-            return true;
-        }
+    if (!settings.model) {
+        throw new Error("Model is required to test connection.");
+    }
 
-        // For providers that don't support model listing, try a simple chat request
+    try {
         let payload: any = {
             model: settings.model,
             messages: [{ role: "user", content: "Hi" }],
             max_tokens: 1,
         };
 
-        // For Ollama with non-OpenAI-compatible body
         if (provider.id === 'ollama' && provider.requestBodyTransformer) {
             payload = provider.requestBodyTransformer(payload);
         }
@@ -151,10 +148,28 @@ export const testConnection = async (settings: AISettings): Promise<boolean> => 
             body: JSON.stringify(payload),
         });
 
-        return response.ok;
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `API Error (${response.status})`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.error?.message) {
+                    errorMessage += `: ${errorJson.error.message}`;
+                } else if (errorJson.message) {
+                    errorMessage += `: ${errorJson.message}`;
+                } else {
+                    errorMessage += `: ${errorText.substring(0, 100)}`;
+                }
+            } catch (e) {
+                errorMessage += `: ${errorText.substring(0, 100)}`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        return true;
     } catch (error) {
         console.error('Connection test failed:', error);
-        return false;
+        throw error;
     }
 };
 
