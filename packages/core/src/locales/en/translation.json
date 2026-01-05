@@ -95,7 +95,19 @@
         "system": "System"
       },
       "themeColor": "Theme Color",
-      "themeColorDescription": "Choose an accent color for the application."
+      "themeColorDescription": "Choose an accent color for the application.",
+      "typography": "Typography",
+      "textSize": "Text Size",
+      "textSizeOptions": {
+        "default": "Default",
+        "large": "Large"
+      },
+      "fontWeight": "Font Weight",
+      "fontWeightOptions": {
+        "light": "Light",
+        "regular": "Regular",
+        "bold": "Bold"
+      }
     },
     "preferences": {
       "title": "Preferences",
@@ -164,10 +176,6 @@
       "unavailable": {
         "title": "Proxy Settings Unavailable",
         "description": "Custom proxy configuration is only available in the Desktop application. In the web version, please use your browser's proxy settings or system settings."
-      },
-      "about": {
-        "title": "About Proxy Settings",
-        "description": "These settings apply specifically to AI features and external integrations within Tada. They utilize a separate network stack to bypass system limitations."
       },
       "enable": {
         "label": "Enable Proxy",

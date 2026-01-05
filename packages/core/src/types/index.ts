@@ -114,6 +114,8 @@ export interface AppearanceSettings {
     themeId: string;
     darkMode: DarkModeOption;
     interfaceDensity: 'compact' | 'default' | 'comfortable';
+    textSize: 'default' | 'large';
+    fontWeight: 'light' | 'regular' | 'bold';
 }
 
 /**

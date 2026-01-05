@@ -95,7 +95,19 @@
         "system": "系统"
       },
       "themeColor": "主题色",
-      "themeColorDescription": "为应用选择一个强调色。"
+      "themeColorDescription": "为应用选择一个强调色。",
+      "typography": "字体设置",
+      "textSize": "文字大小",
+      "textSizeOptions": {
+        "default": "默认",
+        "large": "大号"
+      },
+      "fontWeight": "字体粗细",
+      "fontWeightOptions": {
+        "light": "细体",
+        "regular": "常规",
+        "bold": "粗体"
+      }
     },
     "preferences": {
       "title": "偏好设置",
@@ -164,10 +176,6 @@
       "unavailable": {
         "title": "代理设置不可用",
         "description": "自定义代理配置仅在桌面版应用中可用。在网页版中，请使用浏览器的代理设置或系统设置。"
-      },
-      "about": {
-        "title": "关于代理设置",
-        "description": "这些设置专门应用于 Tada 内的 AI 功能和外部集成。它们使用独立的网络堆栈来绕过系统限制。"
       },
       "enable": {
         "label": "启用代理",

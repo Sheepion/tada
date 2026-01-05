@@ -17,7 +17,7 @@ import {
     settingsSelectedTabAtom,
     userListNamesAtom,
 } from '@/store/jotai.ts';
-import {AISettings as AISettingsType, SettingsTab} from '@/types';
+import {AISettings as AISettingsType, SettingsTab, AppearanceSettings as AppearanceSettingsType} from '@/types';
 import Icon from '@/components/ui/Icon.tsx';
 import Button from '@/components/ui/Button.tsx';
 import ModelCombobox from '@/components/ui/ModelCombobox.tsx';
@@ -178,6 +178,14 @@ const AppearanceSettings: React.FC = memo(() => {
         ...(s ?? defaultAppearanceSettingsFromAtoms),
         darkMode: mode
     }));
+    const handleTextSizeChange = (size: 'default' | 'large') => setAppearance(s => ({
+        ...(s ?? defaultAppearanceSettingsFromAtoms),
+        textSize: size
+    }));
+    const handleFontWeightChange = (weight: 'light' | 'regular' | 'bold') => setAppearance(s => ({
+        ...(s ?? defaultAppearanceSettingsFromAtoms),
+        fontWeight: weight
+    }));
 
     return (
         <div className="space-y-6">
@@ -200,6 +208,63 @@ const AppearanceSettings: React.FC = memo(() => {
                     ))}
                 </div>
             </SettingsRow>
+
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+            {/* Typography Section */}
+            <div>
+                <h3 className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal mb-3">
+                    {t('settings.appearance.typography')}
+                </h3>
+
+                <SettingsRow label={t('settings.appearance.textSize')}>
+                    <RadioGroup.Root
+                        value={currentAppearance.textSize}
+                        onValueChange={(val: 'default' | 'large') => handleTextSizeChange(val)}
+                        className="flex space-x-1 p-0.5 bg-grey-ultra-light dark:bg-neutral-700 rounded-base"
+                    >
+                        <RadioGroup.Item value="default" className={twMerge(
+                            "flex-1 flex items-center justify-center px-2.5 py-1 h-7 rounded-[4px] text-[12px] font-normal transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                            currentAppearance.textSize === 'default' ? "bg-white dark:bg-neutral-600 text-primary dark:text-primary-light shadow-sm" : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
+                        )}>
+                            {t('settings.appearance.textSizeOptions.default')}
+                        </RadioGroup.Item>
+                        <RadioGroup.Item value="large" className={twMerge(
+                            "flex-1 flex items-center justify-center px-2.5 py-1 h-7 rounded-[4px] text-[12px] font-normal transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                            currentAppearance.textSize === 'large' ? "bg-white dark:bg-neutral-600 text-primary dark:text-primary-light shadow-sm" : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
+                        )}>
+                            {t('settings.appearance.textSizeOptions.large')}
+                        </RadioGroup.Item>
+                    </RadioGroup.Root>
+                </SettingsRow>
+
+                <SettingsRow label={t('settings.appearance.fontWeight')}>
+                    <RadioGroup.Root
+                        value={currentAppearance.fontWeight}
+                        onValueChange={(val: 'light' | 'regular' | 'bold') => handleFontWeightChange(val)}
+                        className="flex space-x-1 p-0.5 bg-grey-ultra-light dark:bg-neutral-700 rounded-base"
+                    >
+                        <RadioGroup.Item value="light" className={twMerge(
+                            "flex-1 flex items-center justify-center px-2.5 py-1 h-7 rounded-[4px] text-[12px] font-normal transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                            currentAppearance.fontWeight === 'light' ? "bg-white dark:bg-neutral-600 text-primary dark:text-primary-light shadow-sm" : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
+                        )}>
+                            {t('settings.appearance.fontWeightOptions.light')}
+                        </RadioGroup.Item>
+                        <RadioGroup.Item value="regular" className={twMerge(
+                            "flex-1 flex items-center justify-center px-2.5 py-1 h-7 rounded-[4px] text-[12px] font-normal transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                            currentAppearance.fontWeight === 'regular' ? "bg-white dark:bg-neutral-600 text-primary dark:text-primary-light shadow-sm" : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
+                        )}>
+                            {t('settings.appearance.fontWeightOptions.regular')}
+                        </RadioGroup.Item>
+                        <RadioGroup.Item value="bold" className={twMerge(
+                            "flex-1 flex items-center justify-center px-2.5 py-1 h-7 rounded-[4px] text-[12px] font-normal transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                            currentAppearance.fontWeight === 'bold' ? "bg-white dark:bg-neutral-600 text-primary dark:text-primary-light shadow-sm" : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
+                        )}>
+                            {t('settings.appearance.fontWeightOptions.bold')}
+                        </RadioGroup.Item>
+                    </RadioGroup.Root>
+                </SettingsRow>
+            </div>
         </div>
     );
 });
@@ -1106,16 +1171,6 @@ const ProxySettings: React.FC = memo(() => {
 
     return (
         <div className="space-y-0">
-            <div className="p-4 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/10 dark:border-primary/20 mb-6 flex items-start gap-3">
-                <Icon name="info" size={18} className="text-primary dark:text-primary-light mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-grey-dark dark:text-neutral-200">
-                    <p className="mb-1 font-medium">{t('settings.proxy.about.title')}</p>
-                    <p className="opacity-80">
-                        {t('settings.proxy.about.description')}
-                    </p>
-                </div>
-            </div>
-
             <SettingsRow
                 label={t('settings.proxy.enable.label')}
                 description={t('settings.proxy.enable.description')}
@@ -1159,7 +1214,7 @@ const ProxySettings: React.FC = memo(() => {
                         value={currentSettings.host}
                         onChange={handleHostChange}
                         placeholder="127.0.0.1"
-                        className="w-[200px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                        className="w-[200px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
                     />
                 </SettingsRow>
 
@@ -1172,7 +1227,7 @@ const ProxySettings: React.FC = memo(() => {
                         value={currentSettings.port}
                         onChange={handlePortChange}
                         placeholder="7890"
-                        className="w-[100px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                        className="w-[100px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
                     />
                 </SettingsRow>
 
@@ -1202,7 +1257,7 @@ const ProxySettings: React.FC = memo(() => {
                                     type="text"
                                     value={currentSettings.username}
                                     onChange={handleUsernameChange}
-                                    className="flex-1 h-8 px-3 text-[13px] font-light rounded-base bg-white dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary border border-grey-light dark:border-neutral-600"
+                                    className="flex-1 h-8 px-3 text-[13px] font-light rounded-base bg-white dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary border border-grey-light dark:border-neutral-600"
                                 />
                             </div>
                             <div className="flex items-center">
@@ -1211,7 +1266,7 @@ const ProxySettings: React.FC = memo(() => {
                                     type="password"
                                     value={currentSettings.password}
                                     onChange={handlePasswordChange}
-                                    className="flex-1 h-8 px-3 text-[13px] font-light rounded-base bg-white dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary border border-grey-light dark:border-neutral-600"
+                                    className="flex-1 h-8 px-3 text-[13px] font-light rounded-base bg-white dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary border border-grey-light dark:border-neutral-600"
                                 />
                             </div>
                         </div>

@@ -7,9 +7,21 @@
     :root {
         /* Typography */
         --font-primary: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        --font-primary-regular-weight: 400;
-        --font-primary-medium-weight: 500;
-        --font-primary-semibold-weight: 600;
+
+        /* Font Sizes */
+        --app-font-size: 13.5px;
+
+        /* Dynamic Font Weights */
+        --fw-light: 300;
+        --fw-normal: 400;
+        --fw-medium: 500;
+        --fw-semibold: 600;
+        --fw-bold: 700;
+
+        /* Applied via tailwind config mapping */
+        --font-primary-regular-weight: var(--fw-normal);
+        --font-primary-medium-weight: var(--fw-medium);
+        --font-primary-semibold-weight: var(--fw-semibold);
 
         /* Default Theme Colors (Coral Red) */
         --color-primary-hsl: 3 76% 58%;
@@ -53,6 +65,36 @@
         --ai-glow-gradient-neutral: linear-gradient(90deg, #ADC9F5, #CDE5EF, #D2BDEF, #F7D9E0, #ADC9F5);
     }
 
+    /* Override Font Weights based on classes to use variables */
+    .font-light { font-weight: var(--fw-light) !important; }
+    .font-normal { font-weight: var(--fw-normal) !important; }
+    .font-medium { font-weight: var(--fw-medium) !important; }
+    .font-semibold { font-weight: var(--fw-semibold) !important; }
+    .font-bold { font-weight: var(--fw-bold) !important; }
+
+    /* Large Text Mode Overrides */
+    :root[data-text-size="large"] body {
+        font-size: 16px;
+    }
+
+    :root[data-text-size="large"] {
+        --color-grey-dark: 0 0% 0%;
+    }
+
+    :root[data-text-size="large"] .text-\[10px\] { font-size: 12px !important; }
+    :root[data-text-size="large"] .text-\[11px\] { font-size: 13px !important; }
+    :root[data-text-size="large"] .text-\[12px\] { font-size: 14px !important; }
+    :root[data-text-size="large"] .text-\[13px\] { font-size: 15px !important; }
+    :root[data-text-size="large"] .text-\[14px\] { font-size: 16px !important; }
+    :root[data-text-size="large"] .text-xs { font-size: 14px !important; }
+    :root[data-text-size="large"] .text-sm { font-size: 16px !important; }
+
+    /* Adjust specific UI elements that might break in Large Mode */
+    :root[data-text-size="large"] .h-8 { height: 36px; }
+    :root[data-text-size="large"] .h-7 { height: 32px; }
+    :root[data-text-size="large"] .h-\[32px\] { height: 36px; }
+    :root[data-text-size="large"] .h-\[48px\] { height: 54px; } /* Task Item height */
+
     .dark {
         --color-almost-white: 210 20% 10%;
         --color-grey-ultra-light: 210 20% 12%;
@@ -65,7 +107,7 @@
     body {
         font-family: var(--font-primary), sans-serif;
         font-weight: var(--font-primary-regular-weight);
-        font-size: 13.5px;
+        font-size: var(--app-font-size);
         line-height: 1.65;
         background-color: hsl(var(--color-white));
         color: hsl(var(--color-grey-dark));
@@ -118,6 +160,10 @@
         font-size: 13.5px !important;
         line-height: 1.65 !important;
         color: hsl(var(--color-grey-dark)) !important;
+    }
+
+    :root[data-text-size="large"] .cm-editor {
+        font-size: 16px !important;
     }
 
     .dark .cm-editor {

@@ -60,7 +60,11 @@ export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): 
 
 // --- Default Settings for Fallback ---
 export const defaultAppearanceSettingsForApi = (): AppearanceSettings => ({
-    themeId: 'default-coral', darkMode: 'system', interfaceDensity: 'default',
+    themeId: 'default-coral',
+    darkMode: 'system',
+    interfaceDensity: 'default',
+    textSize: 'default',
+    fontWeight: 'light'
 });
 export const defaultPreferencesSettingsForApi = (): PreferencesSettings => ({
     language: 'zh-CN', defaultNewTaskDueDate: null, defaultNewTaskPriority: null,
